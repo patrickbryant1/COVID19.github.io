@@ -18,6 +18,7 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Plot ECDC data provided in csv format.''')
 
 parser.add_argument('--csvfile', nargs=1, type= str, default=sys.stdin, help = 'Path to csv file with ECDC data.')
+parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 
 
@@ -57,7 +58,7 @@ def order_dates(corona_df):
 
 	return corona_df
 
-def plot_per_country(corona_df):
+def plot_per_country(corona_df, outdir):
 	'''Plot ECDC collected statistics per country in a joint figure
 	Columns:
 	dateRep,day,month,year,cases,deaths,countriesAndTerritories,geoId,countryterritoryCode,popData2018
@@ -67,19 +68,28 @@ def plot_per_country(corona_df):
 	corona_df =order_dates(corona_df)
 	countries = corona_df['countriesAndTerritories'].unique()
 
-
-	fig, ax = plt.subplots(figsize=(10,10))
+	#Plot cases
+	
 	for country in countries:
+		fig, ax = plt.subplots(figsize=(10,10))
 		country_data = corona_df[corona_df['countriesAndTerritories']==country]
-		plt.plot(country_data['days_since_outbreak'], 1/country_data['cases'])
-		plt.yscale('log')
-	plt.show()
-	pdb.set_trace()
+		start = country_data['days_since_outbreak'].min() #Start of outbreak
+		ax.plot(country_data['days_since_outbreak']-start, country_data['cases'])
+		ax.set_yscale('log')
+		ax.set_xlabel('Days since outbreak')
+		ax.set_ylabel('log(cases)')
+
+		fig.savefig(outdir+country+'_cases.png', format='png')
+		plt.close()
 		
+		print(df.loc[i].values[0].split('.')[0]+'\n'+'\n')
+		print('!['+df.loc[i].values[0].split('.')[0]+'](/COVID19.github.io/gh-pages/figures/'+df.loc[i].values[0]+')')
+
 
 #####MAIN#####
 args = parser.parse_args()
 
 
 corona_df = pd.read_csv(args.csvfile[0], encoding = "ISO-8859-1")
-plot_per_country(corona_df)
+outdir = args.outdir[0]
+plot_per_country(corona_df, outdir)
