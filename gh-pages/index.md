@@ -2,6 +2,9 @@
 layout: default
 ---
 
+#R0 vs the final fraction infected
+![R0_vs_tau](/COVID19.github.io/gh-pages/figures/R0_vs_tau.png)
+
 Plots of COVID19
 
 Afghanistan_cases
