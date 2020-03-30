@@ -4,10 +4,10 @@
     <title>COVID19 Decision Analysis</title>
     <description>Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions effects.
 </description>
-    <link>http://localhost:4000/COVID19.github.io/gh-pages/</link>
-    <atom:link href="http://localhost:4000/COVID19.github.io/gh-pages/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 30 Mar 2020 16:09:07 +0200</pubDate>
-    <lastBuildDate>Mon, 30 Mar 2020 16:09:07 +0200</lastBuildDate>
+    <link>http://localhost:4000/COVID19.github.io/docs/</link>
+    <atom:link href="http://localhost:4000/COVID19.github.io/docs/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Mon, 30 Mar 2020 16:19:03 +0200</pubDate>
+    <lastBuildDate>Mon, 30 Mar 2020 16:19:03 +0200</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
   </channel>
