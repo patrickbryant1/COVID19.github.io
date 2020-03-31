@@ -10,6 +10,9 @@ layout: default
 ## Development in number of deaths for countries with at least 10 deaths
 ![deaths_10_per_country](/COVID19.github.io/docs/figures/deaths_10_per_country.png)
 
+## Development in number of deaths for countries with at least 10 deaths grouped by income
+![deaths_10_income_group_country](/COVID19.github.io/docs/figures/deaths_10_income_group_country.png)
+
 
 Afghanistan_cases
 

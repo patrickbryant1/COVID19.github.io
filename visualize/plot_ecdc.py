@@ -25,19 +25,19 @@ parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'P
 
 
 ###FUNCTIONS###
-def order_dates(corona_df):
+def order_dates(ecdc_df):
 	'''Assign a value to all dates in the corona df - starting with 0
 	'''
 
-	years = np.sort(corona_df['year'].unique())
+	years = np.sort(ecdc_df['year'].unique())
 	dmy = {}
 	i = 0 #index
 	for y in years:
-		y_df = corona_df[corona_df['year']==y]
+		y_df = ecdc_df[ecdc_df['year']==y]
 		months = np.sort(y_df['month'].unique())
 		for m in months:
 			m_df = y_df[y_df['month']==m]
-			days = np.sort(corona_df['day'].unique())
+			days = np.sort(ecdc_df['day'].unique())
 			for d in days:
 				if len(str(int(d)))<2:
 					d = '0'+str(int(d))
@@ -53,26 +53,41 @@ def order_dates(corona_df):
 				i+=1
 
 	#Add indices
-	corona_df['days_since_outbreak'] = 0
-	for i in range(len(corona_df)):
-		dateRep = corona_df['dateRep'].loc[i]
-		corona_df.set_value(i,'days_since_outbreak',dmy[dateRep])
+	ecdc_df['days_since_outbreak'] = 0
+	for i in range(len(ecdc_df)):
+		dateRep = ecdc_df['dateRep'].loc[i]
+		ecdc_df.set_value(i,'DaysSinceFirstReportedCase',dmy[dateRep])
 
-	return corona_df
+	return ecdc_df
 
 def add_wb_data(ecdc_df, pop_meta_df):
 	'''Add wb data to the ecdc df per country
 	'''
 	#Add new columns to ecdc df
+	ecdc_df['popData2018_millions'] = 0
 	ecdc_df['Region'] = 'Home'
 	ecdc_df['IncomeGroup'] = 'Unknown'
 	countries = ecdc_df['countriesAndTerritories'].unique()
 	for country in countries:
 		country_data = pop_meta_df[pop_meta_df['Country Name']==country]
-		pop_size = country_data['2018']
-		region = country_data['Region']
-		inc = country_data['IncomeGroup']
+		try:
+			pop_size = np.round(country_data['2018']/1000000,0).values[0]
+		except:
+			pop_size = 0
+		try:
+			region = country_data['Region'].values[0]
+		except:
+			region = 'NA'
+		try:
+			inc = country_data['IncomeGroup'].values[0]
+		except:
+			inc = 'NA'
+		#Assign
+		ecdc_df.loc[ecdc_df['countriesAndTerritories']==country, 'popData2018_millions']=pop_size
+		ecdc_df.loc[ecdc_df['countriesAndTerritories']==country, 'Region']=region
+		ecdc_df.loc[ecdc_df['countriesAndTerritories']==country, 'IncomeGroup']=inc
 
+	return ecdc_df
 
 def plot_per_country(ecdc_df, pop_meta_df, outdir):
 	'''Plot ECDC collected statistics per country in a joint figure
@@ -85,49 +100,54 @@ def plot_per_country(ecdc_df, pop_meta_df, outdir):
 	for_markdown = open(outdir+'for_markdown.txt', 'w')
 	#Order dates - get days since start of data
 	ecdc_df =order_dates(ecdc_df)
-	countries = ecdc_df['countriesAndTerritories'].unique()
-
+	#Add worldbank data
+	ecdc_df = add_wb_data(ecdc_df, pop_meta_df)
 	#Plot deaths per country, where each country has at least 10 deaths
 	fig, ax = plt.subplots(figsize=(20,10))
 	death_df = ecdc_df[ecdc_df['deaths']>=10]
-	sns.lineplot(x='days_since_outbreak', y = 'deaths', data=death_df, hue = 'countryterritoryCode')
+	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'countryterritoryCode')
 	fig.savefig(outdir+'deaths_10_per_country.png', format='png')
+	plt.close()
+	#Plot deaths grouped by income group
+	fig, ax = plt.subplots(figsize=(20,10))
+	sns.scatterplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'IncomeGroup')
+	fig.savefig(outdir+'deaths_10_income_group_country.png', format='png')
 	plt.close()
 
 
-	pdb.set_trace()
 	
 	#Plot cases and deaths individually
+	countries = ecdc_df['countriesAndTerritories'].unique()
 	for country in countries:
 		country_data = ecdc_df[ecdc_df['countriesAndTerritories']==country]
-		start = country_data['days_since_outbreak'].min() #Start of outbreak
+		start = country_data['DaysSinceFirstReportedCase'].min() #Start of outbreak
 		#Cases
 		fig, ax = plt.subplots(figsize=(10,10))
-		ax.scatter(country_data['days_since_outbreak']-start, country_data['cases'])
-		ax.set_yscale('log')
+		pdb.set_trace()
+		ax.bar(country_data['DaysSinceFirstReportedCase']-start, country_data['cases'])
 		ax.set_xlabel('Days since outbreak')
-		ax.set_ylabel('log(cases)')
+		ax.set_ylabel('Cases')
 
 		fig.savefig(outdir+country+'_cases.png', format='png')
 		plt.close()
 
 		#Deaths
 		fig, ax = plt.subplots(figsize=(10,10))
-		ax.scatter(country_data['days_since_outbreak']-start, country_data['deaths'])
+		ax.bar(country_data['DaysSinceFirstReportedCase']-start, country_data['deaths'])
 		ax.set_xlabel('Days since outbreak')
 		ax.set_ylabel('Deaths)')
 
 		fig.savefig(outdir+country+'_deaths.png', format='png')
 		plt.close()
 		
-		for_markdown.write(df.loc[i].values[0].split('.')[0]+'\n')
-		for_markdown.write('['+df.loc[i].values[0].split('.')[0]+'](/COVID19.github.io/docs/figures/'+df.loc[i].values[0]+'_cases.png)')
-		for_markdown.write('['+df.loc[i].values[0].split('.')[0]+'](/COVID19.github.io/docs/figures/'+df.loc[i].values[0]+'_deaths.png)')
+		for_markdown.write(country+'\n')
+		for_markdown.write('['+country+'_cases](/COVID19.github.io/docs/figures/'+country+'_cases.png)'+'\n')
+		for_markdown.write('['+country+'_cases](/COVID19.github.io/docs/figures/'+country+'_deaths.png)'+'\n')
 
 
 	for_markdown.close()
 
-	return corona_df 
+	return ecdc_df 
 
 #####MAIN#####
 args = parser.parse_args()
