@@ -2,10 +2,14 @@
 layout: default
 ---
 
-#R0 vs the final fraction infected
+# Plots of COVID19
+
+## R0 vs the final fraction infected
 ![R0_vs_tau](/COVID19.github.io/docs/figures/R0_vs_tau.png)
 
-Plots of COVID19
+## Development in number of deaths for countries with at least 10 deaths
+![deaths_10_per_country](/COVID19.github.io/docs/figures/deaths_10_per_country.png)
+
 
 Afghanistan_cases
 

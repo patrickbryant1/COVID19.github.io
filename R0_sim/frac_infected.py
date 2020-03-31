@@ -7,6 +7,7 @@ import sys
 import os
 import glob
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -28,7 +29,7 @@ def simulate(outdir):
 	Evaluate equation for different R0
 	'''
 
-	
+	matplotlib.rcParams.update({'font.size': 20})
 	fig, ax = plt.subplots(figsize=(15,10))
 
 	#No preventive measures
