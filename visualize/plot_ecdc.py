@@ -123,17 +123,15 @@ def plot_per_country(ecdc_df, pop_meta_df, outdir):
 		start = country_data['DaysSinceFirstReportedCase'].min() #Start of outbreak
 		#Cases
 		fig, ax = plt.subplots(figsize=(10,10))
-		pdb.set_trace()
-		ax.bar(country_data['DaysSinceFirstReportedCase']-start, country_data['cases'])
+		ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['cases'], width=0.8)
 		ax.set_xlabel('Days since outbreak')
 		ax.set_ylabel('Cases')
-
 		fig.savefig(outdir+country+'_cases.png', format='png')
 		plt.close()
 
 		#Deaths
 		fig, ax = plt.subplots(figsize=(10,10))
-		ax.bar(country_data['DaysSinceFirstReportedCase']-start, country_data['deaths'])
+		ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['deaths'], width=0.8)
 		ax.set_xlabel('Days since outbreak')
 		ax.set_ylabel('Deaths)')
 
