@@ -6,12 +6,12 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>COVID19 Decision Analysis</title>
+  <title>Epidemic modeling</title>
   <meta name="description" content="Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions effects.
 ">
 
   <link rel="stylesheet" href="/COVID19.github.io/docs/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/docs/">
+  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/docs/models.html">
   <link rel="alternate" type="application/rss+xml" title="COVID19 Decision Analysis" href="http://localhost:4000/COVID19.github.io/docs/feed.xml">
 </head>
 
@@ -59,17 +59,26 @@
 
     <div class="page-content">
       <div class="wrapper">
-        <div class="home">
+        <h1 id="epidemic-modeling">Epidemic modeling</h1>
 
-  <h1 class="page-heading"></h1>
-  <img src="/COVID19.github.io/docs/assets/Coronavirus-CDC.jpg" alt="hi" class="inline"/>
-  <ul class="post-list">
-    
-  </ul>
+<h2 id="r0-vs-the-final-fraction-infected">R0 vs the final fraction infected</h2>
+<p><img src="/COVID19.github.io/docs/assets/R0_vs_tau.png" alt="R0_vs_tau" /></p>
 
-</p>
+<h2 id="infection-to-onset-gammamean51-variance086">Infection-to-onset: gamma(mean=5.1, variance=0.86)</h2>
+<p>shape (α) = 1/std^2</p>
 
-</div>
+<p>scale (β) = mean/shape = mean/(1/std^2) = mean*std^2</p>
+
+<p><img src="/COVID19.github.io/docs/assets/ITO.png" alt="ITO.png" /></p>
+
+<h2 id="onset-to-death-gamma188-045">Onset-to-death: gamma(18.8, 0.45)</h2>
+<p><img src="/COVID19.github.io/docs/assets/OTD.png" alt="OTD.png" /></p>
+
+<h2 id="survival-fraction-for-onset-to-death">Survival Fraction for onset-to-death</h2>
+<p><img src="/COVID19.github.io/docs/assets/survival_fraction.png" alt="survival_fraction.png" /></p>
+
+<h2 id="infection-to-death">Infection-to-death</h2>
+<p><img src="/COVID19.github.io/docs/assets/ITD.png" alt="ITD.png" /></p>
 
       </div>
     </div>
