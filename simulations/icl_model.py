@@ -18,8 +18,7 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate fraction infected for different R0
-												t = 1- e^-R0t.''')
+parser = argparse.ArgumentParser(description = '''Simulate according to the ICL response team''')
 
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -93,8 +92,13 @@ def simulate(outdir):
 	fig.savefig(outdir+'survival_fraction.svg', format='svg')
 	plt.close()
 
-
-
+	#To model the number of infections over time we need to specify a serial
+	#interval distribution g with density g(τ), (the time between when a person gets infected and when
+	#they subsequently infect another other people), which we choose to be Gamma distributed:
+	#g ∼ Gamma (6.5,0.62).
+	serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
+	serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
+	plot_pdf(np.arange(0,21), serial.pdf(np.arange(0,21)), 'Serial')
 
 #####MAIN#####
 args = parser.parse_args()
