@@ -6,13 +6,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>COVID19 Decision Analysis</title>
-  <meta name="description" content="Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions effects.
+  <title>Epidemic modeling</title>
+  <meta name="description" content="Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions' effects.
 ">
 
-  <link rel="stylesheet" href="/COVID19.github.io/docs/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/docs/">
-  <link rel="alternate" type="application/rss+xml" title="COVID19 Decision Analysis" href="http://localhost:4000/COVID19.github.io/docs/feed.xml">
+  <link rel="stylesheet" href="/COVID19.github.io/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/models.html">
+  <link rel="alternate" type="application/rss+xml" title="COVID19 Decision Analysis" href="http://localhost:4000/COVID19.github.io/feed.xml">
 </head>
 
 
@@ -22,7 +22,7 @@
 
   <div class="wrapper">
 
-    <a class="site-title" href="/COVID19.github.io/docs/">COVID19 Decision Analysis</a>
+    <a class="site-title" href="/COVID19.github.io/">COVID19 Decision Analysis</a>
 
     <nav class="site-nav">
       <a href="#" class="menu-icon">
@@ -36,7 +36,7 @@
       <div class="trigger">
         
           
-          <a class="page-link" href="/COVID19.github.io/docs/development.html">Plots of COVID19</a>
+          <a class="page-link" href="/COVID19.github.io/development.html">Plots of COVID19</a>
           
         
           
@@ -46,7 +46,7 @@
           
         
           
-          <a class="page-link" href="/COVID19.github.io/docs/models.html">Epidemic modeling</a>
+          <a class="page-link" href="/COVID19.github.io/models.html">Epidemic modeling</a>
           
         
       </div>
@@ -59,17 +59,37 @@
 
     <div class="page-content">
       <div class="wrapper">
-        <div class="home">
+        <article class="post">
 
-  <h1 class="page-heading"></h1>
-  <img src="./assets/Coronavirus-CDC.jpg" alt="Coronavirus-CDC.jpg not loaded" class="inline"/>
-  <ul class="post-list">
-    
-  </ul>
+  <header class="post-header">
+    <h1 class="post-title">Epidemic modeling</h1>
+  </header>
 
-</p>
+  <div class="post-content">
+    <h1 id="epidemic-modeling">Epidemic modeling</h1>
 
-</div>
+<h2 id="r0-vs-the-final-fraction-infected">R0 vs the final fraction infected</h2>
+<p><img src="/COVID19.github.io/assets/R0_vs_tau.png" alt="R0_vs_tau" /></p>
+
+<h2 id="infection-to-onset-gammamean51-variance086">Infection-to-onset: gamma(mean=5.1, variance=0.86)</h2>
+<p>shape (α) = 1/std^2</p>
+
+<p>scale (β) = mean/shape = mean/(1/std^2) = mean*std^2</p>
+
+<p><img src="/COVID19.github.io/assets/ITO.png" alt="ITO.png" /></p>
+
+<h2 id="onset-to-death-gamma188-045">Onset-to-death: gamma(18.8, 0.45)</h2>
+<p><img src="/COVID19.github.io/assets/OTD.png" alt="OTD.png" /></p>
+
+<h2 id="survival-fraction-for-onset-to-death">Survival Fraction for onset-to-death</h2>
+<p><img src="/COVID19.github.io/assets/survival_fraction.png" alt="survival_fraction.png" /></p>
+
+<h2 id="infection-to-death">Infection-to-death</h2>
+<p><img src="/COVID19.github.io/assets/ITD.svg" alt="ITD.png" /></p>
+
+  </div>
+
+</article>
 
       </div>
     </div>
@@ -103,7 +123,7 @@
       </div>
 
       <div class="footer-col footer-col-3">
-        <p>Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions effects.
+        <p>Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions' effects.
 </p>
       </div>
     </div>
