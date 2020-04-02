@@ -32,8 +32,35 @@ def simulate(outdir):
 
 	matplotlib.rcParams.update({'font.size': 20})
 
+	########Daily Deaths#########
+	#We observe daily deaths D t,m for days t ∈ 1, ... , n and countries m ∈ 1, ... , p. These daily deaths are
+	#modelled using a positive real-valued function d t,m = E(D t,m ) that represents the expected number
+	#of deaths attributed to COVID-19. D t,m is assumed to follow a negative binomial distribution with expression as target:
+	# mean dt,m and variance dt,m + dt,m^2/ψ (psi),
+	#where ψ follows a half normal distribution, i.e.
+	#D t,m ∼ Negative Binomial (dt,m , dt,m +dt,m^2/ ψ)
+	#ψ ∼ Normal+(0,5). (half normal distribution)
+	psi = np.random.normal(0,0.5,1000) #mean and standard deviation
+
+	def cov_neg_bin_params(mean,variance):
+		'''Returns n = number of successes, p = prob of success
+		#neg_bin(n,p), n = number of successes, p = prob of success
+		#If defined by mean and variance: mean = np/(1-p), variance = np/(1-p)^2
+		'''
+		p = 1-(mean/std)
+		n = (mean*mean/variance)/(1-*mean/variance)
+		return n,p
+
+	for p in psi:
+		variance = d_tm+d_tm*d_tm/psi
+		n,p = cov_neg_bin_params(d_tm,
+		#neg_bin(n,p), n = number of successes, p = prob of success
+		#If defined by mean and variance: mean = np/(1-p), variance = np/(1-p)^2
+		D_tm = np.random.negative_binomial(n, p )
 
 
+
+	#####Gamma Distributions#######
 	#In R
 	#x1 = rgammaAlt(5e6,mean1,cv1) # infection-to-onset ----> do all people who are infected get to onset?
     #x2 = rgammaAlt(5e6,mean2,cv2) # onset-to-death
@@ -138,6 +165,9 @@ def simulate(outdir):
 	sns.distplot(Exp_tau)
 	fig.savefig(outdir+'Exp_tau.svg', format='svg')
 	plt.close()
+
+
+
 #####MAIN#####
 args = parser.parse_args()
 
