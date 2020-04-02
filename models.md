@@ -23,3 +23,8 @@ scale (β) = mean/shape = mean/(1/std^2) = mean*std^2
 
 ## Infection-to-death
 ![ITD.png](./assets/ITD.svg)
+
+## Serial interval distribution
+To model the number of infections over time we need to specify a serial
+interval distribution g with density g(τ), (the time between when a person gets infected and when they subsequently infect another other people), which we choose to be Gamma distributed: g ∼ Gamma (6.5,0.62).
+![Serial.svg](./assets/Serial.svg)
