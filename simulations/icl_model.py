@@ -100,6 +100,13 @@ def simulate(outdir):
 	serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 	plot_pdf(np.arange(0,21), serial.pdf(np.arange(0,21)), 'Serial')
 
+
+	#The impact of each intervention on R t,m is characterised by a set of parameters
+	#α 1 , ... , α 6 , with independent prior distributions chosen to be α k ∼ Gamma(0.5,1)
+	impact_shape, impact_scale = conv_gamma_params(0.5,1)
+	impact = gamma(a=impact_shape, scale = impact_scale) #a=shape
+	plot_pdf(np.arange(0,3), impact.pdf(np.arange(0,3)), 'Impact')
+
 #####MAIN#####
 args = parser.parse_args()
 
