@@ -55,7 +55,7 @@ def simulate(outdir):
 		ax.set_xlabel('Days')
 		ax.set_ylabel('Probability')
 		plt.legend()
-		fig.savefig(outdir+name+'.png', format='png')
+		fig.savefig(outdir+name+'.svg', format='svg')
 		plt.close()
 
 
@@ -83,7 +83,7 @@ def simulate(outdir):
 	ax.plot(days, 1-(0.01*np.cumsum(otd.pdf(days))))
 	ax.set_xlabel('Days')
 	ax.set_ylabel('Survival Fraction')
-	fig.savefig(outdir+'survival_fraction.png', format='png')
+	fig.savefig(outdir+'survival_fraction.svg', format='svg')
 	plt.close()
 
 
