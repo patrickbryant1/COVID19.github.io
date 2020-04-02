@@ -56,7 +56,7 @@ def order_dates(ecdc_df):
 	ecdc_df['days_since_outbreak'] = 0
 	for i in range(len(ecdc_df)):
 		dateRep = ecdc_df['dateRep'].loc[i]
-		ecdc_df.set_value(i,'DaysSinceFirstReportedCase',dmy[dateRep])
+		ecdc_df.at[i,'DaysSinceFirstReportedCase'] = dmy[dateRep]
 
 	return ecdc_df
 
@@ -110,48 +110,51 @@ def plot_per_country(ecdc_df, pop_meta_df, outdir):
 	plt.close()
 	#Plot deaths grouped by income group
 	fig, ax = plt.subplots(figsize=(20,10))
-	sns.scatterplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'IncomeGroup')
+	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'IncomeGroup')
 	fig.savefig(outdir+'deaths_10_income_group_country.png', format='png')
 	plt.close()
 
 
-	
+
 	#Plot cases and deaths individually
-	countries = ecdc_df['countriesAndTerritories'].unique()
-	for country in countries:
-		country_data = ecdc_df[ecdc_df['countriesAndTerritories']==country]
-		start = country_data['DaysSinceFirstReportedCase'].min() #Start of outbreak
-		#Cases
-		fig, ax = plt.subplots(figsize=(10,10))
-		ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['cases'], width=0.8)
-		ax.set_xlabel('Days since outbreak')
-		ax.set_ylabel('Cases')
-		fig.savefig(outdir+country+'_cases.png', format='png')
-		plt.close()
+	plot_ind = False
+	if plot_ind == True:
 
-		#Deaths
-		fig, ax = plt.subplots(figsize=(10,10))
-		ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['deaths'], width=0.8)
-		ax.set_xlabel('Days since outbreak')
-		ax.set_ylabel('Deaths)')
+		countries = ecdc_df['countriesAndTerritories'].unique()
+		for country in countries:
+			country_data = ecdc_df[ecdc_df['countriesAndTerritories']==country]
+			start = country_data['DaysSinceFirstReportedCase'].min() #Start of outbreak
+			#Cases
+			fig, ax = plt.subplots(figsize=(10,10))
+			ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['cases'], width=0.8)
+			ax.set_xlabel('Days since outbreak')
+			ax.set_ylabel('Cases')
+			fig.savefig(outdir+country+'_cases.png', format='png')
+			plt.close()
 
-		fig.savefig(outdir+country+'_deaths.png', format='png')
-		plt.close()
-		
-		for_markdown.write(country+'\n')
-		for_markdown.write('['+country+'_cases](/COVID19.github.io/docs/figures/'+country+'_cases.png)'+'\n')
-		for_markdown.write('['+country+'_cases](/COVID19.github.io/docs/figures/'+country+'_deaths.png)'+'\n')
+			#Deaths
+			fig, ax = plt.subplots(figsize=(10,10))
+			ax.bar((country_data['DaysSinceFirstReportedCase']-start).values, country_data['deaths'], width=0.8)
+			ax.set_xlabel('Days since outbreak')
+			ax.set_ylabel('Deaths)')
+
+			fig.savefig(outdir+country+'_deaths.png', format='png')
+			plt.close()
+
+			for_markdown.write(country+'\n')
+			for_markdown.write('!['+country+'_cases](./assets/'+country+'_cases.png)'+'\n'+'\n')
+			for_markdown.write('!['+country+'_cases](./assets/'+country+'_deaths.png)'+'\n'+'\n')
 
 
-	for_markdown.close()
+		for_markdown.close()
 
-	return ecdc_df 
+	return ecdc_df
 
 #####MAIN#####
 args = parser.parse_args()
 
 
-ecdc_df = pd.read_csv(args.ecdc_csv[0], encoding = "ISO-8859-1")
+ecdc_df = pd.read_csv(args.ecdc_csv[0])
 wb_data = args.wb_data[0]
 pop_df = pd.read_csv(wb_data+'population_total.csv')
 meta_df = pd.read_csv(wb_data+'Metadata_Country.csv')
