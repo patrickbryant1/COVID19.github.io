@@ -21,4 +21,4 @@ scale (β) = mean/shape = mean/(1/std^2) = mean*std^2
 ![survival_fraction.png](/COVID19.github.io/docs/assets/survival_fraction.png)
 
 ## Infection-to-death
-![ITD.png](/COVID19.github.io/docs/assets/ITD.png)
+![ITD.png](/COVID19.github.io/docs/assets/ITD.svg)

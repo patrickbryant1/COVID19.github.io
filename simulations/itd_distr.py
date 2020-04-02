@@ -76,7 +76,14 @@ def simulate(outdir):
 	#Infection to death
 	fig, ax = plt.subplots(figsize=(15,10))
 	itd = 0.01*(ito.pdf(days)+otd.pdf(days))
-	plot_pdf(days, itd, 'ITD')
+	ax.plot(days, itd, label='ITD')
+	ax.plot(days, ito.pdf(days)*0.01, label='ITO')
+	ax.plot(days, otd.pdf(days)*0.01, label='OTD')
+	ax.set_xlabel('Days')
+	ax.set_ylabel('Probability')
+	plt.legend()
+	fig.savefig(outdir+'ITD.svg', format='svg')
+	plt.close()
 
 	#Cumulated survival fraction
 	fig, ax = plt.subplots(figsize=(15,10))
