@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from scipy.stats import gamma
+from statsmodels.distributions.empirical_distribution import ECDF
 import numpy as np
 import seaborn as sns
 import pdb
@@ -31,7 +32,7 @@ def simulate(outdir):
 	'''
 
 	matplotlib.rcParams.update({'font.size': 20})
-	fig, ax = plt.subplots(figsize=(15,10))
+
 
 
 	#In R
@@ -49,12 +50,14 @@ def simulate(outdir):
 		return shape,scale
 
 	def plot_pdf(days, prob, name):
-		ax.plot(days,prob)
+		fig, ax = plt.subplots(figsize=(15,10))
+		ax.plot(days,prob, label = name)
 		ax.set_xlabel('Days')
-		ax.set_ylabel('PDF of ' + name)
-
+		ax.set_ylabel('Probability')
+		plt.legend()
 		fig.savefig(outdir+name+'.png', format='png')
 		plt.close()
+
 
 	#Infection to onset
 	ito_shape, ito_scale = conv_gamma_params(5.1, 0.86)
@@ -62,18 +65,30 @@ def simulate(outdir):
 	#Onset to death
 	otd_shape, otd_scale = conv_gamma_params(18.8, 0.45)
 	otd = gamma(a=otd_shape, scale = otd_scale) #a=shape
-	
-	#Days to model	
+
+	#Days to model
 	days = np.arange(0,61)
 
 	#PDF plots
 	plot_pdf(days, ito.pdf(days), 'ITO')
-	plot_pdf(days, otd.pdf(days), 'OTD')
+	plot_pdf(days, otd.pdf(days)*0.01, 'OTD')
+
 	#Infection to death
+	fig, ax = plt.subplots(figsize=(15,10))
 	itd = 0.01*(ito.pdf(days)+otd.pdf(days))
-	
-	
-	
+	plot_pdf(days, itd, 'ITD')
+
+	#Cumulated survival fraction
+	fig, ax = plt.subplots(figsize=(15,10))
+	ax.plot(days, 1-(0.01*np.cumsum(otd.pdf(days))))
+	ax.set_xlabel('Days')
+	ax.set_ylabel('Survival Fraction')
+	fig.savefig(outdir+'survival_fraction.png', format='png')
+	plt.close()
+
+
+
+
 #####MAIN#####
 args = parser.parse_args()
 
