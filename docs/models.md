@@ -28,3 +28,26 @@ scale (β) = mean/shape = mean/(1/std^2) = mean*std^2
 To model the number of infections over time we need to specify a serial
 interval distribution g with density g(τ), (the time between when a person gets infected and when they subsequently infect another other people), which we choose to be Gamma distributed: g ∼ Gamma (6.5,0.62).
 ![Serial.svg](./assets/Serial.svg)
+
+## Impact
+The impact of each intervention on R t,m is characterised by a set of parameters
+α 1 , ... , α 6 , with independent prior distributions chosen to be α k ∼ Gamma(0.5,1)
+
+![Impact.svg](./assets/Impact.svg)
+
+## R 0,m prior distribution
+The prior distribution for R 0 was chosen to be R 0,m ∼ Normal(2.4, |κ|) with κ ∼ Normal(0,0.5)
+
+Kappa
+![Kappa.svg](./assets/Kappa.svg)
+R0m
+![R0m.svg](./assets/R0m.svg)
+
+## Tau seed
+We assume that seeding of new infections begins 30 days before the day after a country has cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03).
+
+Tau
+![tau_seed.svg](./assets/tau_seed.svg)
+
+Exponential(τ)
+![Exp_tau.svg](./assets/Exp_tau.svg)

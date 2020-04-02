@@ -107,6 +107,37 @@ def simulate(outdir):
 	impact = gamma(a=impact_shape, scale = impact_scale) #a=shape
 	plot_pdf(np.arange(0,3), impact.pdf(np.arange(0,3)), 'Impact')
 
+	#The impacts α k are shared between all m countries and therefore they are informed by all available
+	#data. The prior distribution for R 0 was chosen to be
+	#R 0,m ∼ Normal(2.4, |κ|) with κ ∼ Normal(0,0.5)
+	K =  np.random.normal(0,0.5,1000) #mean and standard deviation
+	fig, ax = plt.subplots(figsize=(15,10))
+	sns.distplot(K, label = 'Kappa')
+	fig.savefig(outdir+'Kappa.svg', format='svg')
+	plt.close()
+	fig, ax = plt.subplots(figsize=(15,10))
+	R = []
+	for k in K:
+		R.append(np.random.normal(2.4,np.abs(k)))
+	sns.distplot(R)
+	fig.savefig(outdir+'R0m.svg', format='svg')
+	plt.close()
+
+	#We assume that seeding of new infections begins 30 days before the day after a country has
+	#cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of
+	#infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03).
+	fig, ax = plt.subplots(figsize=(15,10))
+	T = np.random.exponential(0.03, 1000)
+	sns.distplot(T)
+	fig.savefig(outdir+'tau_seed.svg', format='svg')
+	plt.close()
+	Exp_tau = []
+	for t in T:
+		Exp_tau.append(np.random.exponential(t))
+	fig, ax = plt.subplots(figsize=(15,10))
+	sns.distplot(Exp_tau)
+	fig.savefig(outdir+'Exp_tau.svg', format='svg')
+	plt.close()
 #####MAIN#####
 args = parser.parse_args()
 

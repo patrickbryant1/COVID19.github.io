@@ -53,7 +53,7 @@ def order_dates(ecdc_df):
 				i+=1
 
 	#Add indices
-	ecdc_df['days_since_outbreak'] = 0
+	ecdc_df['DaysSinceFirstReportedCase'] = 0
 	for i in range(len(ecdc_df)):
 		dateRep = ecdc_df['dateRep'].loc[i]
 		ecdc_df.at[i,'DaysSinceFirstReportedCase'] = dmy[dateRep]
@@ -105,7 +105,7 @@ def plot_per_country(ecdc_df, pop_meta_df, outdir):
 	#Plot deaths per country, where each country has at least 10 deaths
 	fig, ax = plt.subplots(figsize=(20,10))
 	death_df = ecdc_df[ecdc_df['deaths']>=10]
-	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'countryterritoryCode')
+	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'countriesAndTerritories')
 	fig.savefig(outdir+'deaths_10_per_country.png', format='png')
 	plt.close()
 	#Plot deaths grouped by income group
@@ -113,6 +113,27 @@ def plot_per_country(ecdc_df, pop_meta_df, outdir):
 	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'IncomeGroup')
 	fig.savefig(outdir+'deaths_10_income_group_country.png', format='png')
 	plt.close()
+
+	#Plot deaths grouped by relative country size
+	fig, ax = plt.subplots(figsize=(20,10))
+	sns.lineplot(x=death_df['DaysSinceFirstReportedCase'], y = death_df['deaths']/death_df['popData2018_millions'], hue='countriesAndTerritories', data = death_df)
+	fig.savefig(outdir+'deaths_10_size_norm.png', format='png')
+	plt.close()
+
+	#Plot deaths grouped by region
+	fig, ax = plt.subplots(figsize=(20,10))
+	sns.lineplot(x=death_df['DaysSinceFirstReportedCase'], y = death_df['deaths'], hue='Region', data = death_df)
+	fig.savefig(outdir+'deaths_10_region.png', format='png')
+	plt.close()
+
+	#Plot deaths per country, where each country has at least 100 deaths
+	death_df = ecdc_df[ecdc_df['deaths']>=100]
+	death_df = death_df[death_df['countriesAndTerritories']!='China'] #Drop China_deaths
+	fig, ax = plt.subplots(figsize=(20,10))
+	sns.lineplot(x='DaysSinceFirstReportedCase', y = 'deaths', data=death_df, hue = 'countriesAndTerritories')
+	fig.savefig(outdir+'deaths_100_per_country.png', format='png')
+	plt.close()
+	pdb.set_trace()
 
 
 

@@ -92,6 +92,29 @@
 interval distribution g with density g(τ), (the time between when a person gets infected and when they subsequently infect another other people), which we choose to be Gamma distributed: g ∼ Gamma (6.5,0.62).
 <img src="/COVID19.github.io/assets/Serial.svg" alt="Serial.svg" /></p>
 
+<h2 id="impact">Impact</h2>
+<p>The impact of each intervention on R t,m is characterised by a set of parameters
+α 1 , … , α 6 , with independent prior distributions chosen to be α k ∼ Gamma(0.5,1)</p>
+
+<p><img src="/COVID19.github.io/assets/Impact.svg" alt="Impact.svg" /></p>
+
+<h2 id="r-0m-prior-distribution">R 0,m prior distribution</h2>
+<p>The prior distribution for R 0 was chosen to be R 0,m ∼ Normal(2.4, |κ|) with κ ∼ Normal(0,0.5)</p>
+
+<p>Kappa
+<img src="./assets/Kappa.svg" alt="Kappa.svg" />
+R0m
+<img src="./assets/R0m.svg" alt="R0m.svg" /></p>
+
+<h2 id="tau-seed">Tau seed</h2>
+<p>We assume that seeding of new infections begins 30 days before the day after a country has cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of infections drawn from c 1,m , … , c 6,m ~Exponential(τ), where τ~Exponential(0.03).</p>
+
+<p>Tau
+<img src="./assets/tau_seed.svg" alt="tau_seed.svg" /></p>
+
+<p>Exponential(τ)
+<img src="./assets/Exp_tau.svg" alt="Exp_tau.svg" /></p>
+
   </div>
 
 </article>

@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-ECDC_CSV=/home/patrick/COVID19.github.io/ecdc/20200331.csv
+ECDC_CSV=/home/patrick/COVID19.github.io/ecdc/20200402.csv
 WB_DATA=/home/patrick/COVID19.github.io/worldbank/
 OUTDIR=/home/patrick/COVID19.github.io/docs/assets/
 
