@@ -18,11 +18,12 @@ scale (β) = mean/shape = mean/(1/std^2) = mean*std^2
 ## Onset-to-death: gamma(18.8, 0.45)
 ![OTD.png](./assets/OTD.png)
 
-## Survival Fraction for onset-to-death
-![survival_fraction.png](./assets/survival_fraction.png)
-
 ## Infection-to-death
+(infection fatality rate = 0.01)
 ![ITD.png](./assets/ITD.svg)
+
+## Survival Fraction for Infection-to-death
+![survival_fraction.png](./assets/survival_fraction.png)
 
 ## Serial interval distribution
 To model the number of infections over time we need to specify a serial
@@ -51,3 +52,7 @@ Tau
 
 Exponential(τ)
 ![Exp_tau.svg](./assets/Exp_tau.svg)
+
+## Expected number of deaths for a negative binomial distribution
+
+/home/patrick/COVID19.github.io/docs/assets/expectation_neg_binomial.svg

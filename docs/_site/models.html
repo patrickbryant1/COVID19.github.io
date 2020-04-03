@@ -81,11 +81,12 @@
 <h2 id="onset-to-death-gamma188-045">Onset-to-death: gamma(18.8, 0.45)</h2>
 <p><img src="/COVID19.github.io/assets/OTD.png" alt="OTD.png" /></p>
 
-<h2 id="survival-fraction-for-onset-to-death">Survival Fraction for onset-to-death</h2>
-<p><img src="/COVID19.github.io/assets/survival_fraction.png" alt="survival_fraction.png" /></p>
-
 <h2 id="infection-to-death">Infection-to-death</h2>
-<p><img src="/COVID19.github.io/assets/ITD.svg" alt="ITD.png" /></p>
+<p>(infection fatality rate = 0.01)
+<img src="/COVID19.github.io/assets/ITD.svg" alt="ITD.png" /></p>
+
+<h2 id="survival-fraction-for-infection-to-death">Survival Fraction for Infection-to-death</h2>
+<p><img src="/COVID19.github.io/assets/survival_fraction.png" alt="survival_fraction.png" /></p>
 
 <h2 id="serial-interval-distribution">Serial interval distribution</h2>
 <p>To model the number of infections over time we need to specify a serial
@@ -102,18 +103,22 @@ interval distribution g with density g(τ), (the time between when a person gets
 <p>The prior distribution for R 0 was chosen to be R 0,m ∼ Normal(2.4, |κ|) with κ ∼ Normal(0,0.5)</p>
 
 <p>Kappa
-<img src="./assets/Kappa.svg" alt="Kappa.svg" />
+<img src="/COVID19.github.io/assets/Kappa.svg" alt="Kappa.svg" />
 R0m
-<img src="./assets/R0m.svg" alt="R0m.svg" /></p>
+<img src="/COVID19.github.io/assets/R0m.svg" alt="R0m.svg" /></p>
 
 <h2 id="tau-seed">Tau seed</h2>
 <p>We assume that seeding of new infections begins 30 days before the day after a country has cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of infections drawn from c 1,m , … , c 6,m ~Exponential(τ), where τ~Exponential(0.03).</p>
 
 <p>Tau
-<img src="./assets/tau_seed.svg" alt="tau_seed.svg" /></p>
+<img src="/COVID19.github.io/assets/tau_seed.svg" alt="tau_seed.svg" /></p>
 
 <p>Exponential(τ)
-<img src="./assets/Exp_tau.svg" alt="Exp_tau.svg" /></p>
+<img src="/COVID19.github.io/assets/Exp_tau.svg" alt="Exp_tau.svg" /></p>
+
+<h2 id="expected-number-of-deaths-for-a-negative-binomial-distribution">Expected number of deaths for a negative binomial distribution</h2>
+
+<p>/home/patrick/COVID19.github.io/docs/assets/expectation_neg_binomial.svg</p>
 
   </div>
 

@@ -30,6 +30,15 @@ def conv_gamma_params(mean,std):
 
 	return shape,scale
 
+def plot_pdf(days, prob, name):
+	fig, ax = plt.subplots(figsize=(15,10))
+	ax.plot(days,prob, label = name)
+	ax.set_xlabel('Days')
+	ax.set_ylabel('Probability')
+	plt.legend()
+	fig.savefig(outdir+name+'.svg', format='svg')
+	plt.close()
+
 def infection_to_death():
 	'''Simulate the time from infection to death: Infection --> Onset --> Death'''
 
@@ -41,14 +50,7 @@ def infection_to_death():
     #shape (α) = 1/std^2
 	#scale (β) = mean/shape = mean/(1/std^2) = mean*std^2
 
-	def plot_pdf(days, prob, name):
-		fig, ax = plt.subplots(figsize=(15,10))
-		ax.plot(days,prob, label = name)
-		ax.set_xlabel('Days')
-		ax.set_ylabel('Probability')
-		plt.legend()
-		fig.savefig(outdir+name+'.svg', format='svg')
-		plt.close()
+
 
 
 	#Infection to onset
@@ -57,29 +59,21 @@ def infection_to_death():
 	#Onset to death
 	otd_shape, otd_scale = conv_gamma_params(18.8, 0.45)
 	otd = gamma(a=otd_shape, scale = otd_scale) #a=shape
-
+	#Infection to death: sum of ito and otd
+	itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
+	itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
 	#Days to model
 	days = np.arange(0,61)
 
 	#PDF plots
 	plot_pdf(days, ito.pdf(days), 'ITO')
 	plot_pdf(days, otd.pdf(days)*0.01, 'OTD')
+	plot_pdf(days, itd.pdf(days)*0.01, 'ITD')
 
-	#Infection to death
-	fig, ax = plt.subplots(figsize=(15,10))
-	itd = 0.01*(ito.pdf(days)+otd.pdf(days)) #Should convert itd to a callable distribution
-	ax.plot(days, itd, label='ITD')
-	ax.plot(days, ito.pdf(days)*0.01, label='ITO')
-	ax.plot(days, otd.pdf(days)*0.01, label='OTD')
-	ax.set_xlabel('Days')
-	ax.set_ylabel('Probability')
-	plt.legend()
-	fig.savefig(outdir+'ITD.svg', format='svg')
-	plt.close()
 
 	#Cumulated survival fraction
 	fig, ax = plt.subplots(figsize=(15,10))
-	ax.plot(days, 1-(0.01*np.cumsum(otd.pdf(days))))
+	ax.plot(days, 1-(0.01*np.cumsum(itd.pdf(days))))
 	ax.set_xlabel('Days')
 	ax.set_ylabel('Survival Fraction')
 	fig.savefig(outdir+'survival_fraction.svg', format='svg')
@@ -129,7 +123,7 @@ def impact_of_intervention():
 
 	return None
 
-death_seed():
+def death_seed():
 	'''We assume that seeding of new infections begins 30 days before the day after a country has
 	cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of
 	infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03).
@@ -213,4 +207,6 @@ def simulate(outdir):
 args = parser.parse_args()
 
 outdir = args.outdir[0]
+infection_to_death()
+pdb.set_trace()
 simulate(outdir)
