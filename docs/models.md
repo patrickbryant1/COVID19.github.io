@@ -8,6 +8,9 @@ title: Epidemic modeling
 ## R0 vs the final fraction infected
 ![R0_vs_tau](./assets/R0_vs_tau.png)
 
+## Psi - half normal distribution (mean=0, std=5)
+![psi.png](./assets/psi.svg)
+
 ## Infection-to-onset: gamma(mean=5.1, variance=0.86)
 shape (α) = 1/std^2
 

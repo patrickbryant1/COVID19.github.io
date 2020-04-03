@@ -163,6 +163,10 @@ def simulate(outdir):
 	#ψ ∼ Normal+(0,5). (half normal distribution)
 	psi = np.random.normal(0,5,10000) #mean and standard deviation
 	psi = psi[np.where(psi>0)] #Positive part of normal = half normal
+	fig, ax = plt.subplots(figsize=(15,10))
+	sns.distplot(psi)
+	fig.savefig(outdir+'psi.svg', format='svg')
+	plt.close()
 
 	def cov_neg_bin_params(mean,variance):
 		'''Returns n = number of successes, p = prob of success
