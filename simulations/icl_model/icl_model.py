@@ -42,20 +42,11 @@ def infection_to_death():
         '''Simulate the time from infection to death: Infection --> Onset --> Death'''
         #In R
         #x1 = rgammaAlt(5e6,mean1,cv1) # infection-to-onset ----> do all people who are infected get to onset?
-    #x2 = rgammaAlt(5e6,mean2,cv2) # onset-to-death
-    #From https://cran.r-project.org/web/packages/EnvStats/EnvStats.pdf
-
-        #Infection to onset
-        ito_shape, ito_scale = conv_gamma_params(5.1, 0.86)
-        ito = gamma(a=ito_shape, scale = ito_scale) #a=shape
-        #Onset to death
-        otd_shape, otd_scale = conv_gamma_params(18.8, 0.45)
-        otd = gamma(a=otd_shape, scale = otd_scale) #a=shape
+        #x2 = rgammaAlt(5e6,mean2,cv2) # onset-to-death
+        #From https://cran.r-project.org/web/packages/EnvStats/EnvStats.pdf
         #Infection to death: sum of ito and otd
         itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
-
-
         return itd
 
 def serial_interval_distribution():
@@ -112,18 +103,25 @@ def read_and_format_data(datadir):
 
         #Create stan data
         N2=75 #Increase for further forecast
+        dates = {}
+        reported_cases = {}
+        deaths_by_country = {}
+
         stan_data = {'M':len(countries),'N':[],'p':len(covariates.columns)-1,
                                 'x':np.arange(1,N2+1),
-                 'y':[],'covariate1':[],'covariate2':[],'covariate3':[],
-                                 'covariate4':[],'covariate5':[],'covariate6':[],
+                 'y':[],'schools_universities':[],'self_isolating_if_ill':[], 'public_events':[],
+                 'any_intervention':[], 'lockdown':[], 'social_distancing_encouraged':[],
                                  'deaths':[],'f':[],
                  'N0':6,'cases':[],'LENGTHSCALE':7,
                                  'SI':serial_interval[1:N2],
                  'EpidemicStart': []} # N0 = 6 to make it consistent with Rayleigh
 
-
+        #Infection to death distribution
+        itd = infection_to_death()
+        #Covariate names
+        covariate_names = ['schools_universities', 'self_isolating_if_ill','public_events', 'any_intervention', 'lockdown', 'social_distancing_encouraged']
         #Get data by country
-        for country in countries:
+        for country in ['Belgium']:
                 #Get fatality rate
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
                 #Get country epidemic data
@@ -140,12 +138,65 @@ def read_and_format_data(datadir):
 
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
-                for covariate in ['schools_universities', 'public_events', 'lockdown',
-                'social_distancing_encouraged', 'self_isolating_if_ill', 'any_intervention']:
+                for covariate in covariate_names:
                         cov_start = pd.to_datetime(country_cov[covariate].values[0]) #Get start of NPI
                         country_epidemic_data.loc[country_epidemic_data.index,covariate] = 0
                         country_epidemic_data.loc[country_epidemic_data['DateRep']>=cov_start, covariate]=1
-                pdb.set_trace()
+
+                #Save country dates
+                dates[country] = np.array(country_epidemic_data['DateRep'])
+                #Hazard estimation
+                N = len(country_epidemic_data)
+                forecast = N2 - N
+                if forecast <0: #If the number of predicted days are less than the number available
+                    N2 = N
+                    forecast = 0
+                stan_data['N'].append(N)
+
+                #Get hazard rates for all days in country data
+                h = np.zeros(N2) #N2 = N+forecast
+                f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+                for i in range(1,len(h)):
+                    #for each day t, the death prob is the area btw [t-0.5, t+0.5]
+                    #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
+                    #This will be the percent increase compared to the previous end interval
+                    h[i] = (cfr*(f[i*2+1]-f[i*2-1]))/(1-cfr*f[i*2-1])
+
+                #The number of deaths today is the sum of the past infections weighted by their probability of death,
+                #where the probability of death depends on the number of days since infection.
+                s = np.zeros(N2)
+                s[0] = 1
+                for i in range(1,len(s)):
+                    #h is the percent increase in death
+                    #s is thus the relative survival fraction
+                    #The cumulative survival fraction will be the previous
+                    #times the survival probability
+                    #These will be used to track how large a fraction is left after each day
+                    #In the end all of this will amount to the adjusted death fraction
+                    s[i] = s[i-1]*(1-h[i-1]) #Survival fraction
+
+                #Multiplying s and h yields fraction dead of fraction survived
+                f = s*h #This will be fed to the Stan Model
+
+                #Number of cases
+                y = np.zeros(N2)
+                y -=1 #Assign -1 for all forcast days
+                y[:N]=np.array(country_epidemic_data['Cases'])
+                stan_data['y'].append(y[0]) #only the index case
+                #Number of deaths
+                deaths = np.zeros(N2)
+                deaths -=1 #Assign -1 for all forcast days
+                deaths[:N]=np.array(country_epidemic_data['Deaths'])
+                deaths_by_country[country] = deaths
+
+                #Covariates - assign the same shape as others (N2)
+                for name in covariate_names:
+                    cov_i = np.zeros(N2)
+                    cov_i -= 1
+                    covariates[:N] = np.array(country_epidemic_data[name])
+                    stan_data[]
+
+                ###Append data to stan data
 
 
 
