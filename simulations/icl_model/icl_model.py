@@ -162,7 +162,7 @@ def read_and_format_data(datadir):
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
                 #Add epidemic start to stan data
-                stan_data['EpidemicStart'].append(death_index+1-di30)
+                stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
                 #Add 1 for when each NPI (covariate) has been active
@@ -244,8 +244,8 @@ def simulate(stan_data):
         '''
 
         sm =  pystan.StanModel(file='base.stan')
-        fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-
+        #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
+        fit = sm.sampling(m,data=stan_data,iter=200,warmup=100,chains=4,thin=4,control = list(adapt_delta = 0.90, max_treedepth = 10))
         pdb.set_trace()
 
 
@@ -255,6 +255,6 @@ datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
 stan_data = read_and_format_data(datadir)
-pdb.set_trace()
+
 #Simulate
 simulate(stan_data)
