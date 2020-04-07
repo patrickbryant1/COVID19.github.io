@@ -22,7 +22,8 @@ transformed data {
 }
 
 parameters {
-  real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
+  //real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
+  real mu[M];
   real<lower=0> alpha[6]; // Rt^exp-(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
@@ -80,7 +81,7 @@ model {
   for (m in 1:M){
       y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic - why 1/tau?
   }
-  phi ~ normal(0,5); //variance scaling for neg binomial
+  phi ~ normal(0.01,5); //variance scaling for neg binomial
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.4, kappa); // R distribution 
   alpha ~ gamma(.5,1); //alpha distribution - NPI
@@ -88,11 +89,15 @@ model {
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
     for(i in EpidemicStart[m]:N[m]){
-       deaths[i,m] ~ neg_binomial_2(E_deaths[i,m],phi); 
+       //print(phi);
+       deaths[i,m] ~ neg_binomial_2_log_lpmf(E_deaths[i,m],phi); 
+	//NegBinomial2Log(y|η,ϕ)=NegBinomial2(y|exp(η),ϕ)
+	//More stable if a function of exp(E_deaths) instead
     }
    }
 }
 
+//Out metrics
 generated quantities {
     matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
     matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
@@ -117,8 +122,8 @@ generated quantities {
         }
       }
       for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_lpmf(deaths[i,m] | E_deaths[i,m],phi); 
-        lp1[i,m] = neg_binomial_2_lpmf(deaths[i,m] | E_deaths0[i,m],phi); 
+        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi); 
+        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi); 
       }
     }
 

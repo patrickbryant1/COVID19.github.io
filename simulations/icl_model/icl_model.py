@@ -98,11 +98,9 @@ def ortho_poly_fit(x, degree = 1):
     Z = raw / np.sqrt(norm2)
     return Z, norm2, alpha
 
-def read_and_format_data(datadir):
+def read_and_format_data(datadir, countries):
         '''Read in and format all data needed for the model
         '''
-
-        countries = ["Denmark", "Italy", "Germany", "Spain", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'epidemic_data.csv')
@@ -120,6 +118,8 @@ def read_and_format_data(datadir):
         #Create stan data
         N2=75 #Increase for further forecast
         x = ortho_poly_fit(np.arange(1,N2+1),2) #orthogonal fit of number of days
+        dates_by_country = {} #Save for later plotting purposes
+        deaths_by_country = {}
         stan_data = {'M':len(countries), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
@@ -154,17 +154,20 @@ def read_and_format_data(datadir):
 
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['Countries.and.territories']==country]
-                dates = country_epidemic_data['DateRep']
-                decimal_dates = country_epidemic_data['t']
                 index = np.array(country_epidemic_data[country_epidemic_data['Cases']>0].index)
                 #Get all dates with at least 10 deaths
                 cum_deaths = country_epidemic_data['Deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
+
                 #Add epidemic start to stan data
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
+                #Save dates
+                dates_by_country[country] = country_epidemic_data['DateRep']
+                #Save deaths
+                deaths_by_country[country] = country_epidemic_data['Deaths']
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
                 for covariate in covariate_names:
@@ -234,7 +237,7 @@ def read_and_format_data(datadir):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-        return stan_data
+        return stan_data, covariate_names, dates_by_country, deaths_by_country
 
 
 
@@ -245,16 +248,76 @@ def simulate(stan_data):
 
         sm =  pystan.StanModel(file='base.stan')
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(m,data=stan_data,iter=200,warmup=100,chains=4,thin=4,control = list(adapt_delta = 0.90, max_treedepth = 10))
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
         pdb.set_trace()
+        rhat = fit['Rhat']
+        #Save fit
+        out = fit.extract()
+        for key in [*out.keys()]:
+            fit_param = out[key]
+            np.save(key+'.npy', fit_param)
 
+        return out
+
+def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country):
+    '''Visualize results
+    '''
+    #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
+    #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
+
+    #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
+    #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
+    cases = np.load(outdir+'prediction.npy', allow_pickle=True)
+    deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
+    Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
+    days= np.arange(0,75)
+    for i in range(len(countries)):
+        country= countries[i]
+        dates = dates_by_country[country]
+        dates = np.array(dates,  dtype='datetime64[D]')
+        #Plot cases (prediction)
+        country_cases = cases[:,:,i]
+        case_av =  np.average(country_cases,axis=0)
+        case_std =  np.std(country_cases,axis=0)
+        plot_shade_ci(days, dates, case_av,case_std,'Cases','plots/'+country+'_cases.png')
+
+        #Plot Deaths
+        country_deaths = deaths[:,:,i]
+        death_av =  np.average(country_deaths,axis=0)
+        death_std =  np.std(country_deaths,axis=0)
+        plot_shade_ci(days,dates,death_av,death_std,'Deaths','plots/'+country+'_deaths.png')
+
+        #Plot R
+        country_Rt = Rt[:,:,i]
+        Rt_av =  np.average(country_Rt,axis=0)
+        Rt_std =  np.std(country_Rt,axis=0)
+        plot_shade_ci(days,dates,Rt_av,Rt_std,'Rt','plots/'+country+'_Rt.png')
+
+
+def plot_shade_ci(x,dates,y,std,ylabel,outname):
+    '''Plot with shaded 95 % CI
+    '''
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(x,y, alpha=0.5, color='b', label='mean', linewidth = 1.0)
+    ax.fill_between(x, y - std, y+std, color='cornflowerblue', alpha=0.6)
+    ax.fill_between(x, y - 2*std, y+2*std, color='cornflowerblue', alpha=0.4)
+    ax.legend(loc='best')
+    ax.set_ylabel(ylabel)
+    ax.set_ylim([0,max(y)+2*max(std)])
+    ax.set_xlabel("Days")
+    xticks=np.arange(min(x),max(x)+1,7)
+    ax.set_xticks(xticks)
+    #ax.set_xticklabels(dates)
+    fig.savefig(outname, format = 'png')
 
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
-stan_data = read_and_format_data(datadir)
-
+countries = ["Denmark", "Italy", "Germany", "Spain", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+stan_data, covariate_names, dates_by_country, deaths_by_country = read_and_format_data(datadir, countries)
 #Simulate
-simulate(stan_data)
+out = simulate(stan_data)
+#Visualize
+visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country)
