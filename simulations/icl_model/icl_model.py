@@ -60,7 +60,7 @@ def serial_interval_distribution():
 
 def fix_covariates(covariates):
         '''Change dates so all covariates that happen after the lockdown
-        to have the same date as the lockdown.
+        to have the same date as the lockdown. Also add the covariate "any intervention"
         '''
         NPI = ['schools_universities',  'public_events',
         'social_distancing_encouraged', 'self_isolating_if_ill']
@@ -85,13 +85,13 @@ def read_and_format_data(datadir):
         '''Read in and format all data needed for the model
         '''
 
-        countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom",
-                        "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+        countries = ["Sweden", "Denmark"] #["Denmark", "Italy", "Germany", "Spain", "United_Kingdom",
+                        #"France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'epidemic_data.csv')
         #Convert to datetime
-        epidemic_data['DateRep'] = pd.to_datetime(epidemic_data['DateRep'])
+        epidemic_data['DateRep'] = pd.to_datetime(epidemic_data['DateRep'], format='%d/%m/%Y')
         ## get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
@@ -103,25 +103,30 @@ def read_and_format_data(datadir):
 
         #Create stan data
         N2=75 #Increase for further forecast
-        dates = {}
-        reported_cases = {}
-        deaths_by_country = {}
 
-        stan_data = {'M':len(countries),'N':[],'p':len(covariates.columns)-1,
-                                'x':np.arange(1,N2+1),
-                 'y':[],'schools_universities':[],'self_isolating_if_ill':[], 'public_events':[],
-                 'any_intervention':[], 'lockdown':[], 'social_distancing_encouraged':[],
-                                 'deaths':[],'f':[],
-                 'N0':6,'cases':[],'LENGTHSCALE':7,
-                                 'SI':serial_interval[1:N2],
-                 'EpidemicStart': []} # N0 = 6 to make it consistent with Rayleigh
+        stan_data = {'M':len(countries), #number of countries
+                    'N0':6, #number of days for which to impute infections
+                    'N':[], #days of observed data for country m. each entry must be <= N2
+                    'N2':N2,
+                    'x':np.arange(1,N2+1),#index of days
+                    'cases':np.zeros((N2,len(countries)), dtype=int), 'deaths':np.zeros((N2,len(countries)), dtype=int),
+                    'f':np.zeros((N2,len(countries)), dtype=int),
+                    'schools_universities':np.zeros((N2,len(countries)), dtype=int),
+                    'self_isolating_if_ill':np.zeros((N2,len(countries)), dtype=int),
+                    'public_events':np.zeros((N2,len(countries)), dtype=int),
+                    'any_intervention':np.zeros((N2,len(countries)), dtype=int),
+                    'lockdown':np.zeros((N2,len(countries)), dtype=int),
+                    'social_distancing_encouraged':np.zeros((N2,len(countries)), dtype=int),
+                    'SI':serial_interval.loc[0:N2-1]['fit'].values,
+                    'EpidemicStart': []}
 
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
         covariate_names = ['schools_universities', 'self_isolating_if_ill','public_events', 'any_intervention', 'lockdown', 'social_distancing_encouraged']
         #Get data by country
-        for country in ['Belgium']:
+        for c in range(len(countries)):
+                country = countries[c]
                 #Get fatality rate
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
                 #Get country epidemic data
@@ -131,10 +136,12 @@ def read_and_format_data(datadir):
                 index = np.array(country_epidemic_data[country_epidemic_data['Cases']>0].index)
                 #Get all dates with at least 10 deaths
                 cum_deaths = country_epidemic_data['Deaths'].cumsum()
-                death_index = np.array(cum_deaths[cum_deaths>=10])
+                death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
                 #Add epidemic start to stan data
                 stan_data['EpidemicStart'].append(death_index+1-di30)
+                #Get part of country_epidemic_data 30 days before day with at least 10 deaths
+                country_epidemic_data = country_epidemic_data.loc[di30:]
 
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
@@ -143,15 +150,17 @@ def read_and_format_data(datadir):
                         country_epidemic_data.loc[country_epidemic_data.index,covariate] = 0
                         country_epidemic_data.loc[country_epidemic_data['DateRep']>=cov_start, covariate]=1
 
-                #Save country dates
-                dates[country] = np.array(country_epidemic_data['DateRep'])
+
                 #Hazard estimation
                 N = len(country_epidemic_data)
+                stan_data['N'].append(N)
                 forecast = N2 - N
                 if forecast <0: #If the number of predicted days are less than the number available
                     N2 = N
                     forecast = 0
-                stan_data['N'].append(N)
+                    print('Forecast error!')
+                    pdb.set_trace()
+
 
                 #Get hazard rates for all days in country data
                 h = np.zeros(N2) #N2 = N+forecast
@@ -177,38 +186,45 @@ def read_and_format_data(datadir):
 
                 #Multiplying s and h yields fraction dead of fraction survived
                 f = s*h #This will be fed to the Stan Model
+                stan_data['f'][:,c]=f
 
                 #Number of cases
-                y = np.zeros(N2)
-                y -=1 #Assign -1 for all forcast days
-                y[:N]=np.array(country_epidemic_data['Cases'])
-                stan_data['y'].append(y[0]) #only the index case
+                cases = np.zeros(N2)
+                cases -=1 #Assign -1 for all forcast days
+                cases[:N]=np.array(country_epidemic_data['Cases'])
+                stan_data['cases'][:,c]=cases #only the index case
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
                 deaths[:N]=np.array(country_epidemic_data['Deaths'])
-                deaths_by_country[country] = deaths
+                stan_data['deaths'][:,c]=deaths
 
                 #Covariates - assign the same shape as others (N2)
                 for name in covariate_names:
                     cov_i = np.zeros(N2)
-                    cov_i -= 1
-                    covariates[:N] = np.array(country_epidemic_data[name])
-                    stan_data[]
+                    cov_i[:N] = np.array(country_epidemic_data[name])
+                    #Add covariate info to forecast
+                    cov_i[N:N2]=cov_i[N-1]
+                    stan_data[name][:,c] = cov_i
 
-                ###Append data to stan data
+        #Rename covariates to match stan model
+        for i in range(len(covariate_names)):
+            stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
+        pdb.set_trace()
+
+        return stan_data
 
 
 
-def simulate(outdir):
+def simulate(stan_data):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
         for parameter estimation.
         '''
 
-        serial = serial_interval_distribution() #Distribution
-        itd = infection_to_death()
+        sm =  pystan.StanModel(file='base.stan')
+        fit = sm.sampling(data=stan_data, iter=40,warmup=20,chains=2, n_jobs=2) #n_jobs = number of parallel processes - number of chains
 
-
+        pdb.set_trace()
 
 
 #####MAIN#####
@@ -216,6 +232,7 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
-read_and_format_data(datadir)
+stan_data = read_and_format_data(datadir)
+pdb.set_trace()
 #Simulate
-simulate(outdir)
+simulate(stan_data)
