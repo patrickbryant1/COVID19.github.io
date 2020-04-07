@@ -80,13 +80,29 @@ def fix_covariates(covariates):
                 covariates.at[i,'any_intervention'] = first_inter
         return covariates
 
+def ortho_poly_fit(x, degree = 1):
+    n = degree + 1
+    x = np.asarray(x).flatten()
+    if(degree >= len(np.unique(x))):
+            stop("'degree' must be less than number of unique points")
+    xbar = np.mean(x)
+    x = x - xbar
+    X = np.fliplr(np.vander(x, n))
+    q,r = np.linalg.qr(X)
+
+    z = np.diag(np.diag(r))
+    raw = np.dot(q, z)
+
+    norm2 = np.sum(raw**2, axis=0)
+    alpha = (np.sum((raw**2)*np.reshape(x,(-1,1)), axis=0)/norm2 + xbar)[:degree]
+    Z = raw / np.sqrt(norm2)
+    return Z, norm2, alpha
 
 def read_and_format_data(datadir):
         '''Read in and format all data needed for the model
         '''
 
-        countries = ["Sweden", "Denmark"] #["Denmark", "Italy", "Germany", "Spain", "United_Kingdom",
-                        #"France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+        countries = ["Denmark", "Italy", "Germany", "Spain", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'epidemic_data.csv')
@@ -103,22 +119,28 @@ def read_and_format_data(datadir):
 
         #Create stan data
         N2=75 #Increase for further forecast
-
+        x = ortho_poly_fit(np.arange(1,N2+1),2) #orthogonal fit of number of days
         stan_data = {'M':len(countries), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2,
-                    'x':np.arange(1,N2+1),#index of days
-                    'cases':np.zeros((N2,len(countries)), dtype=int), 'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((N2,len(countries)), dtype=int),
+                    'x':np.arange(1,N2+1),
+                    #'x1':x[0][:,1],#index of days
+                    #'x2':x[0][:,2],#index of days
+                    'cases':np.zeros((N2,len(countries)), dtype=int),
+                    'deaths':np.zeros((N2,len(countries)), dtype=int),
+                    'f':np.zeros((N2,len(countries))),
                     'schools_universities':np.zeros((N2,len(countries)), dtype=int),
                     'self_isolating_if_ill':np.zeros((N2,len(countries)), dtype=int),
                     'public_events':np.zeros((N2,len(countries)), dtype=int),
                     'any_intervention':np.zeros((N2,len(countries)), dtype=int),
                     'lockdown':np.zeros((N2,len(countries)), dtype=int),
                     'social_distancing_encouraged':np.zeros((N2,len(countries)), dtype=int),
+                    'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
-                    'EpidemicStart': []}
+                    #'p':7, #stan setting?
+                    'y':[] #index cases
+                    }
 
         #Infection to death distribution
         itd = infection_to_death()
@@ -129,6 +151,7 @@ def read_and_format_data(datadir):
                 country = countries[c]
                 #Get fatality rate
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
+
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['Countries.and.territories']==country]
                 dates = country_epidemic_data['DateRep']
@@ -142,7 +165,6 @@ def read_and_format_data(datadir):
                 stan_data['EpidemicStart'].append(death_index+1-di30)
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
-
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
                 for covariate in covariate_names:
@@ -192,7 +214,8 @@ def read_and_format_data(datadir):
                 cases = np.zeros(N2)
                 cases -=1 #Assign -1 for all forcast days
                 cases[:N]=np.array(country_epidemic_data['Cases'])
-                stan_data['cases'][:,c]=cases #only the index case
+                stan_data['cases'][:,c]=cases
+                stan_data['y'].append(int(cases[0])) # just the index case!#only the index case
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
@@ -210,7 +233,6 @@ def read_and_format_data(datadir):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-        pdb.set_trace()
 
         return stan_data
 
@@ -222,7 +244,7 @@ def simulate(stan_data):
         '''
 
         sm =  pystan.StanModel(file='base.stan')
-        fit = sm.sampling(data=stan_data, iter=40,warmup=20,chains=2, n_jobs=2) #n_jobs = number of parallel processes - number of chains
+        fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
 
         pdb.set_trace()
 

@@ -6,7 +6,7 @@ data {
   real<lower=0> x[N2]; // index of days (starting at 1)
   int cases[N2,M]; // reported cases
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
-  matrix[N2, M] f; // h * s
+  matrix[N2, M] f; // h * s - fraction dead
   matrix[N2, M] covariate1;
   matrix[N2, M] covariate2;
   matrix[N2, M] covariate3;
@@ -18,34 +18,38 @@ data {
 }
 
 transformed data {
-  real delta = 1e-5;
+  real delta = 1e-5; //We’ll need to add a small positive term,δ to the diagonal of the covariance 			    //matrix in order to ensure that our covariance matrix remains positive definite.
 }
 
 parameters {
-  real<lower=0> mu[M]; // intercept for Rt
-  real<lower=0> alpha[6]; // the hier term
-  real<lower=0> kappa;
-  real<lower=0> y[M];
-  real<lower=0> phi;
+  real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
+  real<lower=0> alpha[6]; // Rt^exp-(sum(alpha))
+  real<lower=0> kappa; //std of R
+  real<lower=0> y[M]; //
+  real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
   real<lower=0> tau;
 }
 
 transformed parameters {
-    real convolution;
-    matrix[N2, M] prediction = rep_matrix(0,N2,M);
+    real convolution; //value of integration
+    matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
+	//loop through all countries
     for (m in 1:M){
-      prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days
+      prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
+						//y is the index case
         Rt[,m] = mu[m] * exp(covariate1[,m] * (-alpha[1]) + covariate2[,m] * (-alpha[2]) +
         covariate3[,m] * (-alpha[3])+ covariate4[,m] * (-alpha[4]) + covariate5[,m] * (-alpha[5]) + 
-        covariate6[,m] * (-alpha[6])); // + GP[i]); // to_vector(x) * time_effect
+        covariate6[,m] * (-alpha[6])); // to_vector(x) * time_effect
+	//for all days from 7 (after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
-        convolution=0;
+        convolution=0;//reset
+	//loop through all days up to current
         for(j in 1:(i-1)) {
-          convolution += prediction[j, m]*SI[i-j]; // Correctd 22nd March
+          convolution += prediction[j, m]*SI[i-j]; //Cumulative cases today, sum(cases*rel.change due to SI)
         }
-        prediction[i, m] = Rt[i,m] * convolution;
+        prediction[i, m] = Rt[i,m] * convolution; //
       }
       
       E_deaths[1, m]= 1e-9;
