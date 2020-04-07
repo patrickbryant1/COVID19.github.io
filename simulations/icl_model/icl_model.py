@@ -249,8 +249,10 @@ def simulate(stan_data):
         sm =  pystan.StanModel(file='base.stan')
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
-        pdb.set_trace()
-        rhat = fit['Rhat']
+        s = fit.summary()
+        summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
+        summary.to_csv('summary.csv')
+
         #Save fit
         out = fit.extract()
         for key in [*out.keys()]:
@@ -318,6 +320,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Italy", "Germany", "Spain", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country = read_and_format_data(datadir, countries)
 #Simulate
-out = simulate(stan_data)
+#out = simulate(stan_data)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country)
