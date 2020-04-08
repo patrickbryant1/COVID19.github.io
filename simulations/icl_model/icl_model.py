@@ -273,20 +273,34 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
     #'prediction0', 'E_deaths0' = w/o intervention
 
+    subdir='without_log/'
     #Read in data
-    summary = pd.read_csv(outdir+'summary.csv')
-    cases = np.load(outdir+'prediction.npy', allow_pickle=True)
-    deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
-    Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
+    summary = pd.read_csv(outdir+subdir+'summary.csv')
+    cases = np.load(outdir+subdir+'prediction.npy', allow_pickle=True)
+    deaths = np.load(outdir+subdir+'E_deaths.npy', allow_pickle=True)
+    Rt =  np.load(outdir+subdir+'Rt.npy', allow_pickle=True)
+    alphas = np.load(outdir+subdir+'alpha.npy', allow_pickle=True)
     days = np.arange(0,75)
 
     #Plot rhat
-    # fig, ax = plt.subplots(figsize=(6, 4))
-    # ax.hist(summary['Rhat'])
-    # ax.set_ylabel('Count')
-    # ax.set_xlabel("Rhat")
-    # fig.savefig('plots/rhat.png', format='png')
-    # plt.close()
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.hist(summary['Rhat'])
+    ax.set_ylabel('Count')
+    ax.set_xlabel("Rhat")
+    fig.savefig(subdir+'plots/rhat.png', format='png')
+    plt.close()
+
+    #Plot alpha (Rt = R0*exp(-sum{alpha1-6}))
+    fig, ax = plt.subplots(figsize=(4, 4))
+    alpha_means = np.mean(alphas[2000:,:],axis=0) #2000 warmup rounds
+    alpha_stds = np.std(alphas[2000:,:],axis=0)
+    ax.barh(np.arange(6),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
+    ax.set_ylabel('Fractional reduction in R0')
+    covariate_names.insert(0,'')
+    ax.set_yticklabels(covariate_names,rotation='horizontal')
+    plt.tight_layout()
+    fig.savefig(subdir+'plots/alphas.png', format='png')
+    plt.close()
 
     #plot per country
     for i in range(len(countries)):
@@ -295,26 +309,25 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
         end = len(dates)#End of data
         dates = np.array(dates,  dtype='datetime64[D]')
         #Plot cases (prediction)
-        #These have to be log scaled as well somehow
-        country_cases = cases[:,:,i][:,:end]
+        country_cases = cases[:,:,i][2000:,:end]
         case_av =  np.average(country_cases,axis=0)
         case_std =  np.std(country_cases,axis=0)
         observed_country_cases = cases_by_country[country]
-        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases','plots/'+country+'_cases.png')
+        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases',subdir+'plots/'+country+'_cases.png')
 
         #Plot Deaths
-        country_deaths = deaths[:,:,i][:,:end]
-        country_deaths = np.exp(country_deaths)
+        country_deaths = deaths[:,:,i][2000:,:end]
+        #country_deaths = np.exp(country_deaths) #Necessary if neg_binomial_2_log_lpmf has been used in the stan model
         observed_country_deaths = deaths_by_country[country]
         death_av =  np.average(country_deaths,axis=0)
         death_std =  np.std(country_deaths,axis=0)
-        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths','plots/'+country+'_deaths.png')
+        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths',subdir+'plots/'+country+'_deaths.png')
 
         #Plot R
-        country_Rt = Rt[:,:,i][:,:end]
+        country_Rt = Rt[:,:,i][2000:,:end]
         Rt_av =  np.average(country_Rt,axis=0)
         Rt_std =  np.std(country_Rt,axis=0)
-        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt','plots/'+country+'_Rt.png')
+        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt',subdir+'plots/'+country+'_Rt.png')
 
 
 def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
@@ -336,6 +349,7 @@ def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
     plt.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
+
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
@@ -344,6 +358,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
 #Simulate
-out = simulate(stan_data)
+#out = simulate(stan_data)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)

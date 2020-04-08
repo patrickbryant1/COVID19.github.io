@@ -61,6 +61,7 @@ transformed parameters {
         E_deaths[i,m]= 0; //set to 0
         for(j in 1:(i-1)){
           E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
+							  //exp when neg_binomial_2_log_lpmf is used, otherwise without (when neg_binomial_2_log_lpmf
         }
       }
     }
@@ -81,7 +82,7 @@ model {
   for (m in 1:M){
       y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic - why 1/tau?
   }
-  phi ~ normal(0.01,5); //variance scaling for neg binomial
+  phi ~ normal(0,5); //variance scaling for neg binomial
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.4, kappa); // R distribution 
   alpha ~ gamma(.5,1); //alpha distribution - NPI
@@ -97,7 +98,7 @@ model {
    }
 }
 
-//Out metrics
+//Out metrics - baseline, without R0 reduction
 generated quantities {
     matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
     matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
