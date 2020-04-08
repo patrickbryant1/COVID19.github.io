@@ -54,27 +54,6 @@ def serial_interval_distribution():
 
         return serial
 
-def fix_covariates(covariates):
-        '''Change dates so all covariates that happen after the lockdown
-        to have the same date as the lockdown. Also add the covariate "any intervention"
-        '''
-        NPI = ['schools_universities',  'public_events',
-        'social_distancing_encouraged', 'self_isolating_if_ill']
-        #Add covariate for first intervention
-        covariates['any_intervention'] = ''
-
-        for i in range(len(covariates)):
-                row = covariates.iloc[i]
-                lockdown = row['lockdown']
-                first_inter = '2021-04-01' #Set one year ahead
-                for n in NPI:
-                        if row[n] < first_inter:
-                                first_inter = row[n]
-                        if row[n] > lockdown:
-                                covariates.at[i,n] = lockdown
-
-                covariates.at[i,'any_intervention'] = first_inter
-        return covariates
 
 def read_and_format_data(datadir, countries):
         '''Read in and format all data needed for the model
@@ -83,19 +62,16 @@ def read_and_format_data(datadir, countries):
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'ecdc_20200408.csv')
         #Convert to datetime
-        epidemic_data['DateRep'] = pd.to_datetime(epidemic_data['DateRep'], format='%d/%m/%Y')
+        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
         #NPI and their implementation dates
         covariates = pd.read_csv(datadir+'mobility.csv')
-        #Change dates
-        covariates = fix_covariates(covariates)
 
         #Create stan data
-        N2=75 #Increase for further forecast
-        x = ortho_poly_fit(np.arange(1,N2+1),2) #orthogonal fit of number of days
+        N2=85 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -104,26 +80,23 @@ def read_and_format_data(datadir, countries):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2,
                     'x':np.arange(1,N2+1),
-                    #'x1':x[0][:,1],#index of days
-                    #'x2':x[0][:,2],#index of days
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
-                    'retail_and_recreation':np.zeros((N2,len(countries)), dtype=int),
-                    'grocery_and_pharmacy':np.zeros((N2,len(countries)), dtype=int),
-                    'transit_stations':np.zeros((N2,len(countries)), dtype=int),
-                    'workplace',:np.zeros((N2,len(countries)), dtype=int),
-                    'residential':np.zeros((N2,len(countries)), dtype=int),
+                    'retail_and_recreation':np.zeros((N2,len(countries))),
+                    'grocery_and_pharmacy':np.zeros((N2,len(countries))),
+                    'transit_stations':np.zeros((N2,len(countries))),
+                    'workplace':np.zeros((N2,len(countries))),
+                    'residential':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
-                    #'p':7, #stan setting?
                     'y':[] #index cases
                     }
 
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
-        covariate_names = ['schools_universities', 'self_isolating_if_ill','public_events', 'any_intervention', 'lockdown', 'social_distancing_encouraged']
+        covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -131,30 +104,27 @@ def read_and_format_data(datadir, countries):
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
 
                 #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['Countries.and.territories']==country]
-                index = np.array(country_epidemic_data[country_epidemic_data['Cases']>0].index)
+                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+                #Sort on date
+                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+                #Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
+
                 #Get all dates with at least 10 deaths
-                cum_deaths = country_epidemic_data['Deaths'].cumsum()
+                cum_deaths = country_epidemic_data['deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
-
                 #Add epidemic start to stan data
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
+                print(country, len(country_epidemic_data)+30)
                 #Save dates
-                dates_by_country[country] = country_epidemic_data['DateRep']
+                dates_by_country[country] = country_epidemic_data['dateRep']
                 #Save deaths
-                deaths_by_country[country] = country_epidemic_data['Deaths']
+                deaths_by_country[country] = country_epidemic_data['deaths']
                 #Save cases
-                cases_by_country[country] = country_epidemic_data['Cases']
-                #Add 1 for when each NPI (covariate) has been active
-                country_cov = covariates[covariates['Country']==country]
-                for covariate in covariate_names:
-                        cov_start = pd.to_datetime(country_cov[covariate].values[0]) #Get start of NPI
-                        country_epidemic_data.loc[country_epidemic_data.index,covariate] = 0
-                        country_epidemic_data.loc[country_epidemic_data['DateRep']>=cov_start, covariate]=1
-
+                cases_by_country[country] = country_epidemic_data['cases']
 
                 #Hazard estimation
                 N = len(country_epidemic_data)
@@ -196,22 +166,29 @@ def read_and_format_data(datadir, countries):
                 #Number of cases
                 cases = np.zeros(N2)
                 cases -=1 #Assign -1 for all forcast days
-                cases[:N]=np.array(country_epidemic_data['Cases'])
+                cases[:N]=np.array(country_epidemic_data['cases'])
                 stan_data['cases'][:,c]=cases
                 stan_data['y'].append(int(cases[0])) # just the index case!#only the index case
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
-                deaths[:N]=np.array(country_epidemic_data['Deaths'])
+                deaths[:N]=np.array(country_epidemic_data['deaths'])
                 stan_data['deaths'][:,c]=deaths
 
                 #Covariates - assign the same shape as others (N2)
+                #Add value for when each mobility measure was changed (covariate) has been active
+                country_cov = covariates[covariates['Country']==country]
+                cov_start = pd.to_datetime(country_cov['date_of_change'].values[0]) #Get start of NPI
                 for name in covariate_names:
+                    cov_change = country_cov[name].values[0]
+                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
+                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=cov_start, name]=cov_change
                     cov_i = np.zeros(N2)
                     cov_i[:N] = np.array(country_epidemic_data[name])
                     #Add covariate info to forecast
                     cov_i[N:N2]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
+        pdb.set_trace()
 
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
@@ -226,7 +203,7 @@ def simulate(stan_data):
         for parameter estimation.
         '''
 
-        sm =  pystan.StanModel(file='base.stan')
+        sm =  pystan.StanModel(file='mobility.stan')
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
         s = fit.summary()
@@ -335,6 +312,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Norway", "Sweden"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
 #Simulate
-#out = simulate(stan_data)
+out = simulate(stan_data)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)

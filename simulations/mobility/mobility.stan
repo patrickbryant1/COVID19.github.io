@@ -12,7 +12,6 @@ data {
   matrix[N2, M] covariate3;
   matrix[N2, M] covariate4;
   matrix[N2, M] covariate5;
-  matrix[N2, M] covariate6;
   int EpidemicStart[M];
   real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
 }
@@ -24,7 +23,7 @@ transformed data {
 parameters {
   //real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
   real mu[M];
-  real<lower=0> alpha[6]; // Rt^exp-(sum(alpha))
+  real<lower=0> alpha[5]; // Rt^exp-(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
@@ -42,9 +41,9 @@ transformed parameters {
       prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
 						//y is the index case
 	//mu is the mean R for each country sampled in model
-        Rt[,m] = mu[m] * exp(covariate1[,m] * (-alpha[1]) + covariate2[,m] * (-alpha[2]) +
-        covariate3[,m] * (-alpha[3])+ covariate4[,m] * (-alpha[4]) + covariate5[,m] * (-alpha[5]) + 
-        covariate6[,m] * (-alpha[6])); // to_vector(x) * time_effect
+	// If the covariate is negative = less mobility, R will be decresed
+        Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
+        covariate3[,m] * (-alpha[3])+ covariate4[,m] * (-alpha[4]) + covariate5[,m] * (-alpha[5]); 
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
@@ -92,8 +91,6 @@ model {
     for(i in EpidemicStart[m]:N[m]){
        //print(phi);
        deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi); 
-	//NegBinomial2Log(y|η,ϕ)=NegBinomial2(y|exp(η),ϕ)
-	//More stable if a function of exp(E_deaths) instead
     }
    }
 }

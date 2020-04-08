@@ -117,7 +117,6 @@ def read_and_format_data(datadir, countries):
 
         #Create stan data
         N2=75 #Increase for further forecast
-        x = ortho_poly_fit(np.arange(1,N2+1),2) #orthogonal fit of number of days
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
