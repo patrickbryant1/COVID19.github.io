@@ -188,13 +188,12 @@ def read_and_format_data(datadir, countries):
                     #Add covariate info to forecast
                     cov_i[N:N2]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
-        pdb.set_trace()
 
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-        return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
+        return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2
 
 
 
@@ -218,7 +217,7 @@ def simulate(stan_data):
 
         return out
 
-def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country):
+def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -227,14 +226,14 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
     #'prediction0', 'E_deaths0' = w/o intervention
 
-    subdir='without_log/'
+    subdir='model_output/'
     #Read in data
     summary = pd.read_csv(outdir+subdir+'summary.csv')
     cases = np.load(outdir+subdir+'prediction.npy', allow_pickle=True)
     deaths = np.load(outdir+subdir+'E_deaths.npy', allow_pickle=True)
     Rt =  np.load(outdir+subdir+'Rt.npy', allow_pickle=True)
     alphas = np.load(outdir+subdir+'alpha.npy', allow_pickle=True)
-    days = np.arange(0,75)
+    days = np.arange(0,N2)
 
     #Plot rhat
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -248,7 +247,7 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     fig, ax = plt.subplots(figsize=(4, 4))
     alpha_means = np.mean(alphas[2000:,:],axis=0) #2000 warmup rounds
     alpha_stds = np.std(alphas[2000:,:],axis=0)
-    ax.barh(np.arange(6),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
+    ax.barh(np.arange(alphas.shape[1]),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
     ax.set_ylabel('Fractional reduction in R0')
     covariate_names.insert(0,'')
     ax.set_yticklabels(covariate_names,rotation='horizontal')
@@ -310,8 +309,8 @@ datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
 countries = ["Denmark", "Norway", "Sweden"]
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 #Simulate
-out = simulate(stan_data)
+#out = simulate(stan_data)
 #Visualize
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
+visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
