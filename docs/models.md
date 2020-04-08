@@ -56,6 +56,6 @@ Tau
 Exponential(τ)
 ![Exp_tau.svg](./assets/Exp_tau.svg)
 
-## Expected number of deaths for a negative binomial distribution
 
-/home/patrick/COVID19.github.io/docs/assets/expectation_neg_binomial.svg
+##ICL model for all 11 countries run with stan
+![icl_model.png](./assets/icl_model.png)
