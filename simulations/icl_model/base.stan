@@ -31,7 +31,7 @@ parameters {
   real<lower=0> tau;
 }
 
-//The transformed parameters are the prediction (cases) and E_deaths = cumulative(cases*f)
+//The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
     real convolution; //value of integration
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
@@ -50,7 +50,7 @@ transformed parameters {
         convolution=0;//reset
 	//loop through all days up to current
         for(j in 1:(i-1)) {
-          convolution += prediction[j, m]*SI[i-j]; //Cumulative cases today, sum(cases*rel.change due to SI)
+          convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
         }
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
@@ -60,7 +60,7 @@ transformed parameters {
       for (i in 2:N2){ 
         E_deaths[i,m]= 0; //set to 0
         for(j in 1:(i-1)){
-          E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Cumulative deaths today, sum(deaths*rel.change due to f)
+          E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
         }
       }
     }
@@ -90,7 +90,7 @@ model {
 	//Loop through from epidemic start to end of epidemic
     for(i in EpidemicStart[m]:N[m]){
        //print(phi);
-       deaths[i,m] ~ neg_binomial_2_log_lpmf(E_deaths[i,m],phi); 
+       deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi); 
 	//NegBinomial2Log(y|η,ϕ)=NegBinomial2(y|exp(η),ϕ)
 	//More stable if a function of exp(E_deaths) instead
     }
