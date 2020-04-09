@@ -13,6 +13,7 @@ from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
 import pystan
+import arviz as az
 
 import pdb
 
@@ -215,7 +216,6 @@ def simulate(stan_data, outdir):
         for key in [*out.keys()]:
             fit_param = out[key]
             np.save(outdir+key+'.npy', fit_param)
-
         return out
 
 def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2):
@@ -228,13 +228,16 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     #'prediction0', 'E_deaths0' = w/o mobility changes
 
     #Read in data
+    #For models fit using MCMC, also included in the summary are the
+    #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
+    #and the R-hat statistic (Rhat).
     summary = pd.read_csv(outdir+'summary.csv')
     cases = np.load(outdir+'prediction.npy', allow_pickle=True)
     deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
     Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
     alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
+    phi = np.load(outdir+'phi.npy', allow_pickle=True)
     days = np.arange(0,N2)
-
     #Plot rhat
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(summary['Rhat'])
@@ -243,66 +246,96 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     fig.savefig(outdir+'plots/rhat.png', format='png')
     plt.close()
 
+    #Plot values from each iteration as r function mcmc_parcoord
+    mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
+
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(4, 4))
-    pdb.set_trace
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
-        ax.bar()
-
-
-    alpha_means = np.mean(alphas[2000:,:],axis=0) #2000 warmup rounds
-    alpha_stds = np.std(alphas[2000:,:],axis=0)
-    ax.barh(np.arange(alphas.shape[1]),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
+        alpha_m = 1-np.exp(-alpha['mean'].values[0])
+        alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
+        alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
+        ax.scatter(i,alpha_m)
+        ax.plot([i]*2,[alpha_2_5,alpha_97_5])
+    ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     covariate_names.insert(0,'')
-    ax.set_yticklabels(covariate_names,rotation='horizontal')
+    ax.set_xticklabels(covariate_names,rotation='vertical')
     plt.tight_layout()
     fig.savefig(outdir+'plots/alphas.png', format='png')
     plt.close()
 
+
+
     #plot per country
-    for i in range(len(countries)):
-        country= countries[i]
+    for i in range(1,len(countries)+1):
+        country= countries[i-1]
         dates = dates_by_country[country]
         end = len(dates)#End of data
         dates = np.array(dates,  dtype='datetime64[D]')
-        #Plot cases (prediction)
-        country_cases = cases[:,:,i][2000:,:end]
-        case_av =  np.average(country_cases,axis=0)
-        case_std =  np.std(country_cases,axis=0)
+        means = {'prediction':[],'E_deaths':[], 'Rt':[]}
+        lower_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 2.5 %
+        higher_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 97.5 % - together 95 % CI
+        lower_bound25 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 25%
+        higher_bound75 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 55 % - together 75 % CI
+        #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
+        for j in range(1,N2+1):
+            for var in ['prediction', 'E_deaths', 'Rt']:
+                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+                means[var].append(var_ij['mean'].values[0])
+                lower_bound[var].append(var_ij['2.5%'].values[0])
+                higher_bound[var].append(var_ij['97.5%'].values[0])
+                lower_bound25[var].append(var_ij['25%'].values[0])
+                higher_bound75[var].append(var_ij['75%'].values[0])
+
+        #Plot cases
         observed_country_cases = cases_by_country[country]
-        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases',outdir+'plots/'+country+'_cases.png')
+        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',outdir+'plots/'+country+'_cases.png')
 
         #Plot Deaths
-        country_deaths = deaths[:,:,i][2000:,:end]
-        #country_deaths = np.exp(country_deaths) #Necessary if neg_binomial_2_log_lpmf has been used in the stan model
         observed_country_deaths = deaths_by_country[country]
-        death_av =  np.average(country_deaths,axis=0)
-        death_std =  np.std(country_deaths,axis=0)
-        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths',outdir+'plots/'+country+'_deaths.png')
+        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',outdir+'plots/'+country+'_deaths.png')
 
         #Plot R
-        country_Rt = Rt[:,:,i][2000:,:end]
-        Rt_av =  np.average(country_Rt,axis=0)
-        Rt_std =  np.std(country_Rt,axis=0)
-        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt',outdir+'plots/'+country+'_Rt.png')
+        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'], higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png')
 
+def mcmc_parcoord(cat_array, xtick_labels, outdir):
+    '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
+    '''
+    xtick_labels.insert(0,'')
+    fig, ax = plt.subplots(figsize=(8, 8))
+    for i in range(2000,cat_array.shape[0]): #loop through all iterations
+            ax.plot(np.arange(cat_array.shape[1]), cat_array[i,:], color = 'k', alpha = 0.1)
+    ax.plot(np.arange(cat_array.shape[1]), np.median(cat_array, axis = 0), color = 'r', alpha = 1)
+    ax.set_xticklabels(xtick_labels,rotation='vertical')
+    ax.set_ylim([-5,20])
+    plt.tight_layout()
+    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
+    plt.close()
 
-def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
+def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
+    dates = np.arange(start_date,np.datetime64('2020-04-16')) #Get dates
+    forecast = len(dates)
     fig, ax = plt.subplots(figsize=(4, 4))
+    #Plot observed dates
     if len(observed_y)>1:
-        ax.bar(x,observed_y)
-    ax.plot(x,y, alpha=0.5, color='b', label='mean', linewidth = 1.0)
-    ax.fill_between(x, y - std, y+std, color='cornflowerblue', alpha=0.6)
-    ax.fill_between(x, y - 2*std, y+2*std, color='cornflowerblue', alpha=0.4)
+        ax.bar(x[:end],observed_y)
+    ax.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
+    ax.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
+    ax.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
 
+    #Plot predicted dates
+    ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
+    ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
+    ax.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
+    #Plot formatting
     ax.legend(loc='best')
     ax.set_ylabel(ylabel)
-    ax.set_ylim([0,max(y)+2*max(std)])
-    xticks=np.arange(min(x),max(x)+1,7)
+    ax.set_ylim([0,max(y[:forecast])+max(higher_bound[:forecast])])
+    xticks=np.arange(0,forecast+1,7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
     plt.tight_layout()
@@ -314,7 +347,7 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
-countries = ["Denmark", "Norway", "Sweden"]
+countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 #Simulate
 #out = simulate(stan_data, outdir)
