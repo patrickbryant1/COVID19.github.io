@@ -61,7 +61,7 @@ def read_and_format_data(datadir, countries):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200408.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200409.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -72,7 +72,7 @@ def read_and_format_data(datadir, countries):
         covariates = pd.read_csv(datadir+'mobility.csv')
 
         #Create stan data
-        N2=85 #Increase for further forecast
+        N2=81 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -119,7 +119,7 @@ def read_and_format_data(datadir, countries):
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
-                print(country, len(country_epidemic_data)+30)
+                print(country, len(country_epidemic_data))
                 #Save dates
                 dates_by_country[country] = country_epidemic_data['dateRep']
                 #Save deaths
@@ -350,6 +350,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 #Simulate
-#out = simulate(stan_data, outdir)
+out = simulate(stan_data, outdir)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
