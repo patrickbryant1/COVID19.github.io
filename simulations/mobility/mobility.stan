@@ -7,11 +7,11 @@ data {
   int cases[N2,M]; // reported cases
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, M] f; // h * s - change in fraction dead each day
-  matrix[N2, M] covariate1;
-  matrix[N2, M] covariate2;
-  matrix[N2, M] covariate3;
-  matrix[N2, M] covariate4;
-  matrix[N2, M] covariate5;
+  matrix[N2, M] covariate1; //retail_and_recreation
+  matrix[N2, M] covariate2; //grocery_and_pharmacy
+  matrix[N2, M] covariate3; //transit_stations
+  matrix[N2, M] covariate4; //workplace
+  matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
   real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
 }
@@ -40,9 +40,10 @@ transformed parameters {
       prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
 						//y is the index case
 	//mu is the mean R for each country sampled in model
-	// If the covariate is negative = less mobility, R will be decresed
+	//For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
+  //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
         Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
-        covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) + covariate5[,m] * (alpha[5])); 
+        covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
@@ -52,10 +53,10 @@ transformed parameters {
         }
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
-      
+
       E_deaths[1, m]= 1e-9; //Start expectation - practically 0
 	//Step through all days til end of forecast
-      for (i in 2:N2){ 
+      for (i in 2:N2){
         E_deaths[i,m]= 0; //set to 0
         for(j in 1:(i-1)){
           E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
@@ -82,14 +83,14 @@ model {
   }
   phi ~ normal(0,5); //variance scaling for neg binomial
   kappa ~ normal(0,0.5); //std for R distr.
-  mu ~ normal(2.4, kappa); // R distribution 
+  mu ~ normal(2.4, kappa); // R distribution
   alpha ~ gamma(.5,1); //alpha distribution - NPI
 	//Loop through countries
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
     for(i in EpidemicStart[m]:N[m]){
        //print(phi);
-       deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi); 
+       deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
     }
    }
 }
@@ -110,7 +111,7 @@ generated quantities {
         }
         prediction0[i, m] = mu[m] * convolution0;
       }
-      
+
       E_deaths0[1, m]= 1e-9;
       for (i in 2:N2){
         E_deaths0[i,m]= 0;
@@ -119,8 +120,8 @@ generated quantities {
         }
       }
       for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi); 
-        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi); 
+        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
+        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
       }
     }
 

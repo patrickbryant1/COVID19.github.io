@@ -197,23 +197,24 @@ def read_and_format_data(datadir, countries):
 
 
 
-def simulate(stan_data):
+def simulate(stan_data, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
         for parameter estimation.
         '''
 
         sm =  pystan.StanModel(file='mobility.stan')
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
+        #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
-        summary.to_csv('summary.csv')
+        summary.to_csv(outdir+'summary.csv')
 
-        #Save fit
+        #Save fit - each parameter as np array
         out = fit.extract()
         for key in [*out.keys()]:
             fit_param = out[key]
-            np.save(key+'.npy', fit_param)
+            np.save(outdir+key+'.npy', fit_param)
 
         return out
 
@@ -224,15 +225,14 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
     #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
     #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-    #'prediction0', 'E_deaths0' = w/o intervention
+    #'prediction0', 'E_deaths0' = w/o mobility changes
 
-    subdir='model_output/'
     #Read in data
-    summary = pd.read_csv(outdir+subdir+'summary.csv')
-    cases = np.load(outdir+subdir+'prediction.npy', allow_pickle=True)
-    deaths = np.load(outdir+subdir+'E_deaths.npy', allow_pickle=True)
-    Rt =  np.load(outdir+subdir+'Rt.npy', allow_pickle=True)
-    alphas = np.load(outdir+subdir+'alpha.npy', allow_pickle=True)
+    summary = pd.read_csv(outdir+'summary.csv')
+    cases = np.load(outdir+'prediction.npy', allow_pickle=True)
+    deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
+    Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
+    alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
     days = np.arange(0,N2)
 
     #Plot rhat
@@ -240,11 +240,17 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
-    fig.savefig(subdir+'plots/rhat.png', format='png')
+    fig.savefig(outdir+'plots/rhat.png', format='png')
     plt.close()
 
-    #Plot alpha (Rt = R0*exp(-sum{alpha1-6}))
+    #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(4, 4))
+    pdb.set_trace
+    for i in range(1,6):
+        alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
+        ax.bar()
+
+
     alpha_means = np.mean(alphas[2000:,:],axis=0) #2000 warmup rounds
     alpha_stds = np.std(alphas[2000:,:],axis=0)
     ax.barh(np.arange(alphas.shape[1]),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
@@ -252,7 +258,7 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     covariate_names.insert(0,'')
     ax.set_yticklabels(covariate_names,rotation='horizontal')
     plt.tight_layout()
-    fig.savefig(subdir+'plots/alphas.png', format='png')
+    fig.savefig(outdir+'plots/alphas.png', format='png')
     plt.close()
 
     #plot per country
@@ -266,7 +272,7 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
         case_av =  np.average(country_cases,axis=0)
         case_std =  np.std(country_cases,axis=0)
         observed_country_cases = cases_by_country[country]
-        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases',subdir+'plots/'+country+'_cases.png')
+        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases',outdir+'plots/'+country+'_cases.png')
 
         #Plot Deaths
         country_deaths = deaths[:,:,i][2000:,:end]
@@ -274,13 +280,13 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
         observed_country_deaths = deaths_by_country[country]
         death_av =  np.average(country_deaths,axis=0)
         death_std =  np.std(country_deaths,axis=0)
-        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths',subdir+'plots/'+country+'_deaths.png')
+        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths',outdir+'plots/'+country+'_deaths.png')
 
         #Plot R
         country_Rt = Rt[:,:,i][2000:,:end]
         Rt_av =  np.average(country_Rt,axis=0)
         Rt_std =  np.std(country_Rt,axis=0)
-        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt',subdir+'plots/'+country+'_Rt.png')
+        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt',outdir+'plots/'+country+'_Rt.png')
 
 
 def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
@@ -311,6 +317,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Norway", "Sweden"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 #Simulate
-#out = simulate(stan_data)
+#out = simulate(stan_data, outdir)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
