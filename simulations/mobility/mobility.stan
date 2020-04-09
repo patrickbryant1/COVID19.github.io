@@ -25,7 +25,10 @@ parameters {
   real<lower=0> alpha[5]; // Rt^exp-(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
-  real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
+  //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
+  real<lower=0> phi_mu;
+  real<lower=0> phi_tau;
+  real<lower=0> phi_eta;
   real<lower=0> tau;
 }
 
@@ -35,6 +38,8 @@ transformed parameters {
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
+    real<lower=0> phi;
+    phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
 	//loop through all countries
     for (m in 1:M){
       prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
@@ -64,11 +69,7 @@ transformed parameters {
         }
       }
     }
-   /* for(m in 1:M) {
-     for(i in 1:N[m]) {
-      LowerBound[i,m] = prediction[i,m] * 10 - cases[i,m];
-     }
-    }*/
+
 
 }
 //We assume that seeding of new infections begins 30 days before the day after a country has
@@ -81,7 +82,10 @@ model {
   for (m in 1:M){
       y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic - why 1/tau?
   }
-  phi ~ normal(0,5); //variance scaling for neg binomial
+  //phi ~ normal(0,5); //variance scaling for neg binomial
+  phi_mu ~ normal(0, 5);
+  phi_tau ~ cauchy(0, 5);
+  phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.4, kappa); // R distribution
   alpha ~ gamma(.5,1); //alpha distribution - NPI
