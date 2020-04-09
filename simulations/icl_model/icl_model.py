@@ -357,6 +357,6 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
 #Simulate
-#out = simulate(stan_data)
+out = simulate(stan_data)
 #Visualize
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
+#visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
