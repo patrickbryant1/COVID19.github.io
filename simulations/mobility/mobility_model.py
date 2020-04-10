@@ -209,7 +209,8 @@ def read_and_format_data(datadir, countries):
                         date_d = row_d['dateRep'] #Extract date
                         try:
                             change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
-                            country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                            if not np.isnan(change_d):
+                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
                             continue
 
@@ -381,7 +382,7 @@ outdir = args.outdir[0]
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
-
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, outdir)
 #Visualize
