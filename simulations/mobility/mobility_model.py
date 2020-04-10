@@ -18,7 +18,6 @@ import arviz as az
 import pdb
 
 
-#matplotlib.rcParams.update({'font.size': 20})
 
 #Arguments for argparse module:
 parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
@@ -366,7 +365,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #Plot formatting
     ax.legend(loc='best')
     ax.set_ylabel(ylabel)
-    ax.set_ylim([0,max(y[:forecast])+max(higher_bound[:forecast])])
+    ax.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(0,forecast+1,7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
@@ -380,10 +379,9 @@ datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
-
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
-pdb.set_trace()
+
 #Simulate
-out = simulate(stan_data, outdir)
+#out = simulate(stan_data, outdir)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
