@@ -55,6 +55,25 @@ def serial_interval_distribution():
 
         return serial
 
+def read_stupid_csv(csvfile):
+    '''Read and format all mobility data
+    '''
+    extracted_lines = []
+    print(csvfile)
+    with open(csvfile) as file:
+        ln = 0
+        for line in file:
+            if ln == 0:
+                line = line.split()
+                extracted_lines.append(line[0]+','+line[1]+','+line[2]+'\n')
+                ln+=1
+            else:
+                extracted_lines.append(line)
+    #write
+    with open(csvfile, 'w') as file:
+        for line in extracted_lines:
+            file.write(line)
+    return None
 
 def read_and_format_data(datadir, countries):
         '''Read in and format all data needed for the model
@@ -68,8 +87,6 @@ def read_and_format_data(datadir, countries):
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
-        #NPI and their implementation dates
-        covariates = pd.read_csv(datadir+'mobility.csv')
 
         #Create stan data
         N2=81 #Increase for further forecast
@@ -84,10 +101,10 @@ def read_and_format_data(datadir, countries):
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
-                    'retail_and_recreation':np.zeros((N2,len(countries))),
-                    'grocery_and_pharmacy':np.zeros((N2,len(countries))),
-                    'transit_stations':np.zeros((N2,len(countries))),
-                    'workplace':np.zeros((N2,len(countries))),
+                    'retail':np.zeros((N2,len(countries))),
+                    'grocery':np.zeros((N2,len(countries))),
+                    'transit':np.zeros((N2,len(countries))),
+                    'work':np.zeros((N2,len(countries))),
                     'residential':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
@@ -97,7 +114,7 @@ def read_and_format_data(datadir, countries):
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
-        covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
+        covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -119,6 +136,9 @@ def read_and_format_data(datadir, countries):
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
+                #Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
+
                 print(country, len(country_epidemic_data))
                 #Save dates
                 dates_by_country[country] = country_epidemic_data['dateRep']
@@ -177,13 +197,24 @@ def read_and_format_data(datadir, countries):
                 stan_data['deaths'][:,c]=deaths
 
                 #Covariates - assign the same shape as others (N2)
-                #Add value for when each mobility measure was changed (covariate) has been active
-                country_cov = covariates[covariates['Country']==country]
-                cov_start = pd.to_datetime(country_cov['date_of_change'].values[0]) #Get start of NPI
+                #Mobility data from Google
+                geoId = country_epidemic_data['geoId'].values[0]
                 for name in covariate_names:
-                    cov_change = country_cov[name].values[0]
+                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
+                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
                     country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=cov_start, name]=cov_change
+                    end_date = max(country_cov_name['Date']) #Last date for mobility data
+                    for d in range(len(country_epidemic_data)): #loop through all country data
+                        row_d = country_epidemic_data.loc[d]
+                        date_d = row_d['dateRep'] #Extract date
+                        try:
+                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
+                            country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                        except:
+                            continue
+
+                    #Add the latest available mobility data to all remaining days (including the forecast days)
+                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
                     cov_i = np.zeros(N2)
                     cov_i[:N] = np.array(country_epidemic_data[name])
                     #Add covariate info to forecast
@@ -348,7 +379,9 @@ datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
+
 #Simulate
 out = simulate(stan_data, outdir)
 #Visualize
