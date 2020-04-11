@@ -236,17 +236,20 @@ def simulate(stan_data, outdir):
         '''
 
         sm =  pystan.StanModel(file='mobility.stan')
-        #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
+        #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=16,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
+        #print ("FIT:",fit)
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
+        print ("Saving: ",outdir+'summary.csv')
         summary.to_csv(outdir+'summary.csv')
 
         #Save fit - each parameter as np array
         out = fit.extract()
         for key in [*out.keys()]:
             fit_param = out[key]
+            #print("Output:",outdir+key+'.npy')
             np.save(outdir+key+'.npy', fit_param)
         return out
 
@@ -376,13 +379,18 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
 #####MAIN#####
 args = parser.parse_args()
-datadir = args.datadir[0]
-outdir = args.outdir[0]
+datadir = args.datadir[0]+"/"
+outdir = args.outdir[0]+"/"
+if not os.path.exists(outdir):
+    print('Creating folder: '+outdir)
+    os.system('mkdir -p ' + outdir)
+
 #Read data
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland","Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
+print ("TEST",outdir,stan_data)
 out = simulate(stan_data, outdir)
 #Visualize
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
