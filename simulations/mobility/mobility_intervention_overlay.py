@@ -39,22 +39,26 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
         country = countries[i]
         country_npi = intervention_df[intervention_df['Country']==country]
         geoId = geoIds[i]
-        fig, ax = plt.subplots(figsize=(8, 4)) #Figure
+        fig, ax = plt.subplots(figsize=(6, 4)) #Figure
         #Plot mobility curves
         for name in covariate_names:
             country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
             country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
+
             sns.lineplot(x=country_cov_name['Date'], y=np.array(country_cov_name['Change'], dtype=np.float32), label = name)
+
         #Plot NPIs
         y_npi = 0
         for npi in NPI:
             plt.axvline(pd.to_datetime(country_npi[npi].values[0]))
             plt.text(pd.to_datetime(country_npi[npi].values[0]), y_npi, npi)
-            y_npi -= 5
+            y_npi -= 10
         ax.set_ylabel('Relative Change')
         plt.legend()
+        plt.xticks(rotation=45)
         plt.tight_layout()
-        fig.savefig(outdir+'plots/'+country+'_overlay.png', format='png')
+
+        fig.savefig(outdir+'plots/'+country+'_mobility', format='png')
         plt.close()
 
 

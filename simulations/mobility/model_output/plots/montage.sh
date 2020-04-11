@@ -8,7 +8,6 @@ montage -label '%f' -pointsize 15 "Austria"  "Belgium" "Denmark" "France"  -tile
 montage -label '%f' -pointsize 15 "Germany" "Italy"  "Norway" "Spain" -tile 1x4 -geometry +2+2 'part2.png'
 montage -label '%f' -pointsize 15 "Sweden" "Switzerland" "United_Kingdom"   -tile 1x4 -geometry +2+2 'part3.png'
 
-montage -label '%f' -pointsize 15 "Austria_overlay.png"  "Belgium_overlay.png" "Denmark_overlay.png"  -tile 1x3 -geometry +2+2 'overlay_part1.png'
-montage -label '%f' -pointsize 15 "France_overlay.png" "Germany_overlay.png" "Italy_overlay.png"   -tile 1x3 -geometry +2+2 'overlay_part2.png'
-montage -label '%f' -pointsize 15  "Norway_overlay.png" "Spain_overlay.png" "Sweden_overlay.png" -tile 1x3 -geometry +2+2 'overlay_part3.png'
-montage -label '%f' -pointsize 15  "Switzerland_overlay.png" "United_Kingdom_overlay.png"   -tile 1x2 -geometry +2+2 'overlay_part4.png'
+#Montage mobility
+montage -label '%f' -pointsize 15 "Austria_mobility"  "Belgium_mobility" "Denmark_mobility" "France_mobility" "Germany_mobility" "Italy_mobility" "Norway_mobility" "Spain_mobility"  -tile 2x4 -geometry +2+2 'mobility_part1.png'
+montage -label '%f' -pointsize 15  "Sweden_mobility" "Switzerland_mobility" "United_Kingdom_mobility"   -tile 2x2 -geometry +2+2 'mobility_part2.png'
