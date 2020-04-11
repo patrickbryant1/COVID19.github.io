@@ -113,12 +113,8 @@ def read_and_format_data(datadir, countries):
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
-<<<<<<< HEAD
         covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
-        #covariate_names = ['retail_and_recreation','transit_stations','workplace','residential']
-=======
-        covariate_names = ['retail','grocery','transit','work','residential']
->>>>>>> 513a299a8414c441fd90755003fab85617153780
+        # covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -383,7 +379,7 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 outdir = args.outdir[0]
 #Read data
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland","Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
