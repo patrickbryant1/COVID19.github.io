@@ -61,7 +61,7 @@ def read_and_format_data(datadir, countries):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200409.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200410.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -98,6 +98,7 @@ def read_and_format_data(datadir, countries):
         itd = infection_to_death()
         #Covariate names
         covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
+        #covariate_names = ['retail_and_recreation','transit_stations','workplace','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
