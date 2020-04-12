@@ -60,7 +60,10 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
         ax.set_ylabel('Relative Change')
         ax.set_ylim([-100,40])
         plt.legend()
-        plt.xticks(rotation=45)
+        #X axis foratting
+        xtick_labels = np.arange(np.datetime64('2020-02-15'),np.datetime64('2020-03-30')) #Get dates - increase for longer foreacast
+        xticks=np.arange(0,len(xtick_labels),7)
+        ax.set_xticklabels(xtick_labels[xticks],rotation=45)
         plt.tight_layout()
 
         fig.savefig(outdir+'plots/'+country+'_mobility', format='png')
