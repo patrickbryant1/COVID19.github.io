@@ -87,7 +87,7 @@ model {
   phi_tau ~ cauchy(0, 5);
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
   kappa ~ normal(0,0.5); //std for R distr.
-  mu ~ normal(3.28, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
+  mu ~ normal(2.79, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
   alpha ~ gamma(.5,1); //alpha distribution - NPI
 	//Loop through countries
   for(m in 1:M){

@@ -3,7 +3,9 @@ layout: page
 title: Epidemic modeling
 ---
 
-# Epidemic modeling
+
+## Estimating the impact of mobility patterns on COVID-19 in 11 European countries
+![mobility_model.png](./assets/mobility_model.png)
 
 ## R0 vs the final fraction infected
 ![R0_vs_tau](./assets/R0_vs_tau.png)
@@ -55,7 +57,3 @@ Tau
 
 Exponential(τ)
 ![Exp_tau.svg](./assets/Exp_tau.svg)
-
-
-##ICL model for all 11 countries run with stan
-![icl_model.png](./assets/icl_model.png)
