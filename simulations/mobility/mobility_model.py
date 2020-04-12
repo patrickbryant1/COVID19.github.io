@@ -79,7 +79,7 @@ def read_and_format_data(datadir, countries):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200409.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200411.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -369,7 +369,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax.legend(loc='best')
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,max(higher_bound[:forecast])])
-    xticks=np.arange(0,forecast+1,7)
+    xticks=np.arange(0,forecast,7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
     plt.tight_layout()
