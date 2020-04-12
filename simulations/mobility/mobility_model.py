@@ -79,7 +79,7 @@ def read_and_format_data(datadir, countries):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200410.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200411.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -237,7 +237,7 @@ def simulate(stan_data, outdir):
 
         sm =  pystan.StanModel(file='mobility.stan')
         #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=16,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
         #print ("FIT:",fit)
         s = fit.summary()
@@ -253,7 +253,7 @@ def simulate(stan_data, outdir):
             np.save(outdir+key+'.npy', fit_param)
         return out
 
-def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2):
+def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,interventions):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -302,10 +302,9 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     plt.close()
 
 
-
     #plot per country
-    for i in range(1,len(countries)+1):
-        country= countries[i-1]
+    for i in range(0,len(countries)):
+        country= countries[i]
         dates = dates_by_country[country]
         end = len(dates)#End of data
         dates = np.array(dates,  dtype='datetime64[D]')
@@ -315,25 +314,31 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
         lower_bound25 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 25%
         higher_bound75 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
-        for j in range(1,N2+1):
+        for j in range(0,N2):
             for var in ['prediction', 'E_deaths', 'Rt']:
-                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j+1)+','+str(i+1)+']']
                 means[var].append(var_ij['mean'].values[0])
                 lower_bound[var].append(var_ij['2.5%'].values[0])
                 higher_bound[var].append(var_ij['97.5%'].values[0])
                 lower_bound25[var].append(var_ij['25%'].values[0])
                 higher_bound75[var].append(var_ij['75%'].values[0])
 
+        # Add ineter data.. and scale it
+        IV=[]
+        for j in range(0,len(interventions)):
+            IV+=[interventions[j][i]]
+                
         #Plot cases
         observed_country_cases = cases_by_country[country]
-        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',outdir+'plots/'+country+'_cases.png')
+        
+        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'],IV, 'Cases per day',outdir+'plots/'+country+'_cases.png')
 
         #Plot Deaths
         observed_country_deaths = deaths_by_country[country]
-        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',outdir+'plots/'+country+'_deaths.png')
+        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'],IV, 'Deaths per day',outdir+'plots/'+country+'_deaths.png')
 
         #Plot R
-        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'], higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png')
+        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'], higher_bound75['Rt'],IV,'Rt',outdir+'plots/'+country+'_Rt.png')
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
     '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
@@ -349,7 +354,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
     plt.close()
 
-def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname):
+def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,interventions,ylabel,outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-16')) #Get dates
@@ -361,6 +366,15 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
     ax.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
+
+    # Plot interventions
+    ax2 = ax.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:red'
+    ax2.set_ylabel('Intervention', color=color)  # we already handled the x-label with ax1
+    ax2.plot(x[:end],interventions[:end], alpha=0.5, color='r', label='Shift in intervention', linewidth = 2.0)
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.set_ylim[-1,1]
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
     #Plot predicted dates
     ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
@@ -381,16 +395,17 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]+"/"
 outdir = args.outdir[0]+"/"
-if not os.path.exists(outdir):
+if not os.path.exists(outdir+"plots/"):
     print('Creating folder: '+outdir)
-    os.system('mkdir -p ' + outdir)
+    os.system('mkdir -p ' + outdir+"/plots")
 
 #Read data
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland","Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
-print ("TEST",outdir,stan_data)
-out = simulate(stan_data, outdir)
+#print ("TEST",outdir,stan_data,stan_data['covariate4'])
+#out = simulate(stan_data, outdir)
 #Visualize
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
+
+visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data['covariate4'])
