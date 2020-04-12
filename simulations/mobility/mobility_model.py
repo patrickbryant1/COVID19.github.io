@@ -278,7 +278,7 @@ def visualize_results(outdir, countries, dates_by_country, deaths_by_country, ca
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
-    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace and residential']
+    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
@@ -351,7 +351,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-18')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-19')) #Get dates - increase for longer foreacast
     forecast = len(dates)
     fig, ax = plt.subplots(figsize=(4, 4))
     #Plot observed dates
@@ -369,7 +369,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax.legend(loc='best')
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,max(higher_bound[:forecast])])
-    xticks=np.arange(0,forecast,7)
+    xticks=np.arange(forecast-1,0,-7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
     plt.tight_layout()
@@ -380,11 +380,12 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]
 outdir = args.outdir[0]
+
 #Read data
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
-#out = simulate(stan_data, outdir)
+out = simulate(stan_data, outdir)
 #Visualize
 visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2)
