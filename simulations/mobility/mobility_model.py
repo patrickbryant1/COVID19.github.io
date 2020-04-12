@@ -373,7 +373,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_ylabel('Intervention', color=color)  # we already handled the x-label with ax1
     ax2.plot(x[:end],interventions[:end], alpha=0.5, color='r', label='Shift in intervention', linewidth = 2.0)
     ax2.tick_params(axis='y', labelcolor=color)
-    ax2.set_ylim[-1,1]
+    ax2.set_ylim([-1,1])
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
     #Plot predicted dates
