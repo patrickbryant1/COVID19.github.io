@@ -29,9 +29,13 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
     '''
     #Covariate names
     covariate_names = ['retail','grocery','transit','work','residential']
+    covariate_labels = {'retail':'retail and recreation', 'grocery':'grocery and pharmacy', 'transit':'transit stations','work':'workplace','residential': 'residential'}
     #NPIs
     NPI = ['schools_universities',  'public_events', 'lockdown',
         'social_distancing_encouraged', 'self_isolating_if_ill']
+
+    NPI_labels = {'schools_universities':'schools and universities',  'public_events': 'public events', 'lockdown': 'lockdown',
+        'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
     #Read in intervention dates
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
 
@@ -45,15 +49,16 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
             country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
             country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
 
-            sns.lineplot(x=country_cov_name['Date'], y=np.array(country_cov_name['Change'], dtype=np.float32), label = name)
+            sns.lineplot(x=country_cov_name['Date'], y=np.array(country_cov_name['Change'], dtype=np.float32), label = covariate_labels[name])
 
         #Plot NPIs
         y_npi = 0
         for npi in NPI:
             plt.axvline(pd.to_datetime(country_npi[npi].values[0]))
-            plt.text(pd.to_datetime(country_npi[npi].values[0]), y_npi, npi)
+            plt.text(pd.to_datetime(country_npi[npi].values[0]), y_npi, NPI_labels[npi])
             y_npi -= 10
         ax.set_ylabel('Relative Change')
+        ax.set_ylim([-100,40])
         plt.legend()
         plt.xticks(rotation=45)
         plt.tight_layout()

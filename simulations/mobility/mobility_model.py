@@ -88,7 +88,7 @@ def read_and_format_data(datadir, countries):
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
-        N2=81 #Increase for further forecast
+        N2=83 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -249,7 +249,7 @@ def simulate(stan_data, outdir):
             np.save(outdir+key+'.npy', fit_param)
         return out
 
-def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2):
+def visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -278,9 +278,11 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
+    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace and residential']
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
+
     fig, ax = plt.subplots(figsize=(4, 4))
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
@@ -291,7 +293,6 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
         ax.plot([i]*2,[alpha_2_5,alpha_97_5])
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
-    covariate_names.insert(0,'')
     ax.set_xticklabels(covariate_names,rotation='vertical')
     plt.tight_layout()
     fig.savefig(outdir+'plots/alphas.png', format='png')
@@ -322,8 +323,10 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
 
         #Plot cases
         observed_country_cases = cases_by_country[country]
+        #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',outdir+'plots/'+country+'_cases.png')
-
+        #Cumulative
+        plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']), np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']), 'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png')
         #Plot Deaths
         observed_country_deaths = deaths_by_country[country]
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',outdir+'plots/'+country+'_deaths.png')
@@ -348,7 +351,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-16')) #Get dates
+    dates = np.arange(start_date,np.datetime64('2020-04-18')) #Get dates - increase for longer foreacast
     forecast = len(dates)
     fig, ax = plt.subplots(figsize=(4, 4))
     #Plot observed dates
@@ -384,4 +387,4 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 #Simulate
 #out = simulate(stan_data, outdir)
 #Visualize
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2)
+visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2)
