@@ -100,11 +100,12 @@ def read_and_format_data(datadir, countries):
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
-                    'retail':np.zeros((N2,len(countries))),
-                    'grocery':np.zeros((N2,len(countries))),
-                    'transit':np.zeros((N2,len(countries))),
-                    'work':np.zeros((N2,len(countries))),
-                    'residential':np.zeros((N2,len(countries))),
+                     'line':np.zeros((N2,len(countries))),
+                    # 'retail':np.zeros((N2,len(countries))),
+                    # 'grocery':np.zeros((N2,len(countries))),
+                    # 'transit':np.zeros((N2,len(countries))),
+                    # 'work':np.zeros((N2,len(countries))),
+                    # 'residential':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
                     'y':[] #index cases
@@ -114,7 +115,8 @@ def read_and_format_data(datadir, countries):
         itd = infection_to_death()
         #Covariate names
         #covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
-        covariate_names = ['retail','grocery','transit','work','residential']
+        #covariate_names = ['retail','grocery','transit','work','residential']
+        covariate_names = ['line'] #'retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -200,22 +202,23 @@ def read_and_format_data(datadir, countries):
                 #Mobility data from Google
                 geoId = country_epidemic_data['geoId'].values[0]
                 for name in covariate_names:
-                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
-                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
-                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    end_date = max(country_cov_name['Date']) #Last date for mobility data
+                    #country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
+                    #country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
+                    country_epidemic_data.loc[country_epidemic_data.index,name] = 1 #Set all to 0
+                    end_date = max(country_epidemic_data['dateRep']) #Last date for mobility data
                     for d in range(len(country_epidemic_data)): #loop through all country data
                         row_d = country_epidemic_data.loc[d]
                         date_d = row_d['dateRep'] #Extract date
-                        try:
-                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
-                            if not np.isnan(change_d):
-                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
-                        except:
-                            continue
+                        country_epidemic_data.loc[d,name] = 0 #Add to right date in country data
+                        #try:
+                        #    change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
+                        #    if not np.isnan(change_d):
+                        #        country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                        #except:
+                        #    continue
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
+                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=1 # change_d
                     cov_i = np.zeros(N2)
                     cov_i[:N] = np.array(country_epidemic_data[name])
                     #Add covariate info to forecast
@@ -235,7 +238,7 @@ def simulate(stan_data, outdir):
         for parameter estimation.
         '''
 
-        sm =  pystan.StanModel(file='mobility.stan')
+        sm =  pystan.StanModel(file='freer0.stan')
         #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
@@ -377,15 +380,15 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim([-1,1])
-    ax2.legend(loc='upper left',fontsize=6)
+    ax2.legend(loc='lower left')
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    ax.set(title=outname)
+
     #Plot predicted dates
     ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
     ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
     ax.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
     #Plot formatting
-    ax.legend(loc='lower left',fontsize=6)
+    ax.legend(loc='best')
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(0,forecast+1,7)
@@ -413,4 +416,5 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 #Visualize
 
 in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
+in_names={}
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data,in_names)

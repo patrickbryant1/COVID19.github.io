@@ -100,10 +100,10 @@ def read_and_format_data(datadir, countries):
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
-                    'retail':np.zeros((N2,len(countries))),
-                    'grocery':np.zeros((N2,len(countries))),
-                    'transit':np.zeros((N2,len(countries))),
-                    'work':np.zeros((N2,len(countries))),
+                    # 'retail':np.zeros((N2,len(countries))),
+                    # 'grocery':np.zeros((N2,len(countries))),
+                    # 'transit':np.zeros((N2,len(countries))),
+                    # 'work':np.zeros((N2,len(countries))),
                     'residential':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
@@ -114,7 +114,8 @@ def read_and_format_data(datadir, countries):
         itd = infection_to_death()
         #Covariate names
         #covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
-        covariate_names = ['retail','grocery','transit','work','residential']
+        #covariate_names = ['retail','grocery','transit','work','residential']
+        covariate_names = ['residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -235,7 +236,7 @@ def simulate(stan_data, outdir):
         for parameter estimation.
         '''
 
-        sm =  pystan.StanModel(file='mobility.stan')
+        sm =  pystan.StanModel(file='mobility_residential.stan')
         #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
@@ -409,8 +410,9 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 
 #Simulate
 #print ("TEST",outdir,stan_data)
-#out = simulate(stan_data, outdir)
+out = simulate(stan_data, outdir)
 #Visualize
 
-in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
+#in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
+in_names={'covariate1':'residential'}
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data,in_names)
