@@ -253,7 +253,7 @@ def simulate(stan_data, outdir):
             np.save(outdir+key+'.npy', fit_param)
         return out
 
-def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,interventions):
+def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,interventions,in_names):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -324,10 +324,11 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
                 higher_bound75[var].append(var_ij['75%'].values[0])
 
         # Add ineter data.. and scale it
-        IV=[]
-        for j in range(0,len(interventions)):
-            IV+=[interventions[j][i]]
-                
+        IV={}
+        for key in in_names.keys():
+            IV[in_names[key]]=[]
+            for j in range(0,len(interventions[key])):
+                IV[in_names[key]]+=[interventions[key][j][i]]
         #Plot cases
         observed_country_cases = cases_by_country[country]
         
@@ -371,9 +372,12 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2 = ax.twinx()  # instantiate a second axes that shares the same x-axis
     color = 'tab:red'
     ax2.set_ylabel('Intervention', color=color)  # we already handled the x-label with ax1
-    ax2.plot(x[:end],interventions[:end], alpha=0.5, color='r', label='Shift in intervention', linewidth = 2.0)
+    for key in interventions.keys():
+        ax2.plot(x[:end],interventions[key][:end], alpha=0.5,  label=key, linewidth = 1.0,linestyle="dotted") #,color='r',
+
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim([-1,1])
+    ax2.legend(loc='lower left')
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
     #Plot predicted dates
@@ -404,8 +408,9 @@ countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France",
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
-#print ("TEST",outdir,stan_data,stan_data['covariate4'])
+#print ("TEST",outdir,stan_data)
 #out = simulate(stan_data, outdir)
 #Visualize
 
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data['covariate4'])
+in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
+visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data,in_names)
