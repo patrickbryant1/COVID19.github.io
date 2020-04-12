@@ -211,6 +211,6 @@ def simulate(outdir):
 args = parser.parse_args()
 
 outdir = args.outdir[0]
+impact_of_intervention()
 infection_to_death()
-pdb.set_trace()
 simulate(outdir)
