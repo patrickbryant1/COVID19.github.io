@@ -79,7 +79,7 @@ def read_and_format_data(datadir, countries):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200411.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -88,7 +88,7 @@ def read_and_format_data(datadir, countries):
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
-        N2=83 #Increase for further forecast
+        N2=84 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -351,7 +351,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-19')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
     fig, ax = plt.subplots(figsize=(4, 4))
     #Plot observed dates
