@@ -22,7 +22,7 @@ transformed data {
 
 parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
-  real<lower=0> alpha[5]; // Rt^exp-(sum(alpha))
+  real<lower=0> alpha[1]; // Rt^exp-(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi

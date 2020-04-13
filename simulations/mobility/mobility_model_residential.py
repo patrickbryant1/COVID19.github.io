@@ -5,6 +5,7 @@
 import argparse
 import sys
 import os
+import re
 import glob
 import pandas as pd
 import matplotlib
@@ -287,7 +288,7 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(4, 4))
-    for i in range(1,6):
+    for i in range(1,len(covariate_names)+1):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
         alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
@@ -380,7 +381,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_ylim([-1,1])
     ax2.legend(loc='upper left',fontsize=6)
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    ax.set(title=outname)
+    title=re.sub(r'\..*','',re.sub(r'.*/','',outname))
+    ax.set(title=title)
     #Plot predicted dates
     ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
     ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
@@ -410,7 +412,7 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 
 #Simulate
 #print ("TEST",outdir,stan_data)
-out = simulate(stan_data, outdir)
+# out = simulate(stan_data, outdir)
 #Visualize
 
 #in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}

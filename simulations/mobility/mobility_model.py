@@ -4,6 +4,7 @@
 
 import argparse
 import sys
+import re
 import os
 import glob
 import pandas as pd
@@ -379,7 +380,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_ylim([-1,1])
     ax2.legend(loc='upper left',fontsize=6)
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    ax.set(title=outname)
+    title=re.sub(r'\..*','',re.sub(r'.*/','',outname))
+    ax.set(title=title)
     #Plot predicted dates
     ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
     ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
@@ -404,7 +406,7 @@ if not os.path.exists(outdir+"plots/"):
     os.system('mkdir -p ' + outdir+"/plots")
 
 #Read data
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland","Greece","Portugal","Netherlands"]
+countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland" ] # ,"Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
