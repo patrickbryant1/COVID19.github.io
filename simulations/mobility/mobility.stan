@@ -4,7 +4,7 @@ data {
   int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
-  int cases[N2,M]; // reported cases
+  int cases[N2,M]; // reported cases, not used in model - estimated through SI
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, M] f; // h * s - change in fraction dead each day
   matrix[N2, M] covariate1; //retail_and_recreation
@@ -87,7 +87,7 @@ model {
   phi_tau ~ cauchy(0, 5);
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
   kappa ~ normal(0,0.5); //std for R distr.
-  mu ~ normal(2.4, kappa); // R distribution
+  mu ~ normal(2.79, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
   alpha ~ gamma(.5,1); //alpha distribution - NPI
 	//Loop through countries
   for(m in 1:M){
