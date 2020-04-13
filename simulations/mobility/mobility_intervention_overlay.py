@@ -49,12 +49,13 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
             country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
             country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
 
-            sns.lineplot(x=country_cov_name['Date'], y=np.array(country_cov_name['Change'], dtype=np.float32), label = covariate_labels[name])
+            ax.plot(np.array(country_cov_name['Date'], dtype="datetime64[D]"), np.array(country_cov_name['Change'], dtype=np.float32), label = covariate_labels[name])
 
         #Plot NPIs
         y_npi = 0
         for npi in NPI:
             plt.axvline(pd.to_datetime(country_npi[npi].values[0]))
+            ax.scatter(pd.to_datetime(country_npi[npi].values[0]), y_npi)
             plt.text(pd.to_datetime(country_npi[npi].values[0]), y_npi, NPI_labels[npi])
             y_npi -= 10
         ax.set_ylabel('Relative Change')
@@ -63,8 +64,9 @@ def read_data_and_plot(datadir, countries, geoIds, outdir):
         #X axis foratting
         xtick_labels = np.arange(np.datetime64('2020-02-15'),np.datetime64('2020-03-30')) #Get dates - increase for longer foreacast
         xticks=np.arange(0,len(xtick_labels),7)
-        ax.set_xticklabels(xtick_labels[xticks],rotation=45)
+        ax.set_xticklabels(xtick_labels[xticks],rotation=90)
         plt.tight_layout()
+        pdb.set_trace()
 
         fig.savefig(outdir+'plots/'+country+'_mobility', format='png')
         plt.close()
