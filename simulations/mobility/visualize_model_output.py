@@ -19,67 +19,18 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
+parser = argparse.ArgumentParser(description = '''Visuaize results from model using google mobility data and most of the ICL response team model''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-###FUNCTIONS###
-
-###DISTRIBUTIONS###
-def conv_gamma_params(mean,std):
-        '''Returns converted shape and scale params
-        shape (α) = 1/std^2
-        scale (β) = mean/shape
-        '''
-        shape = 1/(std*std)
-        scale = mean/shape
-
-        return shape,scale
-
-def infection_to_death():
-        '''Simulate the time from infection to death: Infection --> Onset --> Death'''
-        #Infection to death: sum of ito and otd
-        itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
-        itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
-        return itd
-
-def serial_interval_distribution():
-        '''Models the the time between when a person gets infected and when
-        they subsequently infect another other people
-        '''
-        serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
-        serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
-
-        return serial
-
-def read_stupid_csv(csvfile):
-    '''Read and format all mobility data
-    '''
-    extracted_lines = []
-    print(csvfile)
-    with open(csvfile) as file:
-        ln = 0
-        for line in file:
-            if ln == 0:
-                line = line.split()
-                extracted_lines.append(line[0]+','+line[1]+','+line[2]+'\n')
-                ln+=1
-            else:
-                extracted_lines.append(line)
-    #write
-    with open(csvfile, 'w') as file:
-        for line in extracted_lines:
-            file.write(line)
-    return None
-
-def read_and_format_data(datadir, countries):
+def read_and_format_data(datadir, countries, N2):
         '''Read in and format all data needed for the model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -88,7 +39,6 @@ def read_and_format_data(datadir, countries):
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
-        N2=84 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -227,36 +177,166 @@ def read_and_format_data(datadir, countries):
 
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2
 
+def visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2):
+    '''Visualize results
+    '''
+    #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
+    #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
+    #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
+    #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
+    #'prediction0', 'E_deaths0' = w/o mobility changes
+
+    #Read in data
+    #For models fit using MCMC, also included in the summary are the
+    #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
+    #and the R-hat statistic (Rhat).
+    summary = pd.read_csv(outdir+'summary.csv')
+    cases = np.load(outdir+'prediction.npy', allow_pickle=True)
+    deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
+    Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
+    alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
+    phi = np.load(outdir+'phi.npy', allow_pickle=True)
+    days = np.arange(0,N2)
+    #Plot rhat
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.hist(summary['Rhat'])
+    ax.set_ylabel('Count')
+    ax.set_xlabel("Rhat")
+    fig.savefig(outdir+'plots/rhat.png', format='png')
+    plt.close()
+
+    #Plot values from each iteration as r function mcmc_parcoord
+    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
+    mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
+
+    #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
+
+    fig, ax = plt.subplots(figsize=(4, 4))
+    for i in range(1,6):
+        alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
+        alpha_m = 1-np.exp(-alpha['mean'].values[0])
+        alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
+        alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
+        ax.scatter(i,alpha_m)
+        ax.plot([i]*2,[alpha_2_5,alpha_97_5])
+    ax.set_ylim([0,1])
+    ax.set_ylabel('Fractional reduction in R0')
+    ax.set_xticklabels(covariate_names,rotation='vertical')
+    plt.tight_layout()
+    fig.savefig(outdir+'plots/alphas.png', format='png')
+    plt.close()
 
 
-def simulate(stan_data, outdir):
-        '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
-        for parameter estimation.
-        '''
 
-        sm =  pystan.StanModel(file='mobility.stan')
-        #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
-        #Save summary
-        s = fit.summary()
-        summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
-        summary.to_csv(outdir+'summary.csv')
+    #plot per country
+    #Read in intervention dates
+    intervention_df = pd.read_csv(datadir+'interventions_only.csv')
+    for i in range(1,len(countries)+1):
+        country= countries[i-1]
+        country_npi = intervention_df[intervention_df['Country']==country]
+        dates = dates_by_country[country]
+        end = len(dates)#End of data
+        dates = np.array(dates,  dtype='datetime64[D]')
+        means = {'prediction':[],'E_deaths':[], 'Rt':[]}
+        lower_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 2.5 %
+        higher_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 97.5 % - together 95 % CI
+        lower_bound25 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 25%
+        higher_bound75 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 55 % - together 75 % CI
+        #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
+        for j in range(1,N2+1):
+            for var in ['prediction', 'E_deaths', 'Rt']:
+                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+                means[var].append(var_ij['mean'].values[0])
+                lower_bound[var].append(var_ij['2.5%'].values[0])
+                higher_bound[var].append(var_ij['97.5%'].values[0])
+                lower_bound25[var].append(var_ij['25%'].values[0])
+                higher_bound75[var].append(var_ij['75%'].values[0])
 
-        #Save fit - each parameter as np array
-        out = fit.extract()
-        for key in [*out.keys()]:
-            fit_param = out[key]
-            np.save(outdir+key+'.npy', fit_param)
-        return out
+        #Plot cases
+        observed_country_cases = cases_by_country[country]
+        #Per day
+        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',outdir+'plots/'+country+'_cases.png',country_npi)
+        #Cumulative
+        plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']), np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']), 'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi)
+        #Plot Deaths
+        observed_country_deaths = deaths_by_country[country]
+        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',outdir+'plots/'+country+'_deaths.png',country_npi)
+        #Plot R
+        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'], higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi)
+        print(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2)))#Print for table
+
+def mcmc_parcoord(cat_array, xtick_labels, outdir):
+    '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
+    '''
+    xtick_labels.insert(0,'')
+    fig, ax = plt.subplots(figsize=(8, 8))
+    for i in range(2000,cat_array.shape[0]): #loop through all iterations
+            ax.plot(np.arange(cat_array.shape[1]), cat_array[i,:], color = 'k', alpha = 0.1)
+    ax.plot(np.arange(cat_array.shape[1]), np.median(cat_array, axis = 0), color = 'r', alpha = 1)
+    ax.set_xticklabels(xtick_labels,rotation='vertical')
+    ax.set_ylim([-5,20])
+    plt.tight_layout()
+    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
+    plt.close()
+
+def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi):
+    '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
+    '''
+    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
+    forecast = len(dates)
+    fig, ax = plt.subplots(figsize=(4, 4))
+    #Plot observed dates
+    if len(observed_y)>1:
+        ax.bar(x[:end],observed_y)
+    ax.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
+    ax.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
+    ax.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
+
+    #Plot predicted dates
+    ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
+    ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
+    ax.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
+
+    #Plot NPIs
+    #NPIs
+    NPI = ['schools_universities',  'public_events', 'lockdown',
+        'social_distancing_encouraged', 'self_isolating_if_ill']
+
+    NPI_labels = {'schools_universities':'schools and universities',  'public_events': 'public events', 'lockdown': 'lockdown',
+        'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
+    # if ylabel == 'Rt':
+    #     y_npi = max(higher_bound)
+    #     y_npi = y_npi*0.7
+    #     y_step = y_npi/10
+    #
+    #     for npi in NPI:
+    #         xval = np.where(dates==pd.to_datetime(country_npi[npi].values[0]))[0][0]
+    #         ax.axvline(xval)
+    #         ax.scatter(xval, y_npi)
+    #         plt.text(xval, y_npi, NPI_labels[npi])
+    #         y_npi -= 1
+    #
+    # #Plot formatting
+    ax.legend(loc='best')
+    ax.set_ylabel(ylabel)
+    ax.set_ylim([0,max(higher_bound[:forecast])])
+    xticks=np.arange(forecast-1,0,-7)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(dates[xticks],rotation='vertical')
+    plt.tight_layout()
+    fig.savefig(outname, format = 'png')
+    plt.close()
+
+
 
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 outdir = args.outdir[0]
+N2=84 #Number of days to model. Increase for further forecast
 
 #Read data
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
-
-#Simulate
-out = simulate(stan_data, outdir)
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
+#Visualize
+visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2)
