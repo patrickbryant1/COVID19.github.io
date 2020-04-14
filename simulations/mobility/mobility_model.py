@@ -13,7 +13,6 @@ from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
 import pystan
-import arviz as az
 
 import pdb
 
