@@ -23,14 +23,15 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
+parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, N2):
+def read_and_format_data(datadir, countries, days_to_simulate):
         '''Read in and format all data needed for the model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         ## get CFR
@@ -38,37 +39,24 @@ def read_and_format_data(datadir, countries, N2):
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
-        #Create stan data
-        dates_by_country = {} #Save for later plotting purposes
-        deaths_by_country = {}
-        cases_by_country = {}
-        stan_data = {'M':len(countries), #number of countries
-                    'N0':6, #number of days for which to impute infections
-                    'N':[], #days of observed data for country m. each entry must be <= N2
-                    'N2':N2,
-                    'x':np.arange(1,N2+1),
-                    'cases':np.zeros((N2,len(countries)), dtype=int),
-                    'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((N2,len(countries))),
-                    'retail':np.zeros((N2,len(countries))),
-                    'grocery':np.zeros((N2,len(countries))),
-                    'transit':np.zeros((N2,len(countries))),
-                    'work':np.zeros((N2,len(countries))),
-                    'residential':np.zeros((N2,len(countries))),
-                    'EpidemicStart': [],
-                    'SI':serial_interval.loc[0:N2-1]['fit'].values,
-                    'y':[] #index cases
+        #Model data - to be used for plotting
+        stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
+                    'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
+                    'cases_by_country':np.zeros((days_to_simulate,len(countries))),
+                    'days_by_country':np.zeros(len(countries)),
+                    'retail':np.zeros((days_to_simulate,len(countries))),
+                    'grocery':np.zeros((days_to_simulate,len(countries))),
+                    'transit':np.zeros((days_to_simulate,len(countries))),
+                    'work':np.zeros((days_to_simulate,len(countries))),
+                    'residential':np.zeros((days_to_simulate,len(countries))),
                     }
 
-        #Infection to death distribution
-        itd = infection_to_death()
+
         #Covariate names
         covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
-                #Get fatality rate
-                cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
 
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
@@ -81,71 +69,30 @@ def read_and_format_data(datadir, countries, N2):
                 cum_deaths = country_epidemic_data['deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
-                #Add epidemic start to stan data
-                stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
                 #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
 
                 print(country, len(country_epidemic_data))
-                #Save dates
-                dates_by_country[country] = country_epidemic_data['dateRep']
-                #Save deaths
-                deaths_by_country[country] = country_epidemic_data['deaths']
-                #Save cases
-                cases_by_country[country] = country_epidemic_data['cases']
-
-                #Hazard estimation
+                #Check that foreacast is really a forecast
                 N = len(country_epidemic_data)
-                stan_data['N'].append(N)
-                forecast = N2 - N
+                stan_data['days_by_country'][c]=N
+                forecast = days_to_simulate - N
                 if forecast <0: #If the number of predicted days are less than the number available
-                    N2 = N
+                    days_to_simulate = N
                     forecast = 0
                     print('Forecast error!')
                     pdb.set_trace()
 
+                #Save dates
+                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
+                #Save deaths
+                stan_data['deaths_by_country'][:N,c] = country_epidemic_data['deaths']
+                #Save cases
+                stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
 
-                #Get hazard rates for all days in country data
-                h = np.zeros(N2) #N2 = N+forecast
-                f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
-                for i in range(1,len(h)):
-                    #for each day t, the death prob is the area btw [t-0.5, t+0.5]
-                    #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
-                    #This will be the percent increase compared to the previous end interval
-                    h[i] = (cfr*(f[i*2+1]-f[i*2-1]))/(1-cfr*f[i*2-1])
-
-                #The number of deaths today is the sum of the past infections weighted by their probability of death,
-                #where the probability of death depends on the number of days since infection.
-                s = np.zeros(N2)
-                s[0] = 1
-                for i in range(1,len(s)):
-                    #h is the percent increase in death
-                    #s is thus the relative survival fraction
-                    #The cumulative survival fraction will be the previous
-                    #times the survival probability
-                    #These will be used to track how large a fraction is left after each day
-                    #In the end all of this will amount to the adjusted death fraction
-                    s[i] = s[i-1]*(1-h[i-1]) #Survival fraction
-
-                #Multiplying s and h yields fraction dead of fraction survived
-                f = s*h #This will be fed to the Stan Model
-                stan_data['f'][:,c]=f
-
-                #Number of cases
-                cases = np.zeros(N2)
-                cases -=1 #Assign -1 for all forcast days
-                cases[:N]=np.array(country_epidemic_data['cases'])
-                stan_data['cases'][:,c]=cases
-                stan_data['y'].append(int(cases[0])) # just the index case!#only the index case
-                #Number of deaths
-                deaths = np.zeros(N2)
-                deaths -=1 #Assign -1 for all forcast days
-                deaths[:N]=np.array(country_epidemic_data['deaths'])
-                stan_data['deaths'][:,c]=deaths
-
-                #Covariates - assign the same shape as others (N2)
+                #Covariates - assign the same shape as others (days_to_simulate)
                 #Mobility data from Google
                 geoId = country_epidemic_data['geoId'].values[0]
                 for name in covariate_names:
@@ -165,19 +112,15 @@ def read_and_format_data(datadir, countries, N2):
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
                     country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
-                    cov_i = np.zeros(N2)
+                    cov_i = np.zeros(days_to_simulate)
                     cov_i[:N] = np.array(country_epidemic_data[name])
                     #Add covariate info to forecast
-                    cov_i[N:N2]=cov_i[N-1]
+                    cov_i[N:days_to_simulate]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
 
-        #Rename covariates to match stan model
-        for i in range(len(covariate_names)):
-            stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
+        return stan_data
 
-        return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2
-
-def visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2):
+def visualize_results(outdir, countries, stan_data):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -196,7 +139,7 @@ def visualize_results(outdir, countries, dates_by_country, deaths_by_country, ca
     Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
     alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
     phi = np.load(outdir+'phi.npy', allow_pickle=True)
-    days = np.arange(0,N2)
+    days = np.arange(0,days_to_simulate)
     #Plot rhat
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(summary['Rhat'])
@@ -234,7 +177,8 @@ def visualize_results(outdir, countries, dates_by_country, deaths_by_country, ca
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
-        dates = dates_by_country[country]
+        dates = stan_data['dates_by_country'][i]
+        pdb.set_trace()
         end = len(dates)#End of data
         dates = np.array(dates,  dtype='datetime64[D]')
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -243,7 +187,7 @@ def visualize_results(outdir, countries, dates_by_country, deaths_by_country, ca
         lower_bound25 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 25%
         higher_bound75 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
-        for j in range(1,N2+1):
+        for j in range(1,days_to_simulate+1):
             for var in ['prediction', 'E_deaths', 'Rt']:
                 var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
                 means[var].append(var_ij['mean'].values[0])
@@ -263,6 +207,7 @@ def visualize_results(outdir, countries, dates_by_country, deaths_by_country, ca
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'], lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',outdir+'plots/'+country+'_deaths.png',country_npi)
         #Plot R
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'], higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi)
+        #Print R mean at beginning and end of model
         print(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2)))#Print for table
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
@@ -299,24 +244,27 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     #Plot NPIs
     #NPIs
-    NPI = ['schools_universities',  'public_events', 'lockdown',
+    NPI = ['public_events', 'schools_universities',  'lockdown',
         'social_distancing_encouraged', 'self_isolating_if_ill']
 
     NPI_labels = {'schools_universities':'schools and universities',  'public_events': 'public events', 'lockdown': 'lockdown',
         'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
-    # if ylabel == 'Rt':
-    #     y_npi = max(higher_bound)
-    #     y_npi = y_npi*0.7
-    #     y_step = y_npi/10
-    #
-    #     for npi in NPI:
-    #         xval = np.where(dates==pd.to_datetime(country_npi[npi].values[0]))[0][0]
-    #         ax.axvline(xval)
-    #         ax.scatter(xval, y_npi)
-    #         plt.text(xval, y_npi, NPI_labels[npi])
-    #         y_npi -= 1
-    #
-    # #Plot formatting
+    if ylabel == 'Rt':
+        y_npi = max(higher_bound)
+        y_npi = y_npi*0.7
+        y_step = y_npi/10
+
+        for npi in NPI:
+            xval = np.where(dates==pd.to_datetime(country_npi[npi].values[0]))[0][0]
+            ax.scatter(xval, y_npi)
+            plt.text(xval, y_npi, NPI_labels[npi])
+            y_npi -= 1
+
+
+    #Plot mobility data
+    covariate_labels = {'retail':'retail and recreation', 'grocery':'grocery and pharmacy', 'transit':'transit stations','work':'workplace','residential': 'residential'}
+
+    #Plot formatting
     ax.legend(loc='best')
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,max(higher_bound[:forecast])])
@@ -333,10 +281,9 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
+days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
-N2=84 #Number of days to model. Increase for further forecast
-
 #Read data
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate)
 #Visualize
-visualize_results(outdir, countries, dates_by_country, deaths_by_country, cases_by_country, N2)
+visualize_results(outdir, countries, stan_data)
