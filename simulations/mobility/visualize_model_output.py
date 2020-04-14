@@ -174,13 +174,18 @@ def visualize_results(outdir, countries, stan_data):
     #plot per country
     #Read in intervention dates
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
+    dict_keys(['dates_by_country', 'deaths_by_country', 'cases_by_country', 'days_by_country', 'retail', 'grocery', 'transit', 'work', 'residential'])
+
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
-        dates = stan_data['dates_by_country'][i]
-        pdb.set_trace()
-        end = len(dates)#End of data
-        dates = np.array(dates,  dtype='datetime64[D]')
+        #Get att stan data for country i
+        dates = stan_data['dates_by_country'][:,i]
+        observed_country_deaths = stan_data['deaths_by_country'][:,i]
+        observed_country_cases = stan_data['cases_by_country'][:,i]
+        end = stan_data['days_by_country'][i]#End of data
+
+        #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
         lower_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 2.5 %
         higher_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 97.5 % - together 95 % CI
@@ -197,7 +202,6 @@ def visualize_results(outdir, countries, stan_data):
                 higher_bound75[var].append(var_ij['75%'].values[0])
 
         #Plot cases
-        observed_country_cases = cases_by_country[country]
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'], higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',outdir+'plots/'+country+'_cases.png',country_npi)
         #Cumulative
