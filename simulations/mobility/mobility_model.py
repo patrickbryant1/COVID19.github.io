@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
+parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -229,12 +230,12 @@ def read_and_format_data(datadir, countries):
 
 
 
-def simulate(stan_data, outdir):
+def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
         for parameter estimation.
         '''
 
-        sm =  pystan.StanModel(file='mobility.stan')
+        sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
@@ -253,11 +254,12 @@ def simulate(stan_data, outdir):
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
+stan_model = args.stan_model[0]
 outdir = args.outdir[0]
 
 #Read data
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+#countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
 #Simulate
-out = simulate(stan_data, outdir)
+out = simulate(stan_data, stan_model, outdir)
