@@ -55,26 +55,6 @@ def serial_interval_distribution():
 
         return serial
 
-def read_stupid_csv(csvfile):
-    '''Read and format all mobility data
-    '''
-    extracted_lines = []
-    print(csvfile)
-    with open(csvfile) as file:
-        ln = 0
-        for line in file:
-            if ln == 0:
-                line = line.split()
-                extracted_lines.append(line[0]+','+line[1]+','+line[2]+'\n')
-                ln+=1
-            else:
-                extracted_lines.append(line)
-    #write
-    with open(csvfile, 'w') as file:
-        for line in extracted_lines:
-            file.write(line)
-    return None
-
 def read_and_format_data(datadir, countries):
         '''Read in and format all data needed for the model
         '''
