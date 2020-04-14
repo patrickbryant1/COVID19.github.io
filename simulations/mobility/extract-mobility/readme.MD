@@ -16,6 +16,7 @@ Then extract the images using the script extract-plots.sh
 ## Digitize this
 
 Manual for using the program [https://apps.automeris.io/wpd/](https://apps.automeris.io/wpd/)
+Download: https://automeris.io/WebPlotDigitizer/download.html
 
 Please not that the dates on the X-axis are assumed to be number of days from 2020-01-01 on
 Make sure this is correct before running the extraction
