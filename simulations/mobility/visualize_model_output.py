@@ -179,15 +179,15 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
         #Get att stan data for country i
-        dates = stan_data['dates_by_country'][:,i]
-        observed_country_deaths = stan_data['deaths_by_country'][:,i]
-        observed_country_cases = stan_data['cases_by_country'][:,i]
-        end = int(stan_data['days_by_country'][i])#End of data for country i
-        country_retail = stan_data['retail'][:,i]
-        country_grocery= stan_data['grocery'][:,i]
-        country_transit = stan_data['transit'][:,i]
-        country_work = stan_data['work'][:,i]
-        country_residential = stan_data['residential'][:,i]
+        dates = stan_data['dates_by_country'][:,i-1]
+        observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
+        observed_country_cases = stan_data['cases_by_country'][:,i-1]
+        end = int(stan_data['days_by_country'][i-1])#End of data for country i
+        country_retail = stan_data['retail'][:,i-1]
+        country_grocery= stan_data['grocery'][:,i-1]
+        country_transit = stan_data['transit'][:,i-1]
+        country_work = stan_data['work'][:,i-1]
+        country_residential = stan_data['residential'][:,i-1]
 
         #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -213,9 +213,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
         np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
         #Plot Deaths
-        observed_country_deaths = deaths_by_country[country]
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
         outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
@@ -248,7 +247,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig, ax1 = plt.subplots(figsize=(6, 4))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:end],observed_y[:end])
+        ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
     ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
@@ -266,8 +265,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
     NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's',
         'social_distancing_encouraged':'p', 'self_isolating_if_ill':'d'}
-    y_npi = max(higher_bound[:forecast])
-    y_npi = y_npi*0.7
+    y_npi = max(higher_bound[:forecast])*0.9
     y_step = y_npi/10
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
@@ -290,7 +288,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     #Plot formatting
     #ax1
-    ax1.legend(loc='best')
+    ax1.legend(loc='best', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
@@ -299,9 +297,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #ax2
     ax2.set_ylabel('Relative change')
     ax2.set_ylim([-1,0.4])
+    ax2.legend(loc='best', frameon=False)
     fig.tight_layout()
-    plt.show()
-    pdb.set_trace()
     fig.savefig(outname, format = 'png')
     plt.close()
 
@@ -311,6 +308,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
+countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
 #Read data
