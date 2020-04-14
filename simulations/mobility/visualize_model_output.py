@@ -244,7 +244,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
-    fig, ax1 = plt.subplots(figsize=(6, 4))
+    fig, ax1 = plt.subplots(figsize=(9, 4))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
@@ -265,15 +265,18 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
     NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's',
         'social_distancing_encouraged':'p', 'self_isolating_if_ill':'d'}
+    NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
+        'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
     y_npi = max(higher_bound[:forecast])*0.9
-    y_step = y_npi/10
+    y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
         xval = np.where(dates==pd.to_datetime(country_npi[npi].values[0]))[0][0]
+        ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
         if xval in npi_xvals:
-            ax1.scatter(xval, y_npi-y_step, s = 8, marker = NPI_markers[npi], color = 'k')
+            ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
         else:
-            ax1.scatter(xval, y_npi, s = 8, marker = NPI_markers[npi], color = 'k')
+            ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
         npi_xvals.append(xval)
 
 
@@ -312,6 +315,27 @@ countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France",
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate)
+#stan_data = read_and_format_data(datadir, countries, days_to_simulate)
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate)
+#visualize_results(outdir, countries, stan_data, days_to_simulate)
+
+#Plot marker explanation
+#NPIs
+NPI = ['public_events', 'schools_universities',  'lockdown',
+    'social_distancing_encouraged', 'self_isolating_if_ill']
+NPI_labels = {'schools_universities':'schools and universities',  'public_events': 'public events', 'lockdown': 'lockdown',
+    'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
+NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's',
+    'social_distancing_encouraged':'p', 'self_isolating_if_ill':'d'}
+NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
+    'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
+
+fig, ax = plt.subplots(figsize=(4,2))
+i=1
+for npi in NPI:
+    ax.scatter(1,i,marker=NPI_markers[npi], color = NPI_colors[npi])
+    ax.text(1.001,i,NPI_labels[npi])
+    i+=1
+ax.set_xlim([0.999,1.02])
+ax.axis('off')
+fig.savefig(outdir+'plots/NPI_markers', format = 'png')
