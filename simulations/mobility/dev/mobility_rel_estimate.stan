@@ -23,7 +23,11 @@ transformed data {
 parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha*alpha_scale*covariate))
-  matrix[5,M] alpha_scale; // Rt^exp(sum(alpha))
+  real<lower=0> alpha_scale1[M]; // Rt^exp(sum(alpha))
+  real<lower=0> alpha_scale2[M]; // Rt^exp(sum(alpha))
+  real<lower=0> alpha_scale3[M]; // Rt^exp(sum(alpha))
+  real<lower=0> alpha_scale4[M]; // Rt^exp(sum(alpha))
+  real<lower=0> alpha_scale5[M]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
@@ -48,8 +52,8 @@ transformed parameters {
 	//mu is the mean R for each country sampled in model
 	//For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
   //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
-        Rt[,m] = mu[m] * exp(covariate1[,m] * alpha_scale[1,m] * (alpha[1]) + covariate2[,m] * alpha_scale[2,m] * (alpha[2]) +
-        covariate3[,m] * alpha_scale[3,m] * (alpha[3])+ covariate4[,m] * alpha_scale[4,m] * (alpha[4]) - covariate5[,m] * alpha_scale[5,m] * (alpha[5]));
+        Rt[,m] = mu[m] * exp(covariate1[,m] * alpha_scale1[m] * (alpha[1]) + covariate2[,m] * alpha_scale2[m] * (alpha[2]) +
+        covariate3[,m] * alpha_scale3[m] * (alpha[3])+ covariate4[,m] * alpha_scale4[m] * (alpha[4]) - covariate5[,m] * alpha_scale5[m] * (alpha[5]));
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
@@ -90,7 +94,12 @@ model {
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.79, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
   alpha ~ gamma(.5,1); //alpha distribution - NPI
-  alpha_scale ~ uniform(0,1) #Make the relative scaling constant, uniform btw 0 and 1
+  alpha_scale1 ~ uniform(0.,1.); #Make the relative scaling constant, uniform btw 0 and 1
+  alpha_scale2 ~ uniform(0.,1.); #Make the relative scaling constant, uniform btw 0 and 1
+  alpha_scale3 ~ uniform(0.,1.); #Make the relative scaling constant, uniform btw 0 and 1
+  alpha_scale4 ~ uniform(0.,1.); #Make the relative scaling constant, uniform btw 0 and 1
+  alpha_scale5 ~ uniform(0.,1.); #Make the relative scaling constant, uniform btw 0 and 1
+
 	//Loop through countries
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
