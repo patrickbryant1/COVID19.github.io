@@ -15,14 +15,14 @@ Then extract the images using the script extract-plots.sh
 
 ## Digitize this
 
-Manuall using the program [https://apps.automeris.io/wpd/](https://apps.automeris.io/wpd/)
+Manual for using the program [https://apps.automeris.io/wpd/](https://apps.automeris.io/wpd/)
 
-Please not that the dates on the X-axis are assumed to be number of days form 2020-01-01
+Please not that the dates on the X-axis are assumed to be number of days from 2020-01-01 on
+Make sure this is correct before running the extraction
 
 
-## Convert the eextracted data to a CVS 
+## Convert the extracted data to a CSV
 
-The script convertcsv.py does this
+The script convertcsv.py does this.
 
-(Please not that some country codes are not the same here as in ECDC (for instance Greece is GR and not EL)
-
+(Please not that some country codes are not the same here as in e.g. the ECDC data (for instance Greece is GR and not EL)
