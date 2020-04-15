@@ -85,8 +85,6 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
     '''Visualize results by reading in all information from all countries in all combinations
     of the leave one out analysis.
     '''
-    #Read in intervention dates
-    intervention_df = pd.read_csv(datadir+'interventions_only.csv')
     #Get all data from all simulations for each country
     country_means = {"Austria":np.zeros((3,10,days_to_simulate)), #Cases,Deaths,Rt for all combinations and all days  
                      "Belgium":np.zeros((3,10,days_to_simulate)),
@@ -100,7 +98,7 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
                      "Switzerland":np.zeros((3,10,days_to_simulate)), 
                      "United_Kingdom":np.zeros((3,10,days_to_simulate))
                     }
-    alpha_per_combo = np.zeros((3,6,10)) #mean,2.5 and 97.5 values (95 % CI together)
+    alpha_per_combo = np.zeros((3,6,11)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
@@ -109,18 +107,17 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
         countries = country_combos.loc[i].values
         summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
         #Get alphas
-        for a in range(len(alphas)):
+        for a in range(5):
             alpha = summary[summary['Unnamed: 0']=='alpha['+str(a+1)+']']
             alpha_m = 1-np.exp(-alpha['mean'].values[0])
             alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
             alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0]) 
             alpha_per_combo[0,a,i]=alpha_m #Save mean
-            alpha_per_combo[1,a,i]=alpha_m #Save mean
-            alpha_per_combo[2,a,i]=alpha_m #Save mean
+            alpha_per_combo[1,a,i]=alpha_2_5 #Save mean
+            alpha_per_combo[2,a,i]=alpha_97_5 #Save mean
         #Loop through all countries in combo
         for j in range(len(countries)):
             country= countries[j]
-            country_npi = intervention_df[intervention_df['Country']==country]
             #Extract mean modeling results for country j
             means = {'prediction':[],'E_deaths':[], 'Rt':[]}
             for k in range(1,days_to_simulate+1):
@@ -135,11 +132,14 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
 
 
     #Plot alphas - influence of each mobility parameter
+    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     fig, ax = plt.subplots(figsize=(4, 4))
+    step=1/10
+    alpha_colors = {0:'tab:blue',1:'tab:orange',2:'tab:green', 3:'tab:red', 4:'tab:purple'}
     for i in range(5):
-        ax.scatter([i]*10,alpha_per_combo[0,i,:], color='b') #plot mean
-        ax.scatter([i]*10,alpha_per_combo[1,i,:], color='r') #plot 2.5
-        ax.scatter([i]*10,alpha_per_combo[2,i,:], color = 'g') #plot 97.5
+        for j in range(11):
+            ax.scatter(i+(step*j),alpha_per_combo[0,i,j], s=1, color = alpha_colors[i]) #plot mean
+            ax.plot([i+(step*j)]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     ax.set_xticklabels(covariate_names,rotation='vertical')
@@ -147,110 +147,57 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
     fig.savefig(outdir+'LOO/plots/alphas.png', format='png')
     plt.close()
 
-    pdb.set_trace()
 
     #plot per country
-    #Read in intervention dates
-    result_file = open(outdir+'plots/summary_means.csv', 'w')
-    for i in range(1,len(countries)+1):
-        country= countries[i-1]
-        country_npi = intervention_df[intervention_df['Country']==country]
-        #Get att stan data for country i
-        dates = stan_data['dates_by_country'][:,i-1]
-        observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
-        observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])#End of data for country i
-        country_retail = stan_data['retail'][:,i-1]
-        country_grocery= stan_data['grocery'][:,i-1]
-        country_transit = stan_data['transit'][:,i-1]
-        country_work = stan_data['work'][:,i-1]
-        country_residential = stan_data['residential'][:,i-1]
-
-        #Extract modeling results
-        means = {'prediction':[],'E_deaths':[], 'Rt':[]}
-        lower_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 2.5 %
-        higher_bound = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 97.5 % - together 95 % CI
-        lower_bound25 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 25%
-        higher_bound75 = {'prediction':[],'E_deaths':[], 'Rt':[]} #Estimated 55 % - together 75 % CI
-        #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
-        for j in range(1,days_to_simulate+1):
-            for var in ['prediction', 'E_deaths', 'Rt']:
-                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
-                means[var].append(var_ij['mean'].values[0])
-                lower_bound[var].append(var_ij['2.5%'].values[0])
-                higher_bound[var].append(var_ij['97.5%'].values[0])
-                lower_bound25[var].append(var_ij['25%'].values[0])
-                higher_bound75[var].append(var_ij['75%'].values[0])
+    days = np.arange(0,days_to_simulate) #Days to simulate
+    for country in country_means:
+        means = country_means[country]
+        data = country_data[country]
+        dates = data['dates_by_country']
+        observed_country_deaths = data['deaths_by_country']
+        observed_country_cases = data['cases_by_country']
+        end = data['days_by_country']#End of data for country i
 
         #Plot cases
         #Per day
-        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
-        higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
+        outdir+'plots/'+country+'_cases.png')
         #Cumulative
-        plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
-        np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        plot_shade_ci(days, end, dates[0], np.cumsum(means[0,:,:]), np.cumsum(observed_country_cases),
+        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png')
         #Plot Deaths
-        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
-        lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
+        outdir+'plots/'+country+'_deaths.png')
         #Plot R
-        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
-        country_retail, country_grocery, country_transit, country_work, country_residential)
+        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'plots/'+country+'_Rt.png')
  
-       #Print R mean at beginning and end of model
-        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
-    #Close outfile
-    result_file.close()
 
     return None
 
 
-def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential):
+def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
-    fig, ax1 = plt.subplots(figsize=(9, 4))
+    fig, ax = plt.subplots(figsize=(9, 4))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
-    ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
-    ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
-    ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
-
-    #Plot predicted dates
-    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
-    ax1.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
-    ax1.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
-
-    #Plot NPIs
-    #NPIs
-    NPI = ['public_events', 'schools_universities',  'lockdown',
-        'social_distancing_encouraged', 'self_isolating_if_ill']
-    NPI_labels = {'schools_universities':'schools and universities',  'public_events': 'public events', 'lockdown': 'lockdown',
-        'social_distancing_encouraged':'social distancing encouraged', 'self_isolating_if_ill':'self isolating if ill'}
-    NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's',
-        'social_distancing_encouraged':'p', 'self_isolating_if_ill':'d'}
-    NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
-        'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
-    y_npi = max(higher_bound[:forecast])*0.9
-    y_step = y_npi/20
-    npi_xvals = [] #Save npi xvals to not plot over each npi
-
-    #ax1
-    ax1.legend(loc='best', frameon=False, markerscale=2)
-    ax1.set_ylabel(ylabel)
-    ax1.set_ylim([0,max(higher_bound[:forecast])])
+        ax.bar(x[:end],observed_y[:end], alpha = 0.5)
+    #Plot the mean for each LOO combo
+    for i in range(10): 
+        #Plot so far
+        ax.plot(x[:end],y[i,:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
+        #Plot predicted dates
+        ax.plot(x[end:forecast],y[i,end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
+   
+    #Format axis
+    ax.legend(loc='best', frameon=False, markerscale=2)
+    ax.set_ylabel(ylabel)
+    ax.set_ylim([0,max(y[0,:forecast])])
     xticks=np.arange(forecast-1,0,-7)
-    ax1.set_xticks(xticks)
-    ax1.set_xticklabels(dates[xticks],rotation='vertical')
-    #ax2
-    ax2.set_ylabel('Relative change')
-    ax2.set_ylim([-1,0.4])
-    ax2.legend(loc='best', frameon=False)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(dates[xticks],rotation='vertical')
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
