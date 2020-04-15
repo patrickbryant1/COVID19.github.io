@@ -26,7 +26,7 @@ parser.add_argument('--country_combos', nargs=1, type= str, default=sys.stdin, h
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate):
+def read_and_format_data(datadir, country, days_to_simulate):
         '''Read in and format all data needed for the model
         '''
 
@@ -34,120 +34,99 @@ def read_and_format_data(datadir, countries, days_to_simulate):
         epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
-        ## get CFR
-        cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
-        #SI
-        serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
         #Model data - to be used for plotting
-        stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
-                    'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
-                    'cases_by_country':np.zeros((days_to_simulate,len(countries))),
-                    'days_by_country':np.zeros(len(countries)),
-                    'retail':np.zeros((days_to_simulate,len(countries))),
-                    'grocery':np.zeros((days_to_simulate,len(countries))),
-                    'transit':np.zeros((days_to_simulate,len(countries))),
-                    'work':np.zeros((days_to_simulate,len(countries))),
-                    'residential':np.zeros((days_to_simulate,len(countries))),
-                    }
+        stan_data = {'dates_by_country':np.zeros(days_to_simulate, dtype='datetime64[D]'),
+             'deaths_by_country':np.zeros(days_to_simulate),
+             'cases_by_country':np.zeros(days_to_simulate),
+             'days_by_country':0
+              }
 
 
         #Covariate names
         covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
-        for c in range(len(countries)):
-                country = countries[c]
+        #Get country epidemic data
+        country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+        #Sort on date
+        country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+        #Reset index
+        country_epidemic_data = country_epidemic_data.reset_index()
+        #Get all dates with at least 10 deaths
+        cum_deaths = country_epidemic_data['deaths'].cumsum()
+        death_index = cum_deaths[cum_deaths>=10].index[0]
+        di30 = death_index-30
+        #Get part of country_epidemic_data 30 days before day with at least 10 deaths
+        country_epidemic_data = country_epidemic_data.loc[di30:]
+        #Reset index
+        country_epidemic_data = country_epidemic_data.reset_index()
 
-                #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
-                #Sort on date
-                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
-                #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
+        print(country, len(country_epidemic_data))
+        #Check that foreacast is really a forecast
+        N = len(country_epidemic_data)
+        stan_data['days_by_country']=N
+        forecast = days_to_simulate - N
+        if forecast <0: #If the number of predicted days are less than the number available
+            days_to_simulate = N
+            forecast = 0
+            print('Forecast error!')
+            pdb.set_trace()
 
-                #Get all dates with at least 10 deaths
-                cum_deaths = country_epidemic_data['deaths'].cumsum()
-                death_index = cum_deaths[cum_deaths>=10].index[0]
-                di30 = death_index-30
-                #Get part of country_epidemic_data 30 days before day with at least 10 deaths
-                country_epidemic_data = country_epidemic_data.loc[di30:]
-                #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
-
-                print(country, len(country_epidemic_data))
-                #Check that foreacast is really a forecast
-                N = len(country_epidemic_data)
-                stan_data['days_by_country'][c]=N
-                forecast = days_to_simulate - N
-                if forecast <0: #If the number of predicted days are less than the number available
-                    days_to_simulate = N
-                    forecast = 0
-                    print('Forecast error!')
-                    pdb.set_trace()
-
-                #Save dates
-                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
-                #Save deaths
-                stan_data['deaths_by_country'][:N,c] = country_epidemic_data['deaths']
-                #Save cases
-                stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
-
-                #Covariates - assign the same shape as others (days_to_simulate)
-                #Mobility data from Google
-                geoId = country_epidemic_data['geoId'].values[0]
-                for name in covariate_names:
-                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
-                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
-                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    end_date = max(country_cov_name['Date']) #Last date for mobility data
-                    for d in range(len(country_epidemic_data)): #loop through all country data
-                        row_d = country_epidemic_data.loc[d]
-                        date_d = row_d['dateRep'] #Extract date
-                        try:
-                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
-                            if not np.isnan(change_d):
-                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
-                        except:
-                            continue
-
-                    #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
-                    cov_i = np.zeros(days_to_simulate)
-                    cov_i[:N] = np.array(country_epidemic_data[name])
-                    #Add covariate info to forecast
-                    cov_i[N:days_to_simulate]=cov_i[N-1]
-                    stan_data[name][:,c] = cov_i
+        #Save dates
+        stan_data['dates_by_country'][:N] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
+        #Save deaths
+        stan_data['deaths_by_country'][:N] = country_epidemic_data['deaths']
+        #Save cases
+        stan_data['cases_by_country'][:N] = country_epidemic_data['cases']
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate):
-    '''Visualize results
+def visualize_results(outdir, country_combos, country_data, days_to_simulate):
+    '''Visualize results by reading in all information from all countries in all combinations
+    of the leave one out analysis.
     '''
-    #Read in data
-    #For models fit using MCMC, also included in the summary are the
-    #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
-    #and the R-hat statistic (Rhat).
-    summary = pd.read_csv(outdir+'summary.csv')
-    cases = np.load(outdir+'prediction.npy', allow_pickle=True)
-    deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
-    Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
-    alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
-    phi = np.load(outdir+'phi.npy', allow_pickle=True)
-    days = np.arange(0,days_to_simulate) #Days to simulate
-    #Plot rhat
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.hist(summary['Rhat'])
-    ax.set_ylabel('Count')
-    ax.set_xlabel("Rhat")
-    fig.savefig(outdir+'plots/rhat.png', format='png')
-    plt.close()
+    #Read in intervention dates
+    intervention_df = pd.read_csv(datadir+'interventions_only.csv')
+    #Get all data from all simulations for each country
+    country_means = {"Austria":np.zeros((3,10,days_to_simulate)), #Cases,Deaths,Rt for all combinations and all days  
+                     "Belgium":np.zeros((3,10,days_to_simulate)),
+                     "Denmark":np.zeros((3,10,days_to_simulate)),
+                     "France":np.zeros((3,10,days_to_simulate)),
+                     "Germany":np.zeros((3,10,days_to_simulate)),
+                     "Italy":np.zeros((3,10,days_to_simulate)),  
+                     "Norway":np.zeros((3,10,days_to_simulate)), 
+                     "Spain":np.zeros((3,10,days_to_simulate)), 
+                     "Sweden":np.zeros((3,10,days_to_simulate)), 
+                     "Switzerland":np.zeros((3,10,days_to_simulate)), 
+                     "United_Kingdom":np.zeros((3,10,days_to_simulate))
+                    }
+    #Loop through all country combos
+    fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
+                      "Germany":0,"Italy":0,"Norway":0,"Spain":0,
+                      "Sweden":0,"Switzerland":0,"United_Kingdom":0} 
+    for i in range(len(country_combos)):
+        countries = country_combos.loc[i].values
+        summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
+        #Loop through all countries in combo
+        for j in range(len(countries)):
+            country= countries[j]
+            country_npi = intervention_df[intervention_df['Country']==country]
+            #Extract mean modeling results for country j
+            means = {'prediction':[],'E_deaths':[], 'Rt':[]}
+            for k in range(1,days_to_simulate+1):
+                for var in ['prediction', 'E_deaths', 'Rt']:
+                    var_ij = summary[summary['Unnamed: 0']==var+'['+str(k)+','+str(j+1)+']']
+                    means[var].append(var_ij['mean'].values[0])
+            #Save data to country means
+            country_means[country][0,fetched_combos[country],:]=means['prediction']
+            country_means[country][1,fetched_combos[country],:]=means['E_deaths']
+            country_means[country][2,fetched_combos[country],:]=means['Rt']
+            fetched_combos[country]+=1 #Increase location index in np array
+    pdb.set_trace()
 
-    #Plot values from each iteration as r function mcmc_parcoord
-    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
-    mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
-    #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
 
+    #Plot alphas - influence of each mobility parameter
     fig, ax = plt.subplots(figsize=(4, 4))
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
@@ -167,7 +146,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
 
     #plot per country
     #Read in intervention dates
-    intervention_df = pd.read_csv(datadir+'interventions_only.csv')
     result_file = open(outdir+'plots/summary_means.csv', 'w')
     for i in range(1,len(countries)+1):
         country= countries[i-1]
@@ -224,19 +202,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
 
     return None
 
-def mcmc_parcoord(cat_array, xtick_labels, outdir):
-    '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
-    '''
-    xtick_labels.insert(0,'')
-    fig, ax = plt.subplots(figsize=(8, 8))
-    for i in range(2000,cat_array.shape[0]): #loop through all iterations
-            ax.plot(np.arange(cat_array.shape[1]), cat_array[i,:], color = 'k', alpha = 0.1)
-    ax.plot(np.arange(cat_array.shape[1]), np.median(cat_array, axis = 0), color = 'r', alpha = 1)
-    ax.set_xticklabels(xtick_labels,rotation='vertical')
-    ax.set_ylim([-5,20])
-    plt.tight_layout()
-    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
-    plt.close()
 
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
@@ -269,26 +234,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     y_npi = max(higher_bound[:forecast])*0.9
     y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
-    for npi in NPI:
-        xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
-        ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
-        if xval in npi_xvals:
-            ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
-        else:
-            ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
-        npi_xvals.append(xval)
 
-
-    #Plot mobility data
-    #Use a twin of the other x axis
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', label='retail and recreation', linewidth = 1.0)
-    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', label='grocery and pharmacy', linewidth = 1.0)
-    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', label='transit stations', linewidth = 1.0)
-    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', label='workplace', linewidth = 1.0)
-    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', label='residential', linewidth = 1.0)
-
-    #Plot formatting
     #ax1
     ax1.legend(loc='best', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
@@ -312,11 +258,15 @@ datadir = args.datadir[0]
 country_combos = pd.read_csv(args.country_combos[0], header = None)
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
-for i in range(len(country_combos)):
-    combo = country_combos.loc[i]
-    pdb.set_trace()
-#Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate)
+
+#Get data per country
+country_data = {} #Save all data from all extracted country combinations
+
+for country in ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]:
+   
+    #Read data
+    stan_data = read_and_format_data(datadir, country, days_to_simulate)
+    country_data[country]=stan_data
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate)
+visualize_results(outdir, country_combos, country_data, days_to_simulate)
 
