@@ -210,7 +210,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-        return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2
+        return stan_data
 
 
 
@@ -220,7 +220,6 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
         s = fit.summary()
@@ -247,6 +246,5 @@ outdir = args.outdir[0]
 #Read data
 #countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 stan_data = read_and_format_data(datadir, countries, days_to_model, end_date)
-
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
