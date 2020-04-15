@@ -311,7 +311,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+#countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
 #Read data
