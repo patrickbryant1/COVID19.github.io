@@ -9,7 +9,7 @@ import glob
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-from scipy.stats import gamma
+from scipy.stats import pearsonr
 import numpy as np
 import seaborn as sns
 import pystan
@@ -81,7 +81,7 @@ def read_and_format_data(datadir, country, days_to_simulate):
 
         return stan_data
 
-def visualize_results(outdir, country_combos, country_data, days_to_simulate):
+def visualize_results(outdir, country_combos, country_data, all_countries, days_to_simulate):
     '''Visualize results by reading in all information from all countries in all combinations
     of the leave one out analysis.
     '''
@@ -98,6 +98,7 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
                      "Switzerland":np.zeros((3,10,days_to_simulate)), 
                      "United_Kingdom":np.zeros((3,10,days_to_simulate))
                     }
+    
     alpha_per_combo = np.zeros((3,6,11)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
@@ -132,20 +133,22 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
 
 
     #Plot alphas - influence of each mobility parameter
-    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
-    fig, ax = plt.subplots(figsize=(4, 4))
-    step=1/10
+    covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     alpha_colors = {0:'tab:blue',1:'tab:orange',2:'tab:green', 3:'tab:red', 4:'tab:purple'}
-    for i in range(5):
+    for i in range(5): #Loop through all mobility params
+        fig, ax = plt.subplots(figsize=(4, 4))
         for j in range(11):
-            ax.scatter(i+(step*j),alpha_per_combo[0,i,j], s=1, color = alpha_colors[i]) #plot mean
-            ax.plot([i+(step*j)]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
-    ax.set_ylim([0,1])
-    ax.set_ylabel('Fractional reduction in R0')
-    ax.set_xticklabels(covariate_names,rotation='vertical')
-    plt.tight_layout()
-    fig.savefig(outdir+'LOO/plots/alphas.png', format='png')
-    plt.close()
+            lo_country = all_countries[i] #Left out country
+            ax.scatter(j+1,alpha_per_combo[0,i,j], marker="_", color = alpha_colors[i]) #plot mean
+            ax.plot([j+1]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
+            ax.set_ylim([0,1])
+            ax.set_ylabel('Fractional reduction in R0')
+            ax.set_xticks(np.arange(1,12))
+            ax.set_xticklabels(all_countries,rotation='vertical')
+            ax.set_title(covariate_names[i])
+            fig.tight_layout()
+            fig.savefig(outdir+'LOO/plots/'+covariate_names[i]+'.png', format='png')
+            plt.close()
 
 
     #plot per country
@@ -160,17 +163,19 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
 
         #Plot cases
         #Per day
+       
         plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
-        outdir+'plots/'+country+'_cases.png')
+        outdir+'LOO/plots/'+country+'_cases.png')
         #Cumulative
-        plot_shade_ci(days, end, dates[0], np.cumsum(means[0,:,:]), np.cumsum(observed_country_cases),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png')
+        plot_shade_ci(days, end, dates[0], np.cumsum(np.array(means[0,:,:],dtype='int16'),axis=1), np.cumsum(observed_country_cases),
+        'Cumulative cases',outdir+'LOO/plots/'+country+'_cumulative_cases.png')
         #Plot Deaths
         plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
-        outdir+'plots/'+country+'_deaths.png')
+        outdir+'LOO/plots/'+country+'_deaths.png')
         #Plot R
-        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'plots/'+country+'_Rt.png')
- 
+        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'LOO/plots/'+country+'_Rt.png')
+        #Correlations
+        print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:])[0,1:])))
 
     return None
 
@@ -187,14 +192,13 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname):
     #Plot the mean for each LOO combo
     for i in range(10): 
         #Plot so far
-        ax.plot(x[:end],y[i,:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
+        ax.plot(x[:end],y[i,:end], alpha=0.5, color='b', linewidth = 1.0)
         #Plot predicted dates
-        ax.plot(x[end:forecast],y[i,end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
+        ax.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
    
     #Format axis
-    ax.legend(loc='best', frameon=False, markerscale=2)
     ax.set_ylabel(ylabel)
-    ax.set_ylim([0,max(y[0,:forecast])])
+    ax.set_ylim([0,np.amax(y[:,:forecast])])
     xticks=np.arange(forecast-1,0,-7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
@@ -213,12 +217,12 @@ outdir = args.outdir[0]
 
 #Get data per country
 country_data = {} #Save all data from all extracted country combinations
-
-for country in ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]:
-   
+all_countries = ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]
+for country in all_countries:
     #Read data
     stan_data = read_and_format_data(datadir, country, days_to_simulate)
     country_data[country]=stan_data
+
 #Visualize
-visualize_results(outdir, country_combos, country_data, days_to_simulate)
+visualize_results(outdir, country_combos, country_data, all_countries, days_to_simulate)
 

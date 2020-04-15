@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
+parser.add_argument('--days_to_model', nargs=1, type= int, default=sys.stdin, help = 'Number of days to model.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -55,7 +57,7 @@ def serial_interval_distribution():
 
         return serial
 
-def read_and_format_data(datadir, countries):
+def read_and_format_data(datadir, countries, N2, end_date):
         '''Read in and format all data needed for the model
         '''
 
@@ -63,13 +65,15 @@ def read_and_format_data(datadir, countries):
         epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
-        ## get CFR
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date] 
+        # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
-        N2=84 #Increase for further forecast
+        #N2=84 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -234,12 +238,15 @@ def simulate(stan_data, stan_model, outdir):
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
+days_to_model = args.days_to_model[0]
 stan_model = args.stan_model[0]
+days_to_model = args.days_to_model[0]
+end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
 #countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
+stan_data = read_and_format_data(datadir, countries, days_to_model, end_date)
 
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
