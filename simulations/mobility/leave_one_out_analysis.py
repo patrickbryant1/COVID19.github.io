@@ -100,6 +100,7 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
                      "Switzerland":np.zeros((3,10,days_to_simulate)), 
                      "United_Kingdom":np.zeros((3,10,days_to_simulate))
                     }
+    alpha_per_combo = np.zeros((3,6,10)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
@@ -107,6 +108,15 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
     for i in range(len(country_combos)):
         countries = country_combos.loc[i].values
         summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
+        #Get alphas
+        for a in range(len(alphas)):
+            alpha = summary[summary['Unnamed: 0']=='alpha['+str(a+1)+']']
+            alpha_m = 1-np.exp(-alpha['mean'].values[0])
+            alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
+            alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0]) 
+            alpha_per_combo[0,a,i]=alpha_m #Save mean
+            alpha_per_combo[1,a,i]=alpha_m #Save mean
+            alpha_per_combo[2,a,i]=alpha_m #Save mean
         #Loop through all countries in combo
         for j in range(len(countries)):
             country= countries[j]
@@ -122,27 +132,22 @@ def visualize_results(outdir, country_combos, country_data, days_to_simulate):
             country_means[country][1,fetched_combos[country],:]=means['E_deaths']
             country_means[country][2,fetched_combos[country],:]=means['Rt']
             fetched_combos[country]+=1 #Increase location index in np array
-    pdb.set_trace()
-
 
 
     #Plot alphas - influence of each mobility parameter
     fig, ax = plt.subplots(figsize=(4, 4))
-    for i in range(1,6):
-        alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
-        alpha_m = 1-np.exp(-alpha['mean'].values[0])
-        alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
-        alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-        ax.scatter(i,alpha_m)
-        ax.plot([i]*2,[alpha_2_5,alpha_97_5])
+    for i in range(5):
+        ax.scatter([i]*10,alpha_per_combo[0,i,:], color='b') #plot mean
+        ax.scatter([i]*10,alpha_per_combo[1,i,:], color='r') #plot 2.5
+        ax.scatter([i]*10,alpha_per_combo[2,i,:], color = 'g') #plot 97.5
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     ax.set_xticklabels(covariate_names,rotation='vertical')
     plt.tight_layout()
-    fig.savefig(outdir+'plots/alphas.png', format='png')
+    fig.savefig(outdir+'LOO/plots/alphas.png', format='png')
     plt.close()
 
-
+    pdb.set_trace()
 
     #plot per country
     #Read in intervention dates
