@@ -174,7 +174,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
     #plot per country
     #Read in intervention dates
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
-
+    result_file = open(outdir+'plots/summary_means.csv', 'w')
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
@@ -222,8 +222,13 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential)
-        #Print R mean at beginning and end of model
-        print(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2)))#Print for table
+ 
+       #Print R mean at beginning and end of model
+        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
+    #Close outfile
+    result_file.close()
+
+    return None
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
     '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
@@ -271,7 +276,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
-        xval = np.where(dates==pd.to_datetime(country_npi[npi].values[0]))[0][0]
+        xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
         ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
         if xval in npi_xvals:
             ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
@@ -311,13 +316,12 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
 #Read data
-#stan_data = read_and_format_data(datadir, countries, days_to_simulate)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate)
 #Visualize
-#visualize_results(outdir, countries, stan_data, days_to_simulate)
+visualize_results(outdir, countries, stan_data, days_to_simulate)
 
 #Plot marker explanation
 #NPIs
