@@ -23,6 +23,10 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Simulate according to the ICL response team''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
+parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
+parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
+parser.add_argument('--days_to_model', nargs=1, type= int, default=sys.stdin, help = 'Number of days to model.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -80,32 +84,17 @@ def fix_covariates(covariates):
                 covariates.at[i,'any_intervention'] = first_inter
         return covariates
 
-def ortho_poly_fit(x, degree = 1):
-    n = degree + 1
-    x = np.asarray(x).flatten()
-    if(degree >= len(np.unique(x))):
-            stop("'degree' must be less than number of unique points")
-    xbar = np.mean(x)
-    x = x - xbar
-    X = np.fliplr(np.vander(x, n))
-    q,r = np.linalg.qr(X)
 
-    z = np.diag(np.diag(r))
-    raw = np.dot(q, z)
-
-    norm2 = np.sum(raw**2, axis=0)
-    alpha = (np.sum((raw**2)*np.reshape(x,(-1,1)), axis=0)/norm2 + xbar)[:degree]
-    Z = raw / np.sqrt(norm2)
-    return Z, norm2, alpha
-
-def read_and_format_data(datadir, countries):
+def read_and_format_data(datadir, countries, N2, end_date):
         '''Read in and format all data needed for the model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'epidemic_data.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
-        epidemic_data['DateRep'] = pd.to_datetime(epidemic_data['DateRep'], format='%d/%m/%Y')
+        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
         ## get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
@@ -116,7 +105,6 @@ def read_and_format_data(datadir, countries):
         covariates = fix_covariates(covariates)
 
         #Create stan data
-        N2=75 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -153,10 +141,13 @@ def read_and_format_data(datadir, countries):
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
 
                 #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['Countries.and.territories']==country]
-                index = np.array(country_epidemic_data[country_epidemic_data['Cases']>0].index)
+                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+                #Sort on date
+                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+                #Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
                 #Get all dates with at least 10 deaths
-                cum_deaths = country_epidemic_data['Deaths'].cumsum()
+                cum_deaths = country_epidemic_data['deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
 
@@ -164,18 +155,20 @@ def read_and_format_data(datadir, countries):
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
+		#Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
                 #Save dates
-                dates_by_country[country] = country_epidemic_data['DateRep']
+                dates_by_country[country] = country_epidemic_data['dateRep']
                 #Save deaths
-                deaths_by_country[country] = country_epidemic_data['Deaths']
+                deaths_by_country[country] = country_epidemic_data['deaths']
                 #Save cases
-                cases_by_country[country] = country_epidemic_data['Cases']
+                cases_by_country[country] = country_epidemic_data['cases']
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
                 for covariate in covariate_names:
                         cov_start = pd.to_datetime(country_cov[covariate].values[0]) #Get start of NPI
                         country_epidemic_data.loc[country_epidemic_data.index,covariate] = 0
-                        country_epidemic_data.loc[country_epidemic_data['DateRep']>=cov_start, covariate]=1
+                        country_epidemic_data.loc[country_epidemic_data['dateRep']>=cov_start, covariate]=1
 
 
                 #Hazard estimation
@@ -218,13 +211,13 @@ def read_and_format_data(datadir, countries):
                 #Number of cases
                 cases = np.zeros(N2)
                 cases -=1 #Assign -1 for all forcast days
-                cases[:N]=np.array(country_epidemic_data['Cases'])
+                cases[:N]=np.array(country_epidemic_data['cases'])
                 stan_data['cases'][:,c]=cases
                 stan_data['y'].append(int(cases[0])) # just the index case!#only the index case
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
-                deaths[:N]=np.array(country_epidemic_data['Deaths'])
+                deaths[:N]=np.array(country_epidemic_data['deaths'])
                 stan_data['deaths'][:,c]=deaths
 
                 #Covariates - assign the same shape as others (N2)
@@ -243,23 +236,23 @@ def read_and_format_data(datadir, countries):
 
 
 
-def simulate(stan_data):
+def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
         for parameter estimation.
         '''
 
-        sm =  pystan.StanModel(file='base.stan')
+        sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
-        summary.to_csv('summary.csv')
+        summary.to_csv(outdir+'summary.csv')
 
         #Save fit
         out = fit.extract()
         for key in [*out.keys()]:
             fit_param = out[key]
-            np.save(key+'.npy', fit_param)
+            np.save(outdir+key+'.npy', fit_param)
 
         return out
 
@@ -352,11 +345,15 @@ def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
+countries = args.countries[0].split(',')
+days_to_model = args.days_to_model[0]
+stan_model = args.stan_model[0]
+days_to_model = args.days_to_model[0]
+end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 #Read data
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries)
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_model, end_date)
 #Simulate
-#out = simulate(stan_data)
+out = simulate(stan_data, stan_model, outdir)
 #Visualize
-visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
+#visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
