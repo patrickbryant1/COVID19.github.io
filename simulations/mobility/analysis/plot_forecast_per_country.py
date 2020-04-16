@@ -44,14 +44,12 @@ def evaluate_forecast(forecast_df, countries, outdir):
         observed = []
         for ed in end_dates:
             country_ed_data = country_data[country_data['End date']==ed]
-            #dates = pd.to_datetime(country_ed_data['Date'], format='%Y/%m/%d').values #Convert str to date format
-            #dates.sort() #Sort dates
-            pred_mean.extend([*np.cumsum(np.array(country_ed_data['Predicted mean'].values, dtype=float))[-7:]])
-            pred_2_5.extend([*np.cumsum(np.array(country_ed_data['Predicted 2.5'].values, dtype=float))[-7:]])
-            pred_97_5.extend([*np.cumsum(np.array(country_ed_data['Predicted 97.5'].values, dtype=float))[-7:]])
-            pred_25.extend([*np.cumsum(np.array(country_ed_data['Predicted 25'].values, dtype=float))[-7:]])
-            pred_75.extend([*np.cumsum(np.array(country_ed_data['Predicted 75'].values, dtype=float))[-7:]])
-            observed.extend([*np.cumsum(np.array(country_ed_data['Observed deaths'].values, dtype=float))[-7:]])
+            pred_mean.extend([*np.array(country_ed_data['Predicted mean'].values, dtype=float)[-7:]])
+            pred_2_5.extend([*np.array(country_ed_data['Predicted 2.5'].values, dtype=float)[-7:]])
+            pred_97_5.extend([*np.array(country_ed_data['Predicted 97.5'].values, dtype=float)[-7:]])
+            pred_25.extend([*np.array(country_ed_data['Predicted 25'].values, dtype=float)[-7:]])
+            pred_75.extend([*np.array(country_ed_data['Predicted 75'].values, dtype=float)[-7:]])
+            observed.extend([*np.array(country_ed_data['Observed deaths'].values, dtype=float)[-7:]])
         #Get prediction indices
         #pred_index = np.where(dates>=pred_start)
         #Plot observed as hist and predicted as line
@@ -77,8 +75,14 @@ def evaluate_forecast(forecast_df, countries, outdir):
         fig.savefig(outdir+country+'_forecast.png', format = 'png')
         plt.close()
 
-        #Correlation analysis
-        print(country, pearsonr(pred_mean, observed)[0],np.average(np.absolute(np.array(pred_mean)-np.array(observed))))
+        #Analysis of correspondence
+        av_er = [] #Average absolute error per week
+        perc_er = [] #Average absolute percent error per week
+        for c in range(0,len(pred_mean), 7):
+            abs_er = np.absolute(np.array(pred_mean[c:c+7])-np.array(observed[c:c+7]))
+            av_er.append(np.average(abs_er))
+            perc_er.append(np.average(abs_er/np.array(observed[c:c+7])))
+        print(country, av_er[0], av_er[1], perc_er[0], perc_er[1])
     return None
 
 
