@@ -159,5 +159,5 @@ end_date = np.datetime64(args.end_date[0])+7 #Increase to one week ahead for obt
 outdir = args.outdir[0]
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-#Visualize
+#Format forecast data
 evaluate_forecast(outdir, countries, stan_data, days_to_simulate)
