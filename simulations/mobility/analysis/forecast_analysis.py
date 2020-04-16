@@ -19,14 +19,15 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Visuaize results from model using google mobility data and most of the ICL response team model''')
+parser = argparse.ArgumentParser(description = '''Obtain forecast in terms of the mean number of deaths and write to csv.''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'End date of data used to fit model.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate):
+def read_and_format_data(datadir, countries, days_to_simulate, end_date):
         '''Read in and format all data needed for the model
         '''
 
@@ -34,26 +35,22 @@ def read_and_format_data(datadir, countries, days_to_simulate):
         epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
         ## get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
 
+        days_to_simulate = days_to_simulate
         #Model data - to be used for plotting
         stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
                     'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
                     'cases_by_country':np.zeros((days_to_simulate,len(countries))),
                     'days_by_country':np.zeros(len(countries)),
-                    'retail':np.zeros((days_to_simulate,len(countries))),
-                    'grocery':np.zeros((days_to_simulate,len(countries))),
-                    'transit':np.zeros((days_to_simulate,len(countries))),
-                    'work':np.zeros((days_to_simulate,len(countries))),
-                    'residential':np.zeros((days_to_simulate,len(countries))),
                     }
 
 
-        #Covariate names
-        covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -92,31 +89,6 @@ def read_and_format_data(datadir, countries, days_to_simulate):
                 #Save cases
                 stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
 
-                #Covariates - assign the same shape as others (days_to_simulate)
-                #Mobility data from Google
-                geoId = country_epidemic_data['geoId'].values[0]
-                for name in covariate_names:
-                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
-                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
-                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    end_date = max(country_cov_name['Date']) #Last date for mobility data
-                    for d in range(len(country_epidemic_data)): #loop through all country data
-                        row_d = country_epidemic_data.loc[d]
-                        date_d = row_d['dateRep'] #Extract date
-                        try:
-                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
-                            if not np.isnan(change_d):
-                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
-                        except:
-                            continue
-
-                    #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
-                    cov_i = np.zeros(days_to_simulate)
-                    cov_i[:N] = np.array(country_epidemic_data[name])
-                    #Add covariate info to forecast
-                    cov_i[N:days_to_simulate]=cov_i[N-1]
-                    stan_data[name][:,c] = cov_i
 
         return stan_data
 
@@ -136,7 +108,11 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
     plt.close()
 
     #Evaluate per country
-    result_file = open(outdir+'plots/forecast.csv', 'w')
+    result_df = pd.DataFrame()
+    forecast_countries = [] #Save country per forecast
+    death_week_forecast = [] #Save forecast deaths
+    death_week_observed = [] #Save observed deaths
+    forecast_dates = [] #Save forecast dates
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         #Get stan data for country i
@@ -160,13 +136,17 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
             higher_bound75[var].append(var_ij['75%'].values[0])
 
         #Compare Deaths
-        pdb.set_trace()
+        forecast_countries.extend([country]*7)
+        death_week_forecast.extend(means['E_deaths'][end-7:end])
+        death_week_observed.extend(observed_country_deaths[end-7:end])
+        forecast_dates.extend(dates[end-7:end])
 
-       #Print predicted(forecast) and observed deaths 
-        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
-    #Close outfile
-    result_file.close()
-
+    #Save predicted(forecast) and observed deaths 
+    result_df['Country'] = forecast_countries
+    result_df['Date'] = forecast_dates
+    result_df['Predicted deaths'] = death_week_forecast
+    result_df['Observed_deaths'] = death_week_observed
+    result_df.to_csv(outdir+'forecast.csv')
     return None
 
 
@@ -175,8 +155,9 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
+end_date = np.datetime64(args.end_date[0])+7 #Increase to one week ahead for obtaining forecast data
 outdir = args.outdir[0]
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 #Visualize
 evaluate_forecast(outdir, countries, stan_data, days_to_simulate)
