@@ -249,7 +249,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
-    fig, ax1 = plt.subplots(figsize=(6/2.54, 4/2.54))
+    fig, ax1 = plt.subplots(figsize=(6, 4))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
@@ -333,7 +333,7 @@ NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's
 NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
     'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
 
-fig, ax = plt.subplots(figsize=(4.5/2.54,2.25/2.54))
+fig, ax = plt.subplots(figsize=(4.5,2.25))
 i=1
 for npi in NPI:
     ax.scatter(1,i,marker=NPI_markers[npi], color = NPI_colors[npi])
@@ -345,7 +345,7 @@ fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
-fig, ax = plt.subplots(figsize=(4.5/2.54,2.25/2.54))
+fig, ax = plt.subplots(figsize=(4.5,2.25))
 i=5
 for cov in covariate_colors:
     ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
