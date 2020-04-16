@@ -92,7 +92,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date):
 
         return stan_data
 
-def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
+def evaluate_forecast(outdir, countries, stan_data, days_to_simulate, end_date):
     '''Evaluate forecast results per country in terms of the predicted (mean) vs the true number of deaths.
     '''
 
@@ -140,14 +140,14 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
             higher_bound75[var].append(var_ij['75%'].values[0])
 
         #Save deaths
-        forecast_countries.extend([country]*7)
-        death_week_mean_forecast.extend(means['E_deaths'][end-7:end])
-        death_week_2_5_forecast.extend(lower_bound['E_deaths'][end-7:end])
-        death_week_97_5_forecast.extend(higher_bound['E_deaths'][end-7:end])
-        death_week_25_forecast.extend(lower_bound25['E_deaths'][end-7:end])
-        death_week_75_forecast.extend(higher_bound75['E_deaths'][end-7:end])
-        death_week_observed.extend(observed_country_deaths[end-7:end])
-        forecast_dates.extend(dates[end-7:end])
+        death_week_mean_forecast.extend(means['E_deaths'][:end])
+        death_week_2_5_forecast.extend(lower_bound['E_deaths'][:end])
+        death_week_97_5_forecast.extend(higher_bound['E_deaths'][:end])
+        death_week_25_forecast.extend(lower_bound25['E_deaths'][:end])
+        death_week_75_forecast.extend(higher_bound75['E_deaths'][:end])
+        death_week_observed.extend(observed_country_deaths[:end])
+        forecast_dates.extend(dates[:end])
+        forecast_countries.extend([country]*len(means['E_deaths'][:end]))
 
     #Save predicted(forecast) and observed deaths 
     result_df['Country'] = forecast_countries
@@ -158,6 +158,7 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
     result_df['Predicted 25'] = death_week_25_forecast
     result_df['Predicted 75'] = death_week_75_forecast
     result_df['Observed deaths'] = death_week_observed
+    result_df['End date'] = end_date
     result_df.to_csv(outdir+'forecast.csv')
     return None
 
@@ -172,4 +173,4 @@ outdir = args.outdir[0]
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 #Format forecast data
-evaluate_forecast(outdir, countries, stan_data, days_to_simulate)
+evaluate_forecast(outdir, countries, stan_data, days_to_simulate, end_date)

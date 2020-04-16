@@ -25,37 +25,49 @@ parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help =
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 def evaluate_forecast(forecast_df, countries, outdir):
-    '''Evaluate forecast results per country in terms of the predicted (mean) vs the true number of deaths.
-    Predicted mean,Predicted 2.5,Predicted 97.5,Predicted 25,Predicted 75,Observed deaths 
+    '''Evaluate forecast results per country in terms of the icumulative predicted (mean) vs the true number of cumulative deaths.
+    ,Country,Date,Predicted mean,Predicted 2.5,Predicted 97.5,Predicted 25,Predicted 75,Observed deaths, End date 
     '''
 
-    xlabels = ['Mar-30','Apr-2', 'Apr-5', 'Apr-8', 'Apr-11']
+    xlabels = ['30 Mar','2 Apr', '5 Apr', '8 Apr', '11 Apr']
+    pred_start = np.datetime64('2020-03-30')
     for i in range(len(countries)):
         country = countries[i]
         country_data = forecast_df[forecast_df['Country'] == country]
-        x = np.arange(0,len(country_data))
-        dates = country_data['Date'].values
-        pred_mean = np.array(country_data['Predicted mean'].values, dtype=float)
-        pred_2_5 = np.array(country_data['Predicted 2.5'].values, dtype=float)
-        pred_97_5 = np.array(country_data['Predicted 97.5'].values, dtype=float)
-        pred_25 = np.array(country_data['Predicted 25'].values, dtype=float)
-        pred_75 = np.array(country_data['Predicted 75'].values, dtype=float)
-        observed = np.array(country_data['Observed deaths'].values, dtype=float)
-    
+        end_dates = country_data['End date'].unique() #Get unique end dates
+        #Store predictions
+        pred_mean = []
+        pred_2_5 = []
+        pred_97_5 = []
+        pred_25 = []
+        pred_75 = []
+        observed = []
+        for ed in end_dates:
+            country_ed_data = country_data[country_data['End date']==ed]
+            #dates = pd.to_datetime(country_ed_data['Date'], format='%Y/%m/%d').values #Convert str to date format
+            #dates.sort() #Sort dates
+            pred_mean.extend([*np.cumsum(np.array(country_ed_data['Predicted mean'].values, dtype=float))[-7:]])
+            pred_2_5.extend([*np.cumsum(np.array(country_ed_data['Predicted 2.5'].values, dtype=float))[-7:]])
+            pred_97_5.extend([*np.cumsum(np.array(country_ed_data['Predicted 97.5'].values, dtype=float))[-7:]])
+            pred_25.extend([*np.cumsum(np.array(country_ed_data['Predicted 25'].values, dtype=float))[-7:]])
+            pred_75.extend([*np.cumsum(np.array(country_ed_data['Predicted 75'].values, dtype=float))[-7:]])
+            observed.extend([*np.cumsum(np.array(country_ed_data['Observed deaths'].values, dtype=float))[-7:]])
+        #Get prediction indices
+        #pred_index = np.where(dates>=pred_start)
         #Plot observed as hist and predicted as line
+        x = np.arange(0,len(pred_mean))
         fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
         ax.bar(x,observed, alpha = 0.5)
-        ax.plot(x, pred_mean, alpha=1, color='g', label='One week forecast', linewidth = 3.0)
+        ax.plot(x, pred_mean, alpha=1, color='g', label='One week forecast', linewidth = 1.0)
         ax.fill_between(x, pred_2_5, pred_97_5, color='forestgreen', alpha=0.4)
         ax.fill_between(x, pred_25, pred_75, color='forestgreen', alpha=0.6)
-
         #Plot week separators
         for w in np.arange(6.5,len(x)-1,7):
             ax.axvline(w, linestyle='--', linewidth=1, c= 'k')
 
         #Format
-        xticks=np.arange(0,len(country_data),3)
-        ax.set_ylabel('Deaths per day')
+        xticks=np.arange(0,len(x),3)
+        ax.set_ylabel('Cumulative deaths')
         ax.set_xticks(xticks)
         ax.set_xticklabels(xlabels,rotation='vertical')
         ax.set_title(country)
@@ -64,6 +76,9 @@ def evaluate_forecast(forecast_df, countries, outdir):
         fig.tight_layout()
         fig.savefig(outdir+country+'_forecast.png', format = 'png')
         plt.close()
+
+        #Correlation analysis
+        print(country, pearsonr(pred_mean, observed)[0],np.average(np.absolute(np.array(pred_mean)-np.array(observed))))
     return None
 
 
