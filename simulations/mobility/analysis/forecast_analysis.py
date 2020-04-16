@@ -110,7 +110,11 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
     #Evaluate per country
     result_df = pd.DataFrame()
     forecast_countries = [] #Save country per forecast
-    death_week_forecast = [] #Save forecast deaths
+    death_week_mean_forecast = [] #Save forecast deaths
+    death_week_2_5_forecast = []
+    death_week_97_5_forecast = []
+    death_week_25_forecast = []
+    death_week_75_forecast = []
     death_week_observed = [] #Save observed deaths
     forecast_dates = [] #Save forecast dates
     for i in range(1,len(countries)+1):
@@ -135,17 +139,25 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate):
             lower_bound25[var].append(var_ij['25%'].values[0])
             higher_bound75[var].append(var_ij['75%'].values[0])
 
-        #Compare Deaths
+        #Save deaths
         forecast_countries.extend([country]*7)
-        death_week_forecast.extend(means['E_deaths'][end-7:end])
+        death_week_mean_forecast.extend(means['E_deaths'][end-7:end])
+        death_week_2_5_forecast.extend(lower_bound['E_deaths'][end-7:end])
+        death_week_97_5_forecast.extend(higher_bound['E_deaths'][end-7:end])
+        death_week_25_forecast.extend(lower_bound25['E_deaths'][end-7:end])
+        death_week_75_forecast.extend(higher_bound75['E_deaths'][end-7:end])
         death_week_observed.extend(observed_country_deaths[end-7:end])
         forecast_dates.extend(dates[end-7:end])
 
     #Save predicted(forecast) and observed deaths 
     result_df['Country'] = forecast_countries
     result_df['Date'] = forecast_dates
-    result_df['Predicted deaths'] = death_week_forecast
-    result_df['Observed_deaths'] = death_week_observed
+    result_df['Predicted mean'] = death_week_mean_forecast
+    result_df['Predicted 2.5'] = death_week_2_5_forecast
+    result_df['Predicted 97.5'] = death_week_97_5_forecast
+    result_df['Predicted 25'] = death_week_25_forecast
+    result_df['Predicted 75'] = death_week_75_forecast
+    result_df['Observed deaths'] = death_week_observed
     result_df.to_csv(outdir+'forecast.csv')
     return None
 
