@@ -222,7 +222,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential)
- 
+
        #Print R mean at beginning and end of model
         result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
     #Close outfile
@@ -249,7 +249,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
-    fig, ax1 = plt.subplots(figsize=(9, 4))
+    fig, ax1 = plt.subplots(figsize=(6/2.54, 4/2.54))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
@@ -288,11 +288,11 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #Plot mobility data
     #Use a twin of the other x axis
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', label='retail and recreation', linewidth = 1.0)
-    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', label='grocery and pharmacy', linewidth = 1.0)
-    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', label='transit stations', linewidth = 1.0)
-    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', label='workplace', linewidth = 1.0)
-    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', label='residential', linewidth = 1.0)
+    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
+    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
+    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
+    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
+    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
 
     #Plot formatting
     #ax1
@@ -305,7 +305,6 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #ax2
     ax2.set_ylabel('Relative change')
     ax2.set_ylim([-1,0.4])
-    ax2.legend(loc='best', frameon=False)
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
@@ -334,7 +333,7 @@ NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's
 NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
     'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
 
-fig, ax = plt.subplots(figsize=(4,2))
+fig, ax = plt.subplots(figsize=(4.5/2.54,2.25/2.54))
 i=1
 for npi in NPI:
     ax.scatter(1,i,marker=NPI_markers[npi], color = NPI_colors[npi])
@@ -342,4 +341,16 @@ for npi in NPI:
     i+=1
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/NPI_markers', format = 'png')
+fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
+
+#Mobility
+covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
+fig, ax = plt.subplots(figsize=(4.5/2.54,2.25/2.54))
+i=5
+for cov in covariate_colors:
+    ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
+    ax.text(2.001,i,cov)
+    i-=1
+ax.set_xlim([0.999,3.02])
+ax.axis('off')
+fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
