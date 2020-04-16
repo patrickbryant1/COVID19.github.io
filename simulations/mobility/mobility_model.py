@@ -14,7 +14,6 @@ from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
 import pystan
-import arviz as az
 
 import pdb
 
@@ -24,6 +23,8 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
+parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
+parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -54,26 +55,6 @@ def serial_interval_distribution():
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
         return serial
-
-def read_stupid_csv(csvfile):
-    '''Read and format all mobility data
-    '''
-    extracted_lines = []
-    print(csvfile)
-    with open(csvfile) as file:
-        ln = 0
-        for line in file:
-            if ln == 0:
-                line = line.split()
-                extracted_lines.append(line[0]+','+line[1]+','+line[2]+'\n')
-                ln+=1
-            else:
-                extracted_lines.append(line)
-    #write
-    with open(csvfile, 'w') as file:
-        for line in extracted_lines:
-            file.write(line)
-    return None
 
 def read_and_format_data(datadir, countries):
         '''Read in and format all data needed for the model
@@ -231,13 +212,18 @@ def read_and_format_data(datadir, countries):
 
 
 
-def simulate(stan_data, outdir):
+def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
         for parameter estimation.
         '''
 
+<<<<<<< HEAD
         sm =  pystan.StanModel(file='mobility.stan')
         #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
+=======
+        sm =  pystan.StanModel(file=stan_model)
+        #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
+>>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6
         fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
         #Save summary
         #print ("FIT:",fit)
@@ -254,6 +240,7 @@ def simulate(stan_data, outdir):
             np.save(outdir+key+'.npy', fit_param)
         return out
 
+<<<<<<< HEAD
 def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,interventions,in_names):
     '''Visualize results
     '''
@@ -422,6 +409,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig.savefig(outname, format = 'png')
     plt.close()
 
+=======
+>>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]+"/"
@@ -430,9 +419,12 @@ if not os.path.exists(outdir+"plots/"):
     print('Creating folder: '+outdir)
     os.system('mkdir -p ' + outdir+"/plots")
 datadir = args.datadir[0]
+countries = args.countries[0].split(',')
+stan_model = args.stan_model[0]
 outdir = args.outdir[0]
 
 #Read data
+<<<<<<< HEAD
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland" ] # ,"Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
@@ -442,3 +434,10 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 #Visualize
 in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data,in_names)
+=======
+#countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
+
+#Simulate
+out = simulate(stan_data, stan_model, outdir)
+>>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6

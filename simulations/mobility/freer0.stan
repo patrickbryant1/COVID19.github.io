@@ -7,7 +7,7 @@ data {
   int cases[N2,M]; // reported cases
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, M] f; // h * s - change in fraction dead each day
-  matrix[N2, M] covariate1; // straight line
+  matrix[N2, M] covariate1; // any intervention
   // matrix[N2, M] covariate1; //retail_and_recreation
   // matrix[N2, M] covariate2; //grocery_and_pharmacy
   // matrix[N2, M] covariate3; //transit_stations
@@ -18,12 +18,13 @@ data {
 }
 
 transformed data {
-  real delta = 1e-5; //We’ll need to add a small positive term,δ to the diagonal of the covariance 			    //matrix in order to ensure that our covariance matrix remains positive definite.
+  real delta = 1e-5; //We’ll need to add a small positive term,δ to the diagonal of the covariance
+  //matrix in order to ensure that our covariance matrix remains positive definite.
 }
 
 parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
-  real<lower=0> alpha[5]; // Rt^exp-(sum(alpha))
+  real<lower=0> alpha[M]; // Rt^exp-(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
@@ -50,7 +51,7 @@ transformed parameters {
   //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
         //Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
         // covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
-        Rt[,m] = mu[m]* exp(covariate1[,m] * (alpha[1])) ;
+        Rt[,m] = mu[m]* exp(- covariate1[,m] * (alpha[m])) ;
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset

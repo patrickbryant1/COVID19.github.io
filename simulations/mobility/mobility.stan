@@ -22,7 +22,7 @@ transformed data {
 
 parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
-  real<lower=0> alpha[5]; // Rt^exp-(sum(alpha))
+  real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
@@ -88,7 +88,7 @@ model {
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.79, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
-  alpha ~ gamma(.5,1); //alpha distribution - NPI
+  alpha ~ gamma(.5,1); //alpha distribution - mobility
 	//Loop through countries
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic

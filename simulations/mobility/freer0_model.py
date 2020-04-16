@@ -4,6 +4,7 @@
 
 import argparse
 import sys
+import re
 import os
 import glob
 import pandas as pd
@@ -20,7 +21,7 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
+parser = argparse.ArgumentParser(description = '''Simulate according to the ICL response team''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
@@ -40,6 +41,10 @@ def conv_gamma_params(mean,std):
 
 def infection_to_death():
         '''Simulate the time from infection to death: Infection --> Onset --> Death'''
+        #In R
+        #x1 = rgammaAlt(5e6,mean1,cv1) # infection-to-onset ----> do all people who are infected get to onset?
+        #x2 = rgammaAlt(5e6,mean2,cv2) # onset-to-death
+        #From https://cran.r-project.org/web/packages/EnvStats/EnvStats.pdf
         #Infection to death: sum of ito and otd
         itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
@@ -86,6 +91,10 @@ def read_and_format_data(datadir, countries):
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = pd.read_csv(datadir+"serial_interval.csv")
+        #NPI and their implementation dates
+        covariates = pd.read_csv(datadir+'interventions_only.csv')
+        #Change dates
+        covariates = fix_covariates(covariates)
 
         #Create stan data
         N2=81 #Increase for further forecast
@@ -97,6 +106,8 @@ def read_and_format_data(datadir, countries):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2,
                     'x':np.arange(1,N2+1),
+                    #'x1':x[0][:,1],#index of days
+                    #'x2':x[0][:,2],#index of days
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
@@ -289,7 +300,7 @@ def visualize_results(outdir, countries, covariate_names, dates_by_country, deat
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(4, 4))
-    for i in range(1,6):
+    for i in range(1,len(covariate_names)+1):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
         alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
@@ -382,13 +393,15 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_ylim([-1,1])
     ax2.legend(loc='lower left')
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-
+    title=re.sub(r'\..*','',re.sub(r'.*/','',outname))
+    ax.set(title=title)
+    #ax.set(title=outname)
     #Plot predicted dates
     ax.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
     ax.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
     ax.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
     #Plot formatting
-    ax.legend(loc='best')
+    ax.legend(loc='lower left',fontsize=6)
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(0,forecast+1,7)
