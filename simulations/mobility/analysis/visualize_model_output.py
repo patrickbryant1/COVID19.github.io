@@ -24,6 +24,7 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 def read_and_format_data(datadir, countries, days_to_simulate):
@@ -120,7 +121,7 @@ def read_and_format_data(datadir, countries, days_to_simulate):
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate):
+def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -149,21 +150,22 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
-    covariate_names = ['','retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
+    covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
 
-    fig, ax = plt.subplots(figsize=(4, 4))
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
         alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
         alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-        ax.scatter(i,alpha_m)
+        ax.scatter(i,alpha_m, marker = '_')
         ax.plot([i]*2,[alpha_2_5,alpha_97_5])
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
+    ax.set_xticks([1,2,3,4,5])
     ax.set_xticklabels(covariate_names,rotation='vertical')
     plt.tight_layout()
     fig.savefig(outdir+'plots/alphas.png', format='png')
@@ -209,19 +211,24 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate):
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
         np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot Deaths
+        #Per day
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential)
+        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        #Cumulative
+        plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths']),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
+        np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
+        outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
-        country_retail, country_grocery, country_transit, country_work, country_residential)
+        country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
        #Print R mean at beginning and end of model
         result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
@@ -244,21 +251,24 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
     plt.close()
 
-def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential):
+def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
+    selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
+    if len(dates) != len(selected_short_dates):
+        pdb.set_trace()
     forecast = len(dates)
-    fig, ax1 = plt.subplots(figsize=(6, 4))
+    fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
-    ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='so far', linewidth = 1.0)
+    ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 1.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
 
     #Plot predicted dates
-    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='forecast', linewidth = 1.0)
+    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='Forecast', linewidth = 1.0)
     ax1.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
     ax1.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
 
@@ -296,15 +306,18 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     #Plot formatting
     #ax1
-    ax1.legend(loc='best', frameon=False, markerscale=2)
+    ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
     ax1.set_xticks(xticks)
-    ax1.set_xticklabels(dates[xticks],rotation='vertical')
+    ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+    #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
     #ax2
     ax2.set_ylabel('Relative change')
     ax2.set_ylim([-1,0.4])
+    ax2.set_yticks([-1,-0.5,0,0.4])
+
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
@@ -312,15 +325,20 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
 
 #####MAIN#####
+#Set font size
+matplotlib.rcParams.update({'font.size': 8})
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
+short_dates = pd.read_csv(args.short_dates[0])
+#Make sure the np dates are in the correct format
+short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate)
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
 
 #Plot marker explanation
 #NPIs
@@ -333,19 +351,20 @@ NPI_markers = {'schools_universities':'*',  'public_events': 'X', 'lockdown': 's
 NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
     'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
 
-fig, ax = plt.subplots(figsize=(4.5,2.25))
+fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
 i=1
 for npi in NPI:
     ax.scatter(1,i,marker=NPI_markers[npi], color = NPI_colors[npi])
     ax.text(1.001,i,NPI_labels[npi])
     i+=1
+ax.set_ylim([0,6])
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
 fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
-fig, ax = plt.subplots(figsize=(4.5,2.25))
+fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
 i=5
 for cov in covariate_colors:
     ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
