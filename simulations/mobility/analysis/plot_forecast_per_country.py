@@ -30,6 +30,10 @@ def evaluate_forecast(forecast_df, countries, outdir):
     '''
 
     xlabels = ['30 Mar','2 Apr', '5 Apr', '8 Apr', '11 Apr']
+    yticks = {'Austria':[0,20,40,60],'Belgium':[0,200,400,600],'Denmark':[0,30,60],'France':[0,1000,2000],
+             'Germany':[0,200,400,600],'Italy':[0,2500,5000],'Norway':[0,10,20],'Spain':[0,2500,5000],
+             'Sweden':[0,250,500],'Switzerland':[0,100,200],'United_Kingdom':[0,1000,2000]
+             }
     pred_start = np.datetime64('2020-03-30')
     for i in range(len(countries)):
         country = countries[i]
@@ -65,10 +69,11 @@ def evaluate_forecast(forecast_df, countries, outdir):
 
         #Format
         xticks=np.arange(0,len(x),3)
-        ax.set_ylabel('Cumulative deaths')
+        ax.set_ylabel('Deaths per day')
         ax.set_xticks(xticks)
         ax.set_xticklabels(xlabels,rotation='vertical')
         ax.set_title(country)
+        ax.set_yticks(yticks[country])
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         fig.tight_layout()

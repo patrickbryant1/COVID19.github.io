@@ -208,7 +208,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                             if not np.isnan(change_d):
                                 country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
-                            print(date_d)
+                            continue #Date too far ahead
 
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
@@ -222,7 +222,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-        pdb.set_trace()
         return stan_data
 
 
