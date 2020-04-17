@@ -27,7 +27,7 @@ parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin,
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate):
+def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         '''Read in and format all data needed for the model
         '''
 
@@ -35,26 +35,23 @@ def read_and_format_data(datadir, countries, days_to_simulate):
         epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
-        ## get CFR
-        cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
-        #SI
-        serial_interval = pd.read_csv(datadir+"serial_interval.csv")
-
+        #Mobility data
+        mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
+        #Convert to datetime
+        mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Model data - to be used for plotting
         stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
                     'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
                     'cases_by_country':np.zeros((days_to_simulate,len(countries))),
                     'days_by_country':np.zeros(len(countries)),
-                    'retail':np.zeros((days_to_simulate,len(countries))),
-                    'grocery':np.zeros((days_to_simulate,len(countries))),
-                    'transit':np.zeros((days_to_simulate,len(countries))),
-                    'work':np.zeros((days_to_simulate,len(countries))),
-                    'residential':np.zeros((days_to_simulate,len(countries))),
+                    'retail_and_recreation_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'transit_stations_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'workplaces_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'residential_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
                     }
 
 
-        #Covariate names
-        covariate_names = ['retail','grocery','transit','work','residential']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -95,21 +92,26 @@ def read_and_format_data(datadir, countries, days_to_simulate):
 
                 #Covariates - assign the same shape as others (days_to_simulate)
                 #Mobility data from Google
-                geoId = country_epidemic_data['geoId'].values[0]
+                country_cov_data = mobility_data[mobility_data['country_region']==country]
+                if country == 'United_Kingdom': #Different assignments for UK
+                    country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
+                #Get whole country - no subregion
+                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                #Get matching dates
+                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['dateRep'])]
+                end_date = max(country_cov_data['date']) #Last date for mobility data
                 for name in covariate_names:
-                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
-                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
                     country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    end_date = max(country_cov_name['Date']) #Last date for mobility data
                     for d in range(len(country_epidemic_data)): #loop through all country data
                         row_d = country_epidemic_data.loc[d]
                         date_d = row_d['dateRep'] #Extract date
                         try:
-                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
+                            change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
                                 country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
-                            continue
+                            continue #Date too far ahead
+
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
                     country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
@@ -121,7 +123,7 @@ def read_and_format_data(datadir, countries, days_to_simulate):
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
+def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, covariate_names):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -150,7 +152,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
-    covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
@@ -185,11 +186,11 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
         end = int(stan_data['days_by_country'][i-1])#End of data for country i
-        country_retail = stan_data['retail'][:,i-1]
-        country_grocery= stan_data['grocery'][:,i-1]
-        country_transit = stan_data['transit'][:,i-1]
-        country_work = stan_data['work'][:,i-1]
-        country_residential = stan_data['residential'][:,i-1]
+        country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
+        country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
+        country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
+        country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
+        country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
 
         #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -335,10 +336,16 @@ short_dates = pd.read_csv(args.short_dates[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
+#Covariate names
+covariate_names = ['retail_and_recreation_percent_change_from_baseline',
+'grocery_and_pharmacy_percent_change_from_baseline',
+'transit_stations_percent_change_from_baseline',
+'workplaces_percent_change_from_baseline',
+'residential_percent_change_from_baseline']
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, covariate_names)
 
 #Plot marker explanation
 #NPIs
