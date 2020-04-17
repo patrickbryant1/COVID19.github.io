@@ -11,8 +11,8 @@ montage "NPI_markers.png" "mobility_markers.png" -tile 2x1 -geometry +2+2 "marke
 montage -label '%f' -pointsize 15 "markers.png" "Austria"  "Belgium" "Denmark" "France" "Germany" -tile 1x6 -geometry +2+2 'part1.png'
 montage -label '%f' -pointsize 15  "Italy" "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom" -tile 1x6 -geometry +2+2 'part2.png'
 #All countries
-montage -label '%f' -pointsize 15 "Austria"  "Belgium" "Denmark" "France"   "Germany" "Italy"  "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom"   -tile 1x11 -geometry +2+2 'mobility_model.svg'
-
+montage -label '%f' -pointsize 15 "Austria"  "Belgium" "Denmark" "France"   "Germany" "Italy"  "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom"   -tile 1x11 -geometry +2+2 'mobility_model.png'
+montage "markers.png" "mobility_model.png" -tile 1x2 -geometry +2+2 "mobility_model.png"
 #Mobility
 montage -label '%f' -pointsize 15 "Austria_mobility"  "Belgium_mobility" "Denmark_mobility" "France_mobility"  -tile 2x2 -geometry +2+2 'mobility_1.png'
 montage -label '%f' -pointsize 15 "Germany_mobility" "Italy_mobility"  "Norway_mobility" "Spain_mobility" "Sweden_mobility" "Switzerland_mobility" "United_Kingdom_mobility"   -tile 2x4 -geometry +2+2 'mobility_2.png'

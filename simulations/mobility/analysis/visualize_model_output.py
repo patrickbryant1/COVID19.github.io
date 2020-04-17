@@ -123,7 +123,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, covariate_names):
+def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -155,7 +155,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
-
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
@@ -167,7 +166,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     ax.set_xticks([1,2,3,4,5])
-    ax.set_xticklabels(covariate_names,rotation='vertical')
+    ax.set_xticklabels(['retail and recreation', 'grocery and pharmacy', 'transit stations','workplace', 'residential'],rotation='vertical')
     plt.tight_layout()
     fig.savefig(outdir+'plots/alphas.png', format='png')
     plt.close()
@@ -232,7 +231,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
        #Print R mean at beginning and end of model
-        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][-1],2))+'\n')#Print for table
+        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][end-7],2))+','+str(np.round(means['Rt'][end],2))+'\n')#Print for table
     #Close outfile
     result_file.close()
 
@@ -342,10 +341,11 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'transit_stations_percent_change_from_baseline',
 'workplaces_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
+
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, covariate_names)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
 
 #Plot marker explanation
 #NPIs
