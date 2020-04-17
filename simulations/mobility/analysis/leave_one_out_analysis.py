@@ -104,8 +104,14 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
                       "Sweden":0,"Switzerland":0,"United_Kingdom":0} 
+    missing_country_order =  {"Austria":[],"Belgium":[],"Denmark":[],"France":[], #Keep track of index for each country
+                              "Germany":[],"Italy":[],"Norway":[],"Spain":[],
+                              "Sweden":[],"Switzerland":[],"United_Kingdom":[]}
     for i in range(len(country_combos)):
         countries = country_combos.loc[i].values
+        for check in all_countries:
+            if check not in countries:
+                missing_country = check
         summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
         #Get alphas
         for a in range(5):
@@ -119,6 +125,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         #Loop through all countries in combo
         for j in range(len(countries)):
             country= countries[j]
+            missing_country_order[country].append(missing_country) #Save missing country to see which was left out in the sim
             #Extract mean modeling results for country j
             means = {'prediction':[],'E_deaths':[], 'Rt':[]}
             for k in range(1,days_to_simulate+1):
@@ -147,7 +154,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
             ax.set_xticklabels(all_countries,rotation='vertical')
             ax.set_title(covariate_names[i])
             fig.tight_layout()
-            fig.savefig(outdir+'LOO/plots/'+covariate_names[i]+'.png', format='png')
+            fig.savefig(outdir+'/plots/'+covariate_names[i]+'.png', format='png')
             plt.close()
 
 
@@ -160,20 +167,20 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         observed_country_deaths = data['deaths_by_country']
         observed_country_cases = data['cases_by_country']
         end = data['days_by_country']#End of data for country i
-
+        missing_order = missing_country_order[country]
         #Plot cases
         #Per day
        
         plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
-        outdir+'LOO/plots/'+country+'_cases.png')
+        outdir+'/plots/'+country+'_cases.png')
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(np.array(means[0,:,:],dtype='int16'),axis=1), np.cumsum(observed_country_cases),
-        'Cumulative cases',outdir+'LOO/plots/'+country+'_cumulative_cases.png')
+        'Cumulative cases',outdir+'/plots/'+country+'_cumulative_cases.png')
         #Plot Deaths
         plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
-        outdir+'LOO/plots/'+country+'_deaths.png')
+        outdir+'/plots/'+country+'_deaths.png')
         #Plot R
-        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'LOO/plots/'+country+'_Rt.png')
+        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png')
         #Correlations
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:])[0,1:])))
 
