@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(description = '''Simulate according to the ICL 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
-parser.add_argument('--days_to_model', nargs=1, type= int, default=sys.stdin, help = 'Number of days to model.')
+parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to model.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -90,7 +90,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -243,7 +243,7 @@ def simulate(stan_data, stan_model, outdir):
 
         sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.90, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
         summary.to_csv(outdir+'summary.csv')
@@ -346,13 +346,12 @@ def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
-days_to_model = args.days_to_model[0]
 stan_model = args.stan_model[0]
-days_to_model = args.days_to_model[0]
+days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 #Read data
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_model, end_date)
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
 #Visualize
