@@ -32,7 +32,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Mobility data
@@ -184,7 +184,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])#End of data for country i
+        end = int(stan_data['days_by_country'][i-1])-21 #3 week forecast #End of data for country i
         country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
         country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
         country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
@@ -262,7 +262,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:end],observed_y[:end], alpha = 0.5)
+        ax1.bar(x[:end+21],observed_y[:end+21], alpha = 0.5) #3 week forecast
     ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 1.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
