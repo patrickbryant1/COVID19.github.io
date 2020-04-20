@@ -32,7 +32,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -149,7 +149,7 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate, end_date):
         forecast_dates.extend(dates[:end])
         forecast_countries.extend([country]*len(means['E_deaths'][:end]))
 
-    #Save predicted(forecast) and observed deaths 
+    #Save predicted(forecast) and observed deaths
     result_df['Country'] = forecast_countries
     result_df['Date'] = forecast_dates
     result_df['Predicted mean'] = death_week_mean_forecast

@@ -177,6 +177,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     #Read in intervention dates
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
     result_file = open(outdir+'plots/summary_means.csv', 'w')
+    result_file.write('Country,Epidemic Start,R0 at start,R0 29 Mar,R0 Apr 19\n') #Write headers
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
@@ -206,7 +207,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
                 higher_bound[var].append(var_ij['97.5%'].values[0])
                 lower_bound25[var].append(var_ij['25%'].values[0])
                 higher_bound75[var].append(var_ij['75%'].values[0])
-
         #Plot cases
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
@@ -230,8 +230,11 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
-       #Print R mean at beginning and end of model
-        result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][end-7],2))+','+str(np.round(means['Rt'][end],2))+'\n')#Print for table
+        #Print R mean at beginning and end of model
+        try:
+            result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][end],2))+','+str(np.round(means['Rt'][end+20],2))+'\n')#Print for table
+        except:
+            pdb.set_trace()
     #Close outfile
     result_file.close()
 
@@ -258,11 +261,11 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    forecast = len(dates)
+    forecast = end+21
     fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:end+21],observed_y[:end+21], alpha = 0.5) #3 week forecast
+        ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
     ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 1.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
