@@ -156,6 +156,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    pdb.set_trace()
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])

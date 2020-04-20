@@ -72,7 +72,7 @@ def evaluate_forecast(forecast_df, countries, weeks_to_forecast, outdir):
         ax.set_xticks(xticks)
         ax.set_xticklabels(xlabels,rotation='vertical')
         ax.set_title(country)
-        ax.set_yticks(yticks[country])
+        #ax.set_yticks(yticks[country])
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         fig.tight_layout()
