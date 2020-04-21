@@ -156,7 +156,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-    pdb.set_trace()
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
@@ -290,6 +289,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
+        if country_npi[npi].values[0] == '0': #If nan
+            continue
         xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
         ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
         if xval in npi_xvals:

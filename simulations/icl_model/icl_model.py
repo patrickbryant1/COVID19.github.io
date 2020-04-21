@@ -103,7 +103,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
         covariates = pd.read_csv(datadir+'interventions_only.csv')
         #Change dates
         covariates = fix_covariates(covariates)
-
         #Create stan data
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
@@ -231,7 +230,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-
+        
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
 
 
