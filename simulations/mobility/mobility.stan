@@ -47,8 +47,8 @@ transformed parameters {
 	//mu is the mean R for each country sampled in model
 	//For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
   //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
-        Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) - covariate2[,m] * (alpha[2]) +
-        covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) + covariate5[,m] * (alpha[5]));
+        Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
+        covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
