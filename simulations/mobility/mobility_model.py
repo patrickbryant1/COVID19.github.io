@@ -256,5 +256,6 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

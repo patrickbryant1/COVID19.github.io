@@ -191,6 +191,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
         country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
         country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
+        #Print final mobility value
+        print(country,country_grocery[end-1])
 
         #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -349,6 +351,7 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
+
 #Visualize
 visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
 
