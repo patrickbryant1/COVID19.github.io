@@ -147,14 +147,13 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     for i in range(5): #Loop through all mobility params
         fig, ax = plt.subplots(figsize=(4, 4))
         for j in range(11):
-            pdb.set_trace()
             lo_country = all_countries[i] #Left out country
             ax.scatter(j+1,alpha_per_combo[0,i,j], marker="_", color = alpha_colors[i]) #plot mean
             ax.plot([j+1]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
             ax.set_ylim([0,1])
             ax.set_ylabel('Fractional reduction in R0')
             ax.set_xticks(np.arange(1,12))
-            ax.set_xticklabels(all_countries,rotation='vertical')
+            ax.set_xticklabels(['Austria','Belgium','Denmark','France','Germany','Italy','Norway','Spain','Sweden','Switzerland','United Kingdom'],rotation='vertical')
             ax.set_title(covariate_names[i])
             fig.tight_layout()
             fig.savefig(outdir+'/plots/'+covariate_names[i]+'.png', format='png')
@@ -186,20 +185,24 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png', missing_order)
         #Correlations
         corr = np.corrcoef(means[2,:,:]) 
-        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.png') 
+        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.png', country) 
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
     return None
 
-def plot_corr(corr, missing_order, outname):
+def plot_corr(corr, missing_order, outname, country):
     '''Plot corr matrix
     '''
+    if country == "United_Kingdom":
+        country = "United Kingdom"
+
     fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
     im = ax.imshow(corr)
     ax.set_xticks(np.arange(10))
     ax.set_yticks(np.arange(10))
     ax.set_xticklabels(missing_order, rotation = 90)
     ax.set_yticklabels(missing_order)
+    ax.set_title(country)
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
@@ -218,7 +221,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
                      "Spain":'tab:pink',
                      "Sweden":'tab:gray',
                      "Switzerland":'tab:olive',
-                     "United_Kingdom":'tab:cyan'
+                     "United Kingdom":'tab:cyan'
                     }
 
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
@@ -254,7 +257,8 @@ datadir = args.datadir[0]
 country_combos = pd.read_csv(args.country_combos[0], header = None)
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
-
+#Set font size
+matplotlib.rcParams.update({'font.size': 8})
 #Get data per country
 country_data = {} #Save all data from all extracted country combinations
 all_countries = ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]
