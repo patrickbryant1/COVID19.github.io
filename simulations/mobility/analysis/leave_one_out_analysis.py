@@ -167,29 +167,57 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         observed_country_deaths = data['deaths_by_country']
         observed_country_cases = data['cases_by_country']
         end = data['days_by_country']#End of data for country i
-        missing_order = missing_country_order[country]
+        missing_order = missing_country_order[country] #Order of exclusion for LOO
         #Plot cases
         #Per day
        
         plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
-        outdir+'/plots/'+country+'_cases.png')
+        outdir+'/plots/'+country+'_cases.png', missing_order)
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(np.array(means[0,:,:],dtype='int16'),axis=1), np.cumsum(observed_country_cases),
-        'Cumulative cases',outdir+'/plots/'+country+'_cumulative_cases.png')
+        'Cumulative cases',outdir+'/plots/'+country+'_cumulative_cases.png', missing_order)
         #Plot Deaths
         plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
-        outdir+'/plots/'+country+'_deaths.png')
+        outdir+'/plots/'+country+'_deaths.png', missing_order)
         #Plot R
-        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png')
+        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png', missing_order)
         #Correlations
-        print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:])[0,1:])))
+        corr = np.corrcoef(means[2,:,:]) 
+        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.png') 
+        print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
     return None
 
+def plot_corr(corr, missing_order, outname):
+    '''Plot corr matrix
+    '''
+    fig, ax = plt.subplots()
+    im = ax.imshow(corr)
+    ax.set_xticks(np.arange(10))
+    ax.set_yticks(np.arange(10))
+    ax.set_xticklabels(missing_order, rotation = 90)
+    ax.set_yticklabels(missing_order)
+    fig.tight_layout()
+    fig.savefig(outname, format = 'png')
+    plt.close()
 
-def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname):
+
+def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
+    country_colors = {"Austria":'k', #Cases,Deaths,Rt for all combinations and all days  
+                     "Belgium":'tab:blue',
+                     "Denmark":'tab:orange',
+                     "France":'tab:green',
+                     "Germany":'tab:red',
+                     "Italy":'tab:purple',
+                     "Norway":'tab:brown',
+                     "Spain":'tab:pink',
+                     "Sweden":'tab:gray',
+                     "Switzerland":'tab:olive',
+                     "United_Kingdom":'tab:cyan'
+                    }
+
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
     fig, ax = plt.subplots(figsize=(9, 4))
@@ -198,10 +226,11 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname):
         ax.bar(x[:end],observed_y[:end], alpha = 0.5)
     #Plot the mean for each LOO combo
     for i in range(10): 
+        missing_country = missing_order[i]
         #Plot so far
-        ax.plot(x[:end],y[i,:end], alpha=0.5, color='b', linewidth = 1.0)
+        ax.plot(x[:end],y[i,:end], alpha=0.2, color = country_colors[missing_country],linewidth = 2.0, label = missing_country)
         #Plot predicted dates
-        ax.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
+        ax.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.2, color='g', linewidth = 2.0)
    
     #Format axis
     ax.set_ylabel(ylabel)
@@ -209,6 +238,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname):
     xticks=np.arange(forecast-1,0,-7)
     ax.set_xticks(xticks)
     ax.set_xticklabels(dates[xticks],rotation='vertical')
+    ax.legend()
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     plt.close()
