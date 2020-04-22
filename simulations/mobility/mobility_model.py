@@ -48,17 +48,18 @@ def infection_to_death():
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
         return itd
 
-def serial_interval_distribution():
+def serial_interval_distribution(N2):
         '''Models the the time between when a person gets infected and when
         they subsequently infect another other people
         '''
         serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
-        return serial
+        return serial.pdf(np.arange(1,N2+1))
 
 def read_and_format_data(datadir, countries, N2, end_date):
         '''Read in and format all data needed for the model
+        N2 = number of days to model
         '''
 
         #Get epidemic data
@@ -74,7 +75,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
-        serial_interval = pd.read_csv(datadir+"serial_interval.csv")
+        serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
         #N2=84 #Increase for further forecast
@@ -95,10 +96,9 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
-                    'SI':serial_interval.loc[0:N2-1]['fit'].values,
+                    'SI':serial_interval[0:N2],
                     'y':[] #index cases
                     }
-
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
@@ -256,6 +256,5 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

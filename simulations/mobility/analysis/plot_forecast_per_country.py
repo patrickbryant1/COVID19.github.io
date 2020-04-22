@@ -80,12 +80,15 @@ def evaluate_forecast(forecast_df, countries, weeks_to_forecast, outdir):
         plt.close()
 
         #Analysis of correspondence
-        av_er = [] #Average absolute error per week
+        av_er = [] #Average  error per week
+        av_abser = [] #Average absolute error per week
         perc_er = [] #Average absolute percent error per week
         for c in range(0,len(pred_mean), 7):
             abs_er = np.absolute(np.array(pred_mean[c:c+7])-np.array(observed[c:c+7]))
-            av_er.append(np.average(abs_er))
-            perc_er.append(np.sum(abs_er)/np.sum(observed[c:c+7]))
+            er = np.array(pred_mean[c:c+7])-np.array(observed[c:c+7])
+            av_er.append(np.average(er))
+            av_abser.append(np.average(abs_er))
+            perc_er.append(np.sum(av_er[-1])/np.sum(observed[c:c+7]))
         print(country, av_er[0], av_er[1], av_er[2], perc_er[0], perc_er[1], perc_er[2])
     return None
 
