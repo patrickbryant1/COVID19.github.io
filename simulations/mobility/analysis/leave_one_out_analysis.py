@@ -31,7 +31,7 @@ def read_and_format_data(datadir, country, days_to_simulate):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
 
@@ -99,7 +99,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
                      "United_Kingdom":np.zeros((3,10,days_to_simulate))
                     }
     
-    alpha_per_combo = np.zeros((3,6,11)) #mean,2.5 and 97.5 values (95 % CI together)
+    alpha_per_combo = np.zeros((3,5,11)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
@@ -145,6 +145,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     for i in range(5): #Loop through all mobility params
         fig, ax = plt.subplots(figsize=(4, 4))
         for j in range(11):
+            pdb.set_trace()
             lo_country = all_countries[i] #Left out country
             ax.scatter(j+1,alpha_per_combo[0,i,j], marker="_", color = alpha_colors[i]) #plot mean
             ax.plot([j+1]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
