@@ -185,7 +185,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])-1#-21 #3 week forecast #End of data for country i
+        end = int(stan_data['days_by_country'][i-1])-21 #3 week forecast #End of data for country i
         country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
         country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
         country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
@@ -257,7 +257,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-05-10')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
