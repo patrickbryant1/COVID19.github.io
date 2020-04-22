@@ -112,6 +112,8 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         for check in all_countries:
             if check not in countries:
                 missing_country = check
+            if missing_country == "United_Kingdom":
+                missing_country = "United Kingdom"
         summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
         #Get alphas
         for a in range(5):
@@ -192,7 +194,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
 def plot_corr(corr, missing_order, outname):
     '''Plot corr matrix
     '''
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
     im = ax.imshow(corr)
     ax.set_xticks(np.arange(10))
     ax.set_yticks(np.arange(10))
@@ -221,7 +223,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
 
     dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     forecast = len(dates)
-    fig, ax = plt.subplots(figsize=(9, 4))
+    fig, ax = plt.subplots(figsize=(9/2.54, 6/2.54))
     #Plot observed dates
     if len(observed_y)>1:
         ax.bar(x[:end],observed_y[:end], alpha = 0.5)
