@@ -19,9 +19,8 @@ montage -label '%f' -pointsize 15 "Germany_mobility" "Italy_mobility"  "Norway_m
 
 #Sweden and Spain together
 #montage 'Sweden_cumulative_cases.png' 'Spain_cumulative_cases.png' 'Sweden_deaths.png' 'Spain_deaths.png' 'Sweden_Rt.png' 'Spain_Rt.png' -tile 2x3 -geometry +2+2 'Sweden_Spain.png'
-montage -label '%f' -pointsize 15 "Sweden" "Spain" -tile 1x2 -geometry +2+2 'Sweden_Spain.png'
-montage 'Sweden_Spain.png' "markers.png" -tile 1x2 -geometry +2+2 'Sweden_Spain.png'
-montage -label '%f' -pointsize 15 "Spain_mobility" "Sweden_mobility"  -tile 2x2 -geometry +2+2 'Sweden_Spain_mobility.png'
+montage -label '%f' -pointsize 15  "Italy" "Sweden" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
+montage 'Sweden_Italy.png' "markers.png" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
 
 #Forecast
 montage forecast  forecast/Austria_forecast.png  forecast/Germany_forecast.png  forecast/Sweden_forecast.png forecast/Belgium_forecast.png  forecast/Italy_forecast.png    forecast/Switzerland_forecast.png forecast/Denmark_forecast.png  forecast/Norway_forecast.png   forecast/United_Kingdom_forecast.png forecast/France_forecast.png   forecast/Spain_forecast.png -tile 3x4 -geometry +2+2 'forecast.png'
