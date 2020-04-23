@@ -86,17 +86,17 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     of the leave one out analysis.
     '''
     #Get all data from all simulations for each country
-    country_means = {"Austria":np.zeros((3,10,days_to_simulate)), #Cases,Deaths,Rt for all combinations and all days  
-                     "Belgium":np.zeros((3,10,days_to_simulate)),
-                     "Denmark":np.zeros((3,10,days_to_simulate)),
-                     "France":np.zeros((3,10,days_to_simulate)),
-                     "Germany":np.zeros((3,10,days_to_simulate)),
-                     "Italy":np.zeros((3,10,days_to_simulate)),  
-                     "Norway":np.zeros((3,10,days_to_simulate)), 
-                     "Spain":np.zeros((3,10,days_to_simulate)), 
-                     "Sweden":np.zeros((3,10,days_to_simulate)), 
-                     "Switzerland":np.zeros((3,10,days_to_simulate)), 
-                     "United_Kingdom":np.zeros((3,10,days_to_simulate))
+    country_means = {"Austria":np.zeros((3,10,country_data['Austria']['days_by_country'])), #Cases,Deaths,Rt for all combinations and all days  
+                     "Belgium":np.zeros((3,10,country_data['Belgium']['days_by_country'])),
+                     "Denmark":np.zeros((3,10,country_data['Denmark']['days_by_country'])),
+                     "France":np.zeros((3,10,country_data['France']['days_by_country'])),
+                     "Germany":np.zeros((3,10,country_data['Germany']['days_by_country'])),
+                     "Italy":np.zeros((3,10,country_data['Italy']['days_by_country'])),  
+                     "Norway":np.zeros((3,10,country_data['Norway']['days_by_country'])),         
+                     "Spain":np.zeros((3,10,country_data['Spain']['days_by_country'])), 
+                     "Sweden":np.zeros((3,10,country_data['Sweden']['days_by_country'])), 
+                     "Switzerland":np.zeros((3,10,country_data['Switzerland']['days_by_country'])), 
+                     "United_Kingdom":np.zeros((3,10,country_data['United_Kingdom']['days_by_country']))
                     }
     
     alpha_per_combo = np.zeros((3,5,11)) #mean,2.5 and 97.5 values (95 % CI together)
@@ -112,8 +112,8 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         for check in all_countries:
             if check not in countries:
                 missing_country = check
-            if missing_country == "United_Kingdom":
-                missing_country = "United Kingdom"
+        if missing_country == "United_Kingdom":
+            missing_country = "United Kingdom"
         summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
         #Get alphas
         for a in range(5):
@@ -127,13 +127,19 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         #Loop through all countries in combo
         for j in range(len(countries)):
             country= countries[j]
+            data = country_data[country]
+            end_iter = data['days_by_country']
             missing_country_order[country].append(missing_country) #Save missing country to see which was left out in the sim
+                
             #Extract mean modeling results for country j
             means = {'prediction':[],'E_deaths':[], 'Rt':[]}
-            for k in range(1,days_to_simulate+1):
+            for k in range(1,end_iter+1):
                 for var in ['prediction', 'E_deaths', 'Rt']:
                     var_ij = summary[summary['Unnamed: 0']==var+'['+str(k)+','+str(j+1)+']']
-                    means[var].append(var_ij['mean'].values[0])
+                    try:
+                        means[var].append(var_ij['mean'].values[0])
+                    except:
+                        pdb.set_trace()
             #Save data to country means
             country_means[country][0,fetched_combos[country],:]=means['prediction']
             country_means[country][1,fetched_combos[country],:]=means['E_deaths']
