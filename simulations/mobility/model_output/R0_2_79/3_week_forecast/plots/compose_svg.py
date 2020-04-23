@@ -128,3 +128,12 @@ Figure("14cm", "14cm",
           SVG('/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast/Switzerland_forecast.svg'),
           SVG('/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast/United_Kingdom_forecast.svg'),
          ).tile(3, 4).save(outdir+'FigureS2.svg')
+
+#Figure S3 - LOO alphas
+Figure("18cm", "26cm",
+          SVG('./LOO/retail and recreation.svg'),
+          SVG('./LOO/grocery and pharmacy.svg'),
+          SVG('./LOO/transit stations.svg'),
+          SVG('./LOO/workplace.svg'),
+          SVG('./LOO/residential.svg'),
+         ).tile(2, 3).save(outdir+'FigureS4.svg')

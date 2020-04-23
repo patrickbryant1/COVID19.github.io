@@ -9,10 +9,11 @@ import glob
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
-import pystan
+
 
 import pdb
 
@@ -156,13 +157,18 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
         alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
+        alpha_25 = 1-np.exp(-alpha['25%'].values[0])
+        alpha_75 = 1-np.exp(-alpha['75%'].values[0])
         alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-        ax.scatter(i,alpha_m, marker = '_')
-        ax.plot([i]*2,[alpha_2_5,alpha_97_5])
+        ax.plot([i-0.25,i+0.25],[alpha_m,alpha_m],color = alpha_colors[i-1])
+        ax.plot([i]*2,[alpha_2_5,alpha_97_5],  marker = '_',color = alpha_colors[i-1])
+        rect = Rectangle((i-0.25,alpha_25),0.5,alpha_75-alpha_25,linewidth=1, color = alpha_colors[i-1], alpha = 0.3)
+        ax.add_patch(rect)
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     ax.set_xticks([1,2,3,4,5])
@@ -170,6 +176,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     plt.tight_layout()
     fig.savefig(outdir+'plots/alphas.svg', format='svg', dpi=300)
     plt.close()
+    pdb.set_trace()
 
 
 
