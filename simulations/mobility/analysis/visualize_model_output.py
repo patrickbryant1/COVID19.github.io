@@ -148,7 +148,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
-    fig.savefig(outdir+'plots/rhat.png', format='png')
+    fig.savefig(outdir+'plots/rhat.svg', format='svg', dpi=300)
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
@@ -168,7 +168,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     ax.set_xticks([1,2,3,4,5])
     ax.set_xticklabels(['retail and recreation', 'grocery and pharmacy', 'transit stations','workplace', 'residential'],rotation='vertical')
     plt.tight_layout()
-    fig.savefig(outdir+'plots/alphas.png', format='png')
+    fig.savefig(outdir+'plots/alphas.svg', format='svg', dpi=300)
     plt.close()
 
 
@@ -213,23 +213,23 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_cases.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
         np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot Deaths
         #Per day
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_deaths.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
         plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths']),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
         np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
-        outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_cumulative_deaths.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
+        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.svg',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
         #Print R mean at beginning and end of model
@@ -253,7 +253,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     ax.set_xticklabels(xtick_labels,rotation='vertical')
     ax.set_ylim([-5,20])
     plt.tight_layout()
-    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
+    fig.savefig(outdir+'plots/mcmc_parcoord.svg', format = 'svg')
     plt.close()
 
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
@@ -326,7 +326,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_yticks([-1,-0.5,0,0.4])
 
     fig.tight_layout()
-    fig.savefig(outname, format = 'png')
+    fig.savefig(outname, format = 'svg')
     plt.close()
 
 
@@ -375,7 +375,7 @@ for npi in NPI:
 ax.set_ylim([0,6])
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
+fig.savefig(outdir+'plots/NPI_markers.svg', format = 'svg')
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
@@ -387,4 +387,4 @@ for cov in covariate_colors:
     i-=1
 ax.set_xlim([0.999,3.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
+fig.savefig(outdir+'plots/mobility_markers.svg', format = 'svg')
