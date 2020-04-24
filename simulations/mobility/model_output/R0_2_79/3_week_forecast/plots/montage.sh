@@ -6,7 +6,7 @@ do
 done
 
 #Markers
-montage "NPI_markers.png" "mobility_markers.png" -tile 2x1 -geometry +2+2 "markers.png"
+montage "NPI_markers.png" "mobility_markers.png" "foreacast_markers.png" -tile 3x1 -geometry +2+2 "markers.png"
 #Montage different countries together
 montage -label '%f' -pointsize 15 "markers.png" "Austria"  "Belgium" "Denmark" "France" "Germany" -tile 1x6 -geometry +2+2 'part1.png'
 montage -label '%f' -pointsize 15  "Italy" "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom" -tile 1x6 -geometry +2+2 'part2.png'
