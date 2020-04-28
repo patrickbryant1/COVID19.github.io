@@ -25,6 +25,8 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
+parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -47,30 +49,37 @@ def infection_to_death():
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
         return itd
 
-def serial_interval_distribution():
+def serial_interval_distribution(N2):
         '''Models the the time between when a person gets infected and when
         they subsequently infect another other people
         '''
         serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
-        return serial
+        return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(datadir, countries):
+def read_and_format_data(datadir, countries, N2, end_date):
         '''Read in and format all data needed for the model
+        N2 = number of days to model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200412.csv')
-        #Convert to datetime
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
-        ## get CFR
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
+        #Mobility data
+        mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
+        #Convert to datetime
+        mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+        # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
-        serial_interval = pd.read_csv(datadir+"serial_interval.csv")
+        serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
 
         #Create stan data
-        N2=84 #Increase for further forecast
+        #N2=84 #Increase for further forecast
         dates_by_country = {} #Save for later plotting purposes
         deaths_by_country = {}
         cases_by_country = {}
@@ -82,21 +91,23 @@ def read_and_format_data(datadir, countries):
                     'cases':np.zeros((N2,len(countries)), dtype=int),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
-                    'retail':np.zeros((N2,len(countries))),
-                    'grocery':np.zeros((N2,len(countries))),
-                    'transit':np.zeros((N2,len(countries))),
-                    'work':np.zeros((N2,len(countries))),
-                    'residential':np.zeros((N2,len(countries))),
+                    'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
+                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
+                    'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
+                    'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
+                    'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
-                    'SI':serial_interval.loc[0:N2-1]['fit'].values,
+                    'SI':serial_interval[0:N2],
                     'y':[] #index cases
                     }
-
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
-        #covariate_names = ['retail_and_recreation','grocery_and_pharmacy','transit_stations','workplace','residential']
-        covariate_names = ['retail','grocery','transit','work','residential']
+        covariate_names = ['retail_and_recreation_percent_change_from_baseline',
+       'grocery_and_pharmacy_percent_change_from_baseline',
+       'transit_stations_percent_change_from_baseline',
+       'workplaces_percent_change_from_baseline',
+       'residential_percent_change_from_baseline']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -180,21 +191,26 @@ def read_and_format_data(datadir, countries):
 
                 #Covariates - assign the same shape as others (N2)
                 #Mobility data from Google
-                geoId = country_epidemic_data['geoId'].values[0]
+                country_cov_data = mobility_data[mobility_data['country_region']==country]
+                if country == 'United_Kingdom': #Different assignments for UK
+                    country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
+                #Get whole country - no subregion
+                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                #Get matching dates
+                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['dateRep'])]
+                end_date = max(country_cov_data['date']) #Last date for mobility data
                 for name in covariate_names:
-                    country_cov_name = pd.read_csv(datadir+'europe/'+geoId+'-'+name+'.csv')
-                    country_cov_name['Date'] = pd.to_datetime(country_cov_name['Date'])
                     country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    end_date = max(country_cov_name['Date']) #Last date for mobility data
                     for d in range(len(country_epidemic_data)): #loop through all country data
                         row_d = country_epidemic_data.loc[d]
                         date_d = row_d['dateRep'] #Extract date
                         try:
-                            change_d = np.round(float(country_cov_name[country_cov_name['Date']==date_d]['Change'].values[0])/100, 2) #Match mobility change on date
+                            change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
                                 country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
-                            continue
+                            continue #Date too far ahead
+
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
                     country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
@@ -207,8 +223,7 @@ def read_and_format_data(datadir, countries):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-
-        return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2
+        return stan_data
 
 
 
@@ -217,14 +232,10 @@ def simulate(stan_data, stan_model, outdir):
         for parameter estimation.
         '''
 
-<<<<<<< HEAD
         sm =  pystan.StanModel(file='mobility.stan')
         #fit = sm.sampling(data=stan_data, iter=10, warmup=5,chains=2) #n_jobs = number of parallel processes - number of chains
-=======
-        sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
->>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.95, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
         #Save summary
         #print ("FIT:",fit)
         s = fit.summary()
@@ -239,8 +250,6 @@ def simulate(stan_data, stan_model, outdir):
             #print("Output:",outdir+key+'.npy')
             np.save(outdir+key+'.npy', fit_param)
         return out
-
-<<<<<<< HEAD
 def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,interventions,in_names):
     '''Visualize results
     '''
@@ -421,10 +430,11 @@ if not os.path.exists(outdir+"plots/"):
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 stan_model = args.stan_model[0]
+days_to_simulate = args.days_to_simulate[0]
+end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-<<<<<<< HEAD
 countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland" ] # ,"Greece","Portugal","Netherlands"]
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
 
@@ -434,10 +444,6 @@ stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_countr
 #Visualize
 in_names={'covariate1':'retail','covariate2':'grocery','covariate3':'transit','covariate4':'work','covariate5':'residential'}
 visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2,stan_data,in_names)
-=======
-#countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland"]
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
-
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
->>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6
