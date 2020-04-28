@@ -221,7 +221,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-        pdb.set_trace()
+
         return stan_data
 
 
@@ -256,6 +256,5 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
