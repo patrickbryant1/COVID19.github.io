@@ -67,9 +67,11 @@ transformed parameters {
           }
       //Deaths
           E_deaths[p,1,m]= 1e-9; //Start expectation - practically 0
+          E_deaths_sum[1,m]= 1e-9;
     	//Step through all days til end of forecast
         for (i in 2:N2){
           E_deaths[p,i,m]= 0; //set to 0 (should be anyway)
+
           for(j in 1:(i-1)){
             E_deaths[p,i,m] += prediction[p,j,m]*f[i-j,m]*death_frac_age[p,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
             E_deaths_sum[i,m]+=E_deaths[p,i,m]; //Add to total sum over all age bins
