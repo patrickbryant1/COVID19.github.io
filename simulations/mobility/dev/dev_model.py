@@ -91,8 +91,8 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2,
                     'x':np.arange(1,N2+1),
-                    'pop_frac_age':population_per_age,
-                    'death_frac_age':deaths_per_age,
+                    'pop_frac_age':np.zeros((10,len(countries))),
+                    'death_frac_age':np.zeros((10,len(countries))),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((N2,len(countries))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
@@ -117,7 +117,9 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 country = countries[c]
                 #Get fatality rate
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
-
+                #Add population fractions - need to change if more countries
+                stan_data['pop_frac_age'][:,c]=population_per_age
+                stan_data['death_frac_age'][:,c]=deaths_per_age
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
                 #Sort on date
@@ -232,7 +234,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.9, 'max_treedepth': 10})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
@@ -256,5 +258,6 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
