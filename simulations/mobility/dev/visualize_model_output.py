@@ -139,7 +139,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
-    #'E_deaths_sum', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
+    #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
     #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
     #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
     #'prediction0', 'E_deaths0' = w/o mobility changes
@@ -215,16 +215,19 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         print(country,country_grocery[end-1])
 
         #Extract modeling results
-        means = {'prediction':np.zeros((1,days_to_simulate)),'E_deaths_sum':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))}
-        lower_bound = {'prediction':np.zeros((1,days_to_simulate)),'E_deaths_sum':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 2.5 %
-        higher_bound = {'prediction':np.zeros((1,days_to_simulate)),'E_deaths_sum':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
-        lower_bound25 = {'prediction':np.zeros((1,days_to_simulate)),'E_deaths_sum':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 25%
-        higher_bound75 = {'prediction':np.zeros((1,days_to_simulate)),'E_deaths_sum':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 55 % - together 75 % CI
+        means = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))}
+        lower_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 2.5 %
+        higher_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
+        lower_bound25 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 25%
+        higher_bound75 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
         for j in range(1,days_to_simulate+1):
-                for var in ['prediction', 'E_deaths_sum','Rt']:
-                    p=1
-                    var_pij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+            for var in ['prediction', 'E_deaths','Rt']:
+                for p in range(1,means[var].shape[0]+1):
+                    if var =='prediction':
+                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(p)+','+str(j)+','+str(i)+']']
+                    else:
+                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
                     means[var][p-1,j-1]=var_pij['mean'].values[0]
                     lower_bound[var][p-1,j-1]=var_pij['2.5%'].values[0]
                     higher_bound[var][p-1,j-1]=var_pij['97.5%'].values[0]
@@ -243,12 +246,12 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot Deaths
         #Per day
-        plot_shade_ci(days, end,dates[0],means['E_deaths_sum'],observed_country_deaths, lower_bound['E_deaths_sum'], higher_bound['E_deaths_sum'],
-        lower_bound25['E_deaths_sum'], higher_bound75['E_deaths_sum'], 'Deaths per day',
+        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
+        lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
         outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
-        plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths_sum'],axis=0),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths_sum']), np.cumsum(higher_bound['E_deaths_sum']),
-        np.cumsum(lower_bound25['E_deaths_sum']), np.cumsum(higher_bound75['E_deaths_sum']), 'Cumulative deaths',
+        plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths'],axis=0),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
+        np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
         outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
@@ -294,11 +297,13 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     if len(observed_y)>1:
         ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
     #Plot per age group
-    for i in range(1):
+    for i in range(y.shape[0]):
         ax1.plot(x[:end],y[i,:end], alpha=0.5, label=i, linewidth = 1.0)
-        ax1.fill_between(x[:end], lower_bound[i,:end], higher_bound[i,:end], color='cornflowerblue', alpha=0.4)
-        ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
-
+        try:
+            ax1.fill_between(x[:end], lower_bound[i,:end], higher_bound[i,:end], color='cornflowerblue', alpha=0.4)
+            ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
+        except:
+            pdb.set_trace()
         #Plot predicted dates
         ax1.plot(x[end:forecast],y[i,end:forecast], alpha=0.5, color='g', linewidth = 1.0)
         ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
