@@ -35,28 +35,10 @@ parameters {
 
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
-    real convolution1; //value of integration
-    real convolution2;
-    real convolution3;
-    real convolution4;
-    real convolution5;
-    real convolution6;
-    real convolution7;
-    real convolution8;
-    real convolution9;
-    real convolution10;
-    matrix[N2, M] prediction1; //predict cases for each day for all countries
-    matrix[N2, M] prediction2; //predict cases for each day for all countries
-    matrix[N2, M] prediction3; //predict cases for each day for all countries
-    matrix[N2, M] prediction4; //predict cases for each day for all countries
-    matrix[N2, M] prediction5; //predict cases for each day for all countries
-    matrix[N2, M] prediction6; //predict cases for each day for all countries
-    matrix[N2, M] prediction7; //predict cases for each day for all countries
-    matrix[N2, M] prediction8; //predict cases for each day for all countries
-    matrix[N2, M] prediction9; //predict cases for each day for all countries
-    matrix[N2, M] prediction10; //predict cases for each day for all countries
+    real convolution; //value of integration
+    matrix[N2, M] prediction[10]; //predict cases for each day for all countries
     matrix[N2, M] E_deaths = rep_matrix(0,N2,M); //sum of deaths over all age groups
-    matrix[N2, M] Rt;
+    matrix[N2, M] Rt[10]; //Rt per age group to model spread
     real<lower=0> phi;
     phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
 	//loop through all countries
@@ -65,75 +47,43 @@ transformed parameters {
     //mu is the mean R for each country sampled in model
     //For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
     //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
-      Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
-      covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
+      for (p in 1:10){
+        Rt[p,:,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
+        covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
+        }
       //Cases
-        prediction1[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
-      	prediction2[1:N0,m] = rep_vector(y[m],N0); //y is the index case
-      	prediction3[1:N0,m] = rep_vector(y[m],N0);
-      	prediction4[1:N0,m] = rep_vector(y[m],N0);
-      	prediction5[1:N0,m] = rep_vector(y[m],N0);
-      	prediction6[1:N0,m] = rep_vector(y[m],N0);
-      	prediction7[1:N0,m] = rep_vector(y[m],N0);
-      	prediction8[1:N0,m] = rep_vector(y[m],N0);
-      	prediction9[1:N0,m] = rep_vector(y[m],N0);
-      	prediction10[1:N0,m] = rep_vector(y[m],N0);
-
+      for (p in 1:10){
+        prediction[p,1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
+  					                                      //y is the index case
       	//for all days from 7 (1 after the cases in N0 days) to end of forecast
             for (i in (N0+1):N2) {
-              convolution1=0;//reset
-              convolution2=0;
-              convolution3=0;
-              convolution4=0;
-              convolution5=0;
-              convolution6=0;
-              convolution7=0;
-              convolution8=0;
-              convolution9=0;
-              convolution10=0;
-
+              convolution=0;//reset
       	//loop through all days up to current (integration)
-          for(j in 1:(i-1)) { //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
-            convolution1 += prediction1[j,m]*SI[i-j];
-            convolution2 += prediction2[j,m]*SI[i-j];
-            convolution3 += prediction3[j,m]*SI[i-j];
-            convolution4 += prediction4[j,m]*SI[i-j];
-            convolution5 += prediction5[j,m]*SI[i-j];
-            convolution6 += prediction6[j,m]*SI[i-j];
-            convolution7 += prediction7[j,m]*SI[i-j];
-            convolution8 += prediction8[j,m]*SI[i-j];
-            convolution9 += prediction9[j,m]*SI[i-j];
-            convolution10 += prediction10[j,m]*SI[i-j];
+          for(j in 1:(i-1)) {
+            convolution += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
             }
-            prediction1[i,m] = Rt[i,m] * convolution1; //Scale with average spread per case
-            prediction2[i,m] = Rt[i,m] * convolution2;
-            prediction3[i,m] = Rt[i,m] * convolution3;
-            prediction4[i,m] = Rt[i,m] * convolution4;
-            prediction5[i,m] = Rt[i,m] * convolution5;
-            prediction6[i,m] = Rt[i,m] * convolution6;
-            prediction7[i,m] = Rt[i,m] * convolution7;
-            prediction8[i,m] = Rt[i,m] * convolution8;
-            prediction9[i,m] = Rt[i,m] * convolution9;
-            prediction10[i,m] = Rt[i,m] * convolution10;
+            prediction[p,i,m] = Rt[p,i,m] * convolution; //Scale with average spread per case
+            print(Rt[p,i,m])
             }
-
+          }
       //Deaths - use all cases, now that they are estimated
     	//Step through all days til end of forecast
         E_deaths[1,m]= 1e-9; //Start expectation - practically 0
         for (i in 2:N2){
           E_deaths[i,m]= 0; //ensure 0
           //Go through all days up to current
-          for(j in 1:(i-1)){ //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
-              E_deaths[i,m] += (prediction1[j,m]*death_frac_age[1,m]+prediction2[j,m]*death_frac_age[2,m]+
-              prediction3[j,m]*death_frac_age[3,m]+prediction4[j,m]*death_frac_age[4,m]+prediction5[j,m]*death_frac_age[5,m]+
-              prediction6[j,m]*death_frac_age[6,m]+prediction7[j,m]*death_frac_age[7,m]+prediction8[j,m]*death_frac_age[8,m]+
-              prediction9[j,m]*death_frac_age[9,m]+prediction10[j,m]*death_frac_age[10,m])*f[i-j,m];
+          for(j in 1:(i-1)){
+            //Loop through all age bins
+            for (p in 1:10){
+              E_deaths[i,m] += prediction[p,j,m]*f[i-j,m]*death_frac_age[p,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
               //print(p)
+              //print(death_frac_age[p,m])
+              //print(E_deaths[i,m])
               }
       }
     }
   }
-
+}
 //We assume that seeding of new infections begins 30 days before the day after a country has
 //cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of
 //infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03). These seed
