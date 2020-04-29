@@ -9,10 +9,11 @@ import glob
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
-import pystan
+
 
 import pdb
 
@@ -148,7 +149,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
-    fig.savefig(outdir+'plots/rhat.svg', format='svg', dpi=300)
+    fig.savefig(outdir+'plots/rhat.png', format='png', dpi=300)
     plt.close()
 
     #Plot values from each iteration as r function mcmc_parcoord
@@ -156,20 +157,26 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
         alpha_m = 1-np.exp(-alpha['mean'].values[0])
         alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
+        alpha_25 = 1-np.exp(-alpha['25%'].values[0])
+        alpha_75 = 1-np.exp(-alpha['75%'].values[0])
         alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-        ax.scatter(i,alpha_m, marker = '_')
-        ax.plot([i]*2,[alpha_2_5,alpha_97_5])
+        ax.plot([i-0.25,i+0.25],[alpha_m,alpha_m],color = alpha_colors[i-1])
+        ax.plot([i]*2,[alpha_2_5,alpha_97_5],  marker = '_',color = alpha_colors[i-1])
+        rect = Rectangle((i-0.25,alpha_25),0.5,alpha_75-alpha_25,linewidth=1, color = alpha_colors[i-1], alpha = 0.3)
+        ax.add_patch(rect)
     ax.set_ylim([0,1])
     ax.set_ylabel('Fractional reduction in R0')
     ax.set_xticks([1,2,3,4,5])
     ax.set_xticklabels(['retail and recreation', 'grocery and pharmacy', 'transit stations','workplace', 'residential'],rotation='vertical')
     plt.tight_layout()
-    fig.savefig(outdir+'plots/alphas.svg', format='svg', dpi=300)
+    fig.savefig(outdir+'plots/alphas.png', format='png', dpi=300)
     plt.close()
+
 
 
 
@@ -213,23 +220,23 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
         np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot Deaths
         #Per day
         plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+country+'_deaths.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
         plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths']),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
         np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
-        outdir+'plots/'+country+'_cumulative_deaths.svg',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.svg',country_npi,
+        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
         #Print R mean at beginning and end of model
@@ -253,7 +260,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     ax.set_xticklabels(xtick_labels,rotation='vertical')
     ax.set_ylim([-5,20])
     plt.tight_layout()
-    fig.savefig(outdir+'plots/mcmc_parcoord.svg', format = 'svg')
+    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
     plt.close()
 
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
@@ -264,7 +271,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
     forecast = end+21
-    fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
+    fig, ax1 = plt.subplots(figsize=(8/2.54, 5/2.54))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
@@ -313,7 +320,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     #Plot formatting
     #ax1
-    ax1.legend(loc='lower left', frameon=False, markerscale=2)
+    #ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
@@ -326,14 +333,15 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_yticks([-1,-0.5,0,0.4])
 
     fig.tight_layout()
-    fig.savefig(outname, format = 'svg')
+    fig.savefig(outname, format = 'png')
+    fig.savefig(outname.split('.png')[0]+'.png', format = 'png')
     plt.close()
 
 
 
 #####MAIN#####
 #Set font size
-matplotlib.rcParams.update({'font.size': 8})
+matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
@@ -350,10 +358,10 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
+#stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
 
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
+#visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
 
 #Plot marker explanation
 #NPIs
@@ -375,7 +383,7 @@ for npi in NPI:
 ax.set_ylim([0,6])
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/NPI_markers.svg', format = 'svg')
+fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
@@ -385,6 +393,17 @@ for cov in covariate_colors:
     ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
     ax.text(2.001,i,cov)
     i-=1
-ax.set_xlim([0.999,3.02])
+ax.set_xlim([0.999,3.5])
 ax.axis('off')
-fig.savefig(outdir+'plots/mobility_markers.svg', format = 'svg')
+fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
+
+#Simulation and forecast
+fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+ax.plot([1,1.8],[1.5]*2, color = 'b', linewidth=8)
+ax.text(2.001,1.5,'Simulation')
+ax.plot([1,1.8],[1.45]*2, color ='g', linewidth=8)
+ax.text(2.001,1.45,'Forecast')
+ax.set_xlim([0.999,3.02])
+ax.set_ylim([1.42,1.52])
+ax.axis('off')
+fig.savefig(outdir+'plots/foreacast_markers.png', format = 'png')

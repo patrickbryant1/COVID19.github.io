@@ -27,15 +27,16 @@ for country in countries:
     ind_country_format(country)
 
 #Markers
-Figure("12cm", "2.25cm",
+Figure("18cm", "2.25cm",
           SVG('NPI_markers.svg'),
           SVG("mobility_markers.svg"),
-         ).tile(2, 1).save('markers.svg')
+           SVG("foreacast_markers.svg"),
+         ).tile(3, 1).save('markers.svg')
 
 #Figure 1 Italy and Sweden
 Figure("18cm", "16cm",
         Panel(
-            SVG('Italy.svg'),Text("Italy", 310,5, size=10,weight='bold', font='Times New Roman')
+            SVG('Italy.svg'),Text("Italy", 310,10, size=10,weight='bold', font='Times New Roman')
             ),
         Panel(
             SVG('Sweden.svg'),Text("Sweden", 310, 5, size=10,weight='bold', font='Times New Roman')
@@ -95,7 +96,7 @@ Figure("18cm", "29cm",
 #Part 2
 Figure("18cm", "29cm",
         Panel(
-             SVG('Italy.svg'),Text("Italy", text_x,text_y, size=10,weight='bold', font='Times New Roman')
+             SVG('Italy.svg'),Text("Italy", text_x,10, size=10,weight='bold', font='Times New Roman')
             ),
          Panel(
               SVG('Norway.svg'),Text("Norway", text_x,text_y, size=10,weight='bold', font='Times New Roman')
@@ -128,3 +129,12 @@ Figure("14cm", "14cm",
           SVG('/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast/Switzerland_forecast.svg'),
           SVG('/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast/United_Kingdom_forecast.svg'),
          ).tile(3, 4).save(outdir+'FigureS2.svg')
+
+#Figure S3 - LOO alphas
+Figure("18cm", "26cm",
+          SVG('./LOO/retail and recreation.svg'),
+          SVG('./LOO/grocery and pharmacy.svg'),
+          SVG('./LOO/transit stations.svg'),
+          SVG('./LOO/workplace.svg'),
+          SVG('./LOO/residential.svg'),
+         ).tile(2, 3).save(outdir+'FigureS4.svg')
