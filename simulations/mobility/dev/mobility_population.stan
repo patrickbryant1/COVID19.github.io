@@ -68,11 +68,14 @@ transformed parameters {
         E_deaths[1,m]= 1e-9; //Start expectation - practically 0
         for (i in 2:N2){
           E_deaths[i,m]= 0; //ensure 0
-          //Loop through all age bins
-          for (p in 1:10){
-            //Go through all days up to current
-            for(j in 1:(i-1)){
+          //Go through all days up to current
+          for(j in 1:(i-1)){
+            //Loop through all age bins
+            for (p in 1:10){
               E_deaths[i,m] += prediction[p,j,m]*f[i-j,m]*death_frac_age[p,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
+              //print(p)
+              //print(death_frac_age[p,m])
+              //print(E_deaths[i,m])
               }
       }
     }
