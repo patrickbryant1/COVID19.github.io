@@ -149,7 +149,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
 
     #Plot alphas - influence of each mobility parameter
     covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
-    alpha_colors = {0:'tab:blue',1:'tab:orange',2:'tab:green', 3:'tab:red', 4:'tab:purple'}
+    alpha_colors =  {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(5): #Loop through all mobility params
         fig, ax = plt.subplots(figsize=(4, 4))
         for j in range(11):
@@ -162,7 +162,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
             ax.set_xticklabels(['Austria','Belgium','Denmark','France','Germany','Italy','Norway','Spain','Sweden','Switzerland','United Kingdom'],rotation='vertical')
             ax.set_title(covariate_names[i])
             fig.tight_layout()
-            fig.savefig(outdir+'/plots/'+covariate_names[i]+'.png', format='png')
+            fig.savefig(outdir+'/plots/'+covariate_names[i]+'.svg', format='svg')
             plt.close()
 
 
@@ -191,7 +191,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png', missing_order)
         #Correlations
         corr = np.corrcoef(means[2,:,:]) 
-        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.png', country) 
+        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.svg', country) 
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
     return None
@@ -210,7 +210,7 @@ def plot_corr(corr, missing_order, outname, country):
     ax.set_yticklabels(missing_order)
     ax.set_title(country)
     fig.tight_layout()
-    fig.savefig(outname, format = 'png')
+    fig.savefig(outname, format = 'svg')
     plt.close()
 
 
