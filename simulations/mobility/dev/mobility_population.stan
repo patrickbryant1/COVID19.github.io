@@ -36,9 +36,8 @@ parameters {
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
     real convolution; //value of integration
-    matrix[N2, M] prediction; //predict cases for each day for all countries
-    matrix[N2, M] E_deaths[10];
-    matrix[N2, M] E_deaths_sum  = rep_matrix(0,N2,M); //sum of deaths over all age groups
+    matrix[N2, M] prediction[10]; //predict cases for each day for all countries
+    matrix[N2, M] E_deaths = rep_matrix(0,N2,M); //sum of deaths over all age groups
     matrix[N2, M] Rt;
     real<lower=0> phi;
     phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
@@ -51,30 +50,29 @@ transformed parameters {
       Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
       covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
       //Cases
-      prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
-					                                      //y is the index case
-    	//for all days from 7 (1 after the cases in N0 days) to end of forecast
-          for (i in (N0+1):N2) {
-            convolution=0;//reset
-    	//loop through all days up to current (integration)
-        for(j in 1:(i-1)) {
-          convolution += prediction[j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
-          }
-          prediction[i,m] = Rt[i,m] * convolution; //Scale with average spread per case
+      for (p in 1:10){
+        prediction[p,1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
+  					                                      //y is the index case
+      	//for all days from 7 (1 after the cases in N0 days) to end of forecast
+            for (i in (N0+1):N2) {
+              convolution=0;//reset
+      	//loop through all days up to current (integration)
+          for(j in 1:(i-1)) {
+            convolution += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
+            }
+            prediction[p,i,m] = Rt[i,m] * convolution; //Scale with average spread per case
+            }
           }
       //Deaths - use all cases, now that they are estimated
     	//Step through all days til end of forecast
-        E_deaths_sum[1,m]= 1e-9; //Start expectation - practically 0
+        E_deaths[1,m]= 1e-9; //Start expectation - practically 0
         for (i in 2:N2){
-          E_deaths_sum[i,m]= 0; //ensure 0
+          E_deaths[i,m]= 0; //ensure 0
           //Loop through all age bins
           for (p in 1:10){
-            E_deaths[p,1,m]= 1e-9; //Start expectation - practically 0
-            E_deaths[p,i,m]= 0; //set to 0 (should be anyway)
             //Go through all days up to current
             for(j in 1:(i-1)){
-              E_deaths[p,i,m] += prediction[j,m]*f[i-j,m]*death_frac_age[p,m]*pop_frac_age[p,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
-              E_deaths_sum[i,m]+=E_deaths[p,i,m]; //Add to total sum over all age bins
+              E_deaths[i,m] += prediction[p,j,m]*f[i-j,m]*death_frac_age[p,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
               }
       }
     }
@@ -102,8 +100,7 @@ model {
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
     for(i in EpidemicStart[m]:N[m]){
-       //print(phi);
-       deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths_sum[i,m],phi);
+       deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
        }
    }
   }
