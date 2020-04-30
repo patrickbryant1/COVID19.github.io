@@ -215,24 +215,22 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         print(country,country_grocery[end-1])
 
         #Extract modeling results
-        means = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))}
-        lower_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 2.5 %
-        higher_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
-        lower_bound25 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 25%
-        higher_bound75 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 55 % - together 75 % CI
+        means = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((10,days_to_simulate)), 'Rt':np.zeros((10,days_to_simulate))}
+        lower_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((10,days_to_simulate)), 'Rt':np.zeros((10,days_to_simulate))} #Estimated 2.5 %
+        higher_bound = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((10,days_to_simulate)), 'Rt':np.zeros((10,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
+        lower_bound25 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((10,days_to_simulate)), 'Rt':np.zeros((10,days_to_simulate))} #Estimated 25%
+        higher_bound75 = {'prediction':np.zeros((10,days_to_simulate)),'E_deaths':np.zeros((10,days_to_simulate)), 'Rt':np.zeros((10,days_to_simulate))} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
         for j in range(1,days_to_simulate+1):
             for var in ['prediction', 'E_deaths','Rt']:
                 for p in range(1,means[var].shape[0]+1):
-                    if var =='prediction':
-                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(p)+','+str(j)+','+str(i)+']']
-                    else:
-                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+                    var_pij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(p)+']']
                     means[var][p-1,j-1]=var_pij['mean'].values[0]
                     lower_bound[var][p-1,j-1]=var_pij['2.5%'].values[0]
                     higher_bound[var][p-1,j-1]=var_pij['97.5%'].values[0]
                     lower_bound25[var][p-1,j-1]=var_pij['25%'].values[0]
                     higher_bound75[var][p-1,j-1]=var_pij['75%'].values[0]
+
 
         #Plot cases
         #Per day
@@ -285,35 +283,36 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-06')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
 
 
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    forecast = end+21
+    forecast = end+7
     fig, ax1 = plt.subplots(figsize=(8, 5))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
+        ax1.bar(x[:forecast],observed_y[:end+7], alpha = 0.5) #3 week forecast
     #Plot per age group
     for i in range(y.shape[0]):
         ax1.plot(x[:end],y[i,:end], alpha=0.5, label=i, linewidth = 1.0)
-        try:
-            ax1.fill_between(x[:end], lower_bound[i,:end], higher_bound[i,:end], color='cornflowerblue', alpha=0.4)
-            ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
-        except:
-            pdb.set_trace()
+        #ax1.fill_between(x[:end], lower_bound[i,:end], higher_bound[i,:end], color='cornflowerblue', alpha=0.4)
+        #ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
+
         #Plot predicted dates
-        ax1.plot(x[end:forecast],y[i,end:forecast], alpha=0.5, color='g', linewidth = 1.0)
-        ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
-        ax1.fill_between(x[end-1:forecast], lower_bound25[i,end-1:forecast], higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
+        ax1.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
+        #ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
+        #ax1.fill_between(x[end-1:forecast], lower_bound25[i,end-1:forecast], higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
 
     #Sum all age groups
-    if i >1:
-        y_all =  np.sum(y,axis=0)
-        ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
-        ax1.plot(x[end:forecast],np.sum(y,axis=0)[end:forecast], alpha=0.5, color='g', linewidth = 1.0)
+    ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
+    ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
+    ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
+    ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
+    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
+    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
+
 
     #Plot NPIs
     #NPIs
@@ -354,7 +353,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #ax1
     #ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
-    ax1.set_ylim([0,max(higher_bound[0,:forecast])])
+    ax1.set_ylim([0,max(np.sum(higher_bound,axis=0)[:forecast])])
+    pdb.set_trace()
     xticks=np.arange(forecast-1,0,-7)
     ax1.set_xticks(xticks)
     ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')

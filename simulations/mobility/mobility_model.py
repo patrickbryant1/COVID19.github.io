@@ -63,7 +63,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
 
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -256,6 +256,5 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
