@@ -301,19 +301,17 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         #ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
 
         #Plot predicted dates
-        ax1.plot(x[end:forecast],y[i,end:forecast], alpha=0.5, color='g', linewidth = 1.0)
+        ax1.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
         #ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
         #ax1.fill_between(x[end-1:forecast], lower_bound25[i,end-1:forecast], higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
 
     #Sum all age groups
-    if i >1:
-        y_all =  np.sum(y,axis=0)
-        ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
-        ax1.plot(x[end:forecast],np.sum(y,axis=0)[end:forecast], alpha=0.5, color='g', linewidth = 1.0)
-        ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[i,:end], np.sum(higher_bound,axis=0)[i,:end], color='cornflowerblue', alpha=0.4)
-        ax1.fill_between(x[:end], np.sum(lower_bound25[i,:end], np.sum(higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
-        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound[i,end-1:forecast] ,np.sum(higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
-        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25[i,end-1:forecast], np.sum(higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
+    ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
+    ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
+    ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
+    ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
+    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
+    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
 
 
     #Plot NPIs
@@ -355,7 +353,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #ax1
     #ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
-    ax1.set_ylim([0,max(higher_bound[0,:forecast])])
+    ax1.set_ylim([0,max(np.sum(higher_bound,axis=0)[:forecast])])
+    pdb.set_trace()
     xticks=np.arange(forecast-1,0,-7)
     ax1.set_xticks(xticks)
     ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
