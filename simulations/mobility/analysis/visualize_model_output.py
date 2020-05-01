@@ -33,7 +33,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Mobility data
@@ -192,7 +192,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])-21 #3 week forecast #End of data for country i
+        end = int(stan_data['days_by_country'][i-1]) #3 week forecast #End of data for country i
         country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
         country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
         country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
@@ -216,6 +216,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
                 higher_bound[var].append(var_ij['97.5%'].values[0])
                 lower_bound25[var].append(var_ij['25%'].values[0])
                 higher_bound75[var].append(var_ij['75%'].values[0])
+
         #Plot cases
         #Per day
         plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
@@ -266,7 +267,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-05-21')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
@@ -274,7 +275,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig, ax1 = plt.subplots(figsize=(8/2.54, 5/2.54))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
+        ax1.bar(x[:end],observed_y[:end], alpha = 0.5) #3 week forecast
     ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 1.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
@@ -358,10 +359,10 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
 
 #Read data
-#stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
 
 #Visualize
-#visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
 
 #Plot marker explanation
 #NPIs

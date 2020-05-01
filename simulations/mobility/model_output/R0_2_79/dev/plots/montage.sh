@@ -1,12 +1,13 @@
 
 #Join country data
-for COUNTRY in "Denmark" "Italy" "Germany" "Spain" "United_Kingdom" "France" "Norway" "Belgium" "Austria" "Sweden" "Switzerland"
+for COUNTRY in "Sweden"
 do
   montage $COUNTRY'_cumulative_cases.png' $COUNTRY'_deaths.png' $COUNTRY'_Rt.png' -tile 3x1 -geometry +2+2 $COUNTRY
+  montage $COUNTRY'_cumulative_cases_all.png' $COUNTRY'_deaths_all.png' -tile 2x1 -geometry +2+2 $COUNTRY'_All'
 done
 
 #Markers
-montage "NPI_markers.png" "mobility_markers.png" -tile 2x1 -geometry +2+2 "markers.png"
-#All countries
-montage -label '%f' -pointsize 15 "Austria"  "Belgium" "Denmark" "France"   "Germany" "Italy"  "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom"   -tile 1x11 -geometry +2+2 'mobility_model.png'
-montage "markers.png" "mobility_model.png" -tile 1x2 -geometry +2+2 "mobility_model.png"
+montage "NPI_markers.png" "mobility_markers.png" "foreacast_markers.png" -tile 3x1 -geometry +2+2 "markers.png"
+
+#Together
+montage  "markers.png" 'Sweden' 'Sweden_All' -tile 1x3 -geometry +2+2 'Sweden_complete.png'

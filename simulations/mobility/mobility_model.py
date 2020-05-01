@@ -64,7 +64,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
 
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -418,9 +418,6 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig.savefig(outname, format = 'png')
     plt.close()
 
-=======
->>>>>>> 15d4f505b9e153f8ff6a73c63a068e14d9af13b6
-#####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]+"/"
 outdir = args.outdir[0]+"/"
@@ -433,11 +430,7 @@ stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
-
-#Read data
-countries = ["Denmark", "Italy", "Germany", "Spain", "United_Kingdom", "France", "Norway", "Belgium", "Austria", "Sweden", "Switzerland" ] # ,"Greece","Portugal","Netherlands"]
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country, N2 = read_and_format_data(datadir, countries)
-
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 #Simulate
 #print ("TEST",outdir,stan_data)
 #out = simulate(stan_data, outdir)
