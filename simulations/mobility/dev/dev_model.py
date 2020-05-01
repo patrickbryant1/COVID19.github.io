@@ -94,7 +94,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'pop_frac_age':np.zeros((10,len(countries))),
                     'death_frac_age':np.zeros((10,len(countries))),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((N2,len(countries))),
+                    'f':np.zeros((len(countries),N2,9)),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
@@ -106,6 +106,9 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     }
         #Infection to death distribution
         itd = infection_to_death()
+
+        #Diamond princess fatality rates per age group
+        dp_cfr = [0,0.002,0.002,0.002,0.004,0.013,0.036,0.08,0.148] #age groups: 0-9,10-19,20-29,30-39,40-49,50-59,60-69,70-79,80+
         #Covariate names
         covariate_names = ['retail_and_recreation_percent_change_from_baseline',
        'grocery_and_pharmacy_percent_change_from_baseline',
@@ -115,8 +118,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
-                #Get fatality rate
-                cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
                 #Add population fractions - need to change if more countries
                 stan_data['pop_frac_age'][:,c]=population_per_age
                 stan_data['death_frac_age'][:,c]=deaths_per_age
@@ -152,30 +153,39 @@ def read_and_format_data(datadir, countries, N2, end_date):
 
 
                 #Get hazard rates for all days in country data
-                h = np.zeros(N2) #N2 = N+forecast
+                h = np.zeros((N2,9)) #N2 = N+forecast
                 f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
-                for i in range(1,len(h)):
-                    #for each day t, the death prob is the area btw [t-0.5, t+0.5]
-                    #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
-                    #This will be the percent increase compared to the previous end interval
-                    h[i] = (cfr*(f[i*2+1]-f[i*2-1]))/(1-cfr*f[i*2-1])
+                for p in range(9):
+                    for i in range(1,len(h)):
+                        #for each day t, the death prob is the area btw [t-0.5, t+0.5]
+                        #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
+                        #This will be the percent increase compared to the previous end interval
+                        h[i,p] = (dp_cfr[p]*(f[i*2+1]-f[i*2-1]))/(1-dp_cfr[p]*f[i*2-1])
 
                 #The number of deaths today is the sum of the past infections weighted by their probability of death,
                 #where the probability of death depends on the number of days since infection.
-                s = np.zeros(N2)
-                s[0] = 1
-                for i in range(1,len(s)):
-                    #h is the percent increase in death
-                    #s is thus the relative survival fraction
-                    #The cumulative survival fraction will be the previous
-                    #times the survival probability
-                    #These will be used to track how large a fraction is left after each day
-                    #In the end all of this will amount to the adjusted death fraction
-                    s[i] = s[i-1]*(1-h[i-1]) #Survival fraction
+                s = np.zeros((N2,9))
+                for p in range(9):
+                    s[0,p] = 1
+                    for i in range(1,len(s)):
+                        #h is the percent increase in death
+                        #s is thus the relative survival fraction
+                        #The cumulative survival fraction will be the previous
+                        #times the survival probability
+                        #These will be used to track how large a fraction is left after each day
+                        #In the end all of this will amount to the adjusted death fraction
+                        s[i,p] = s[i-1,p]*(1-h[i-1,p]) #Survival fraction
 
                 #Multiplying s and h yields fraction dead of fraction survived
                 f = s*h #This will be fed to the Stan Model
-                stan_data['f'][:,c]=f
+                stan_data['f'][c,:,:]=f
+
+                #Viusualize varying cfr
+                # for i in range(9):
+                #     plt.plot(np.arange(69),f[:,i], label = i)
+                # plt.legend()
+                # plt.show()
+
 
                 #Number of cases
                 # cases = np.zeros(N2)
