@@ -10,4 +10,4 @@ mkdir  $OUTDIR/plots
 #Visualize model output
 python3 /home/arnee/git/COVID19.github.io/simulations/mobility/analysis/visualize_model_output_SE.py --datadir $DATADIR --countries $COUNTRIES --days_to_simulate $DTS --short_dates $SD --outdir $OUTDIR
 #Overlay mobility and intervention
-#/home/arnee/git/COVID19.github.io/simulations/mobility/mobility_intervention_overlay.py --datadir $DATADIR --outdir $OUTDIR
+#/home/arnee/git/COVID19.github.io/simulations/mobility/mobility_intervention_overlay_SE.py --datadir $DATADIR --outdir $OUTDIR

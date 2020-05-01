@@ -13,7 +13,7 @@ from matplotlib.patches import Rectangle
 from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
-import read_and_format_SE as rf
+#import read_and_format_SE as rf
 
 import pdb
 
@@ -28,6 +28,132 @@ parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin,
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
+def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
+        '''Read in and format all data needed for the model
+        '''
+
+        #Get epidemic data
+        epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
+        #Convert to datetime
+        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
+        epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
+        epidemic_data=epidemic_data.rename(columns={"country":"countriesAndTerritories"})                 
+        epidemic_data=epidemic_data.rename(columns={"new_confirmed_cases":"cases"})                 
+        epidemic_data=epidemic_data.rename(columns={"new_deaths":"deaths"})                 
+        #Mobility data
+        translations={
+                "Blekinge County":"Blekinge",
+                "Dalarna County":"Dalarna",
+                "Gavleborg County":"Gävleborg",
+                "Gotland County":"Gotland",
+                "Halland County":"Halland",
+                "Jamtland County":"JämtlandHärjedalen",
+                "Jämtland Härjedalen":"JämtlandHärjedalen",
+                "Jonkoping County":"Jönköping",
+                "Kalmar County":"Kalmar",
+                "Kronoberg County":"Kronoberg",
+                "Norrbotten County":"Norrbotten",
+                "Örebro County":"Örebro",
+                "Östergötland County":"Östergötland",
+                "Skåne County":"Skåne",
+                "Södermanland County":"Sörmland",
+                "Stockholm County":"Stockholm",
+                "Uppsala County":"Uppsala",
+                "Varmland County":"Värmland",
+                "Västerbotten County":"Västerbotten",
+                "Västernorrland County":"Västernorrland",
+                "Västmanland County":"Västmanland",
+                "Västra Götaland County":"VästraGötaland",
+                "Västra Götaland":"VästraGötaland"}
+        mobility_data = pd.read_csv(datadir+'SE_Mobility_Report.csv')
+        mobility_data.replace(translations, inplace=True)
+        epidemic_data.replace(translations, inplace=True)
+        mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y-%m-%d')
+        #Model data - to be used for plotting
+        stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
+                    'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
+                    'cases_by_country':np.zeros((days_to_simulate,len(countries))),
+                    'days_by_country':np.zeros(len(countries)),
+                    'retail_and_recreation_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'transit_stations_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'workplaces_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    'residential_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+                    }
+
+
+        #Get data by country
+        for c in range(len(countries)):
+                country = countries[c]
+                print ("TEST",country)
+                #Get country epidemic data
+                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+                print ("TEST",country_epidemic_data)
+                #Sort on date
+                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+                #Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
+
+                #Get all dates with at least 10 deaths
+                cum_deaths = country_epidemic_data['deaths'].cumsum()
+                death_index = cum_deaths[cum_deaths>=10].index[0]
+                di30 = death_index-30
+                #Get part of country_epidemic_data 30 days before day with at least 10 deaths
+                country_epidemic_data = country_epidemic_data.loc[di30:]
+                #Reset index
+                country_epidemic_data = country_epidemic_data.reset_index()
+
+                print(country, len(country_epidemic_data))
+                #Check that foreacast is really a forecast
+                N = len(country_epidemic_data)
+                stan_data['days_by_country'][c]=N
+                forecast = days_to_simulate - N
+                if forecast <0: #If the number of predicted days are less than the number available
+                    days_to_simulate = N
+                    forecast = 0
+                    print('Forecast error!')
+                    pdb.set_trace()
+
+                #Save dates
+                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
+                #Save deaths
+                stan_data['deaths_by_country'][:N,c] = country_epidemic_data['deaths']
+                #Save cases
+                stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
+
+                #Covariates - assign the same shape as others (days_to_simulate)
+                #Mobility data from Google
+                country_cov_data = mobility_data[mobility_data['country_region']==country]
+                if country == 'United_Kingdom': #Different assignments for UK
+                    country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
+                #Get whole country - no subregion
+                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                #Get matching dates
+                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['dateRep'])]
+                print (country_coc_data)
+                end_date = max(country_cov_data['date']) #Last date for mobility data
+                for name in covariate_names:
+                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
+                    for d in range(len(country_epidemic_data)): #loop through all country data
+                        row_d = country_epidemic_data.loc[d]
+                        date_d = row_d['dateRep'] #Extract date
+                        try:
+                            change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
+                            if not np.isnan(change_d):
+                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                        except:
+                            continue #Date too far ahead
+
+
+                    #Add the latest available mobility data to all remaining days (including the forecast days)
+                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
+                    cov_i = np.zeros(days_to_simulate)
+                    cov_i[:N] = np.array(country_epidemic_data[name])
+                    #Add covariate info to forecast
+                    cov_i[N:days_to_simulate]=cov_i[N-1]
+                    stan_data[name][:,c] = cov_i
+
+        return stan_data
 
 def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
     '''Visualize results
@@ -263,7 +389,7 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
 
 #Read data
-stan_data = rf.read_and_format_data2(datadir, countries, days_to_simulate, covariate_names)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
 
 #Visualize
 visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
