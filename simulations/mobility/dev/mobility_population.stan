@@ -1,11 +1,9 @@
 data {
-  int <lower=1> M; // number of countries
-  int <lower=1> N0; // number of days for which to impute infections
+  int<lower=1> M; // number of countries
+  int<lower=1> N0; // number of days for which to impute infections
   int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
-  real pop_frac_age[10,M]; //Population fractions per age in steps of 10 from 0 to 90+
-  real death_frac_age[10,M]; //Death fractions per age in steps of 10 from 0 to 90+
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, 9] f[M]; // h * s - change in fraction dead each day, 9 age groups
   matrix[N2, M] covariate1; //retail_and_recreation
@@ -15,6 +13,7 @@ data {
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
   real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
+  int<lower=1> population_size [M];
 }
 
 transformed data {
@@ -77,7 +76,7 @@ transformed parameters {
           for(j in 1:(i-1)) {
             convolution += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
             }
-            prediction[p,i,m] = Rt[p,i,m] * convolution; //Scale with average spread per case
+            prediction[p,i,m] = (1-(convolution/population_size[m]))*Rt[p,i,m] * convolution; //Scale with average spread per case
             }
 
       //Deaths - use all cases, now that they are estimated
