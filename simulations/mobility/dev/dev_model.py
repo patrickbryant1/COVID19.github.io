@@ -191,7 +191,14 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
                 deaths[:N]=np.array(country_epidemic_data['deaths'])
-                stan_data['deaths'][:,c]=deaths
+                #Do a 7day sliding window to get more even death predictions
+                deaths_7 = np.zeros(N2)
+                deaths_7[0:7] = np.sum(deaths[0:7])/7
+                for i in range(7,N):
+                    deaths_7[i] = np.sum(deaths[i-6:i+1])/7
+
+
+                stan_data['deaths'][:,c]=deaths_7
 
                 #Covariates - assign the same shape as others (N2)
                 #Mobility data from Google
