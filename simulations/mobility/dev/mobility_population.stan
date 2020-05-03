@@ -83,7 +83,6 @@ transformed parameters {
             prediction[p,i,m] = (1-(cumulative_convolution/population_size[m]))*Rt[p,i,m] * convolution; //Scale with average spread per case
             }
 
-            print(cumulative_convolution)
       //Deaths - use all cases, now that they are estimated
     	//Step through all days til end of forecast
         E_deaths[p,1,m]= 1e-9; //Start expectation - practically 0
