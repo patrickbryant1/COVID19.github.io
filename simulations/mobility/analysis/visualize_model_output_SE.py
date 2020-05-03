@@ -35,7 +35,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
         #Convert to datetime
-        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
+        #epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
         epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
         epidemic_data=epidemic_data.rename(columns={"country":"countriesAndTerritories"})                 
         epidemic_data=epidemic_data.rename(columns={"new_confirmed_cases":"cases"})                 
@@ -85,12 +85,10 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
-                print ("TEST",country)
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
-                print ("TEST",country_epidemic_data)
                 #Sort on date
-                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+                country_epidemic_data = country_epidemic_data.sort_values(by='date')
                 #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
 
@@ -103,7 +101,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
                 #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
 
-                print(country, len(country_epidemic_data))
+                #print(country, len(country_epidemic_data))
                 #Check that foreacast is really a forecast
                 N = len(country_epidemic_data)
                 stan_data['days_by_country'][c]=N
@@ -115,7 +113,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
                     pdb.set_trace()
 
                 #Save dates
-                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
+                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['date'], dtype='datetime64[D]')
                 #Save deaths
                 stan_data['deaths_by_country'][:N,c] = country_epidemic_data['deaths']
                 #Save cases
@@ -123,20 +121,19 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
 
                 #Covariates - assign the same shape as others (days_to_simulate)
                 #Mobility data from Google
-                country_cov_data = mobility_data[mobility_data['country_region']==country]
+                country_cov_data = mobility_data[mobility_data['sub_region_1']==country]
                 if country == 'United_Kingdom': #Different assignments for UK
                     country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
                 #Get whole country - no subregion
-                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                #country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
                 #Get matching dates
-                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['dateRep'])]
-                print (country_coc_data)
+                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['date'])]
                 end_date = max(country_cov_data['date']) #Last date for mobility data
                 for name in covariate_names:
                     country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
                     for d in range(len(country_epidemic_data)): #loop through all country data
                         row_d = country_epidemic_data.loc[d]
-                        date_d = row_d['dateRep'] #Extract date
+                        date_d = row_d['date'] #Extract date
                         try:
                             change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
@@ -146,7 +143,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
 
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
+                    country_epidemic_data.loc[country_epidemic_data['date']>=end_date, name]=change_d
                     cov_i = np.zeros(days_to_simulate)
                     cov_i[:N] = np.array(country_epidemic_data[name])
                     #Add covariate info to forecast
@@ -188,6 +185,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    #fig, ax = plt.subplots(figsize=(9,9))
     alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
@@ -218,7 +216,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     result_file.write('Country,Epidemic Start,R0 at start,R0 29 Mar,R0 Apr 19\n') #Write headers
     for i in range(1,len(countries)+1):
         country= countries[i-1]
-        country_npi = intervention_df[intervention_df['Country']==country]
+        #country_npi = intervention_df[intervention_df['Country']==country]
+        country_npi = intervention_df[intervention_df['Country']=="Sweden"]
         #Get att stan data for country i
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
@@ -230,7 +229,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
         country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
         #Print final mobility value
-        print(country,country_grocery[end-1])
+        #print(country,country_grocery[end-1])
 
         #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -291,7 +290,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     ax.set_xticklabels(xtick_labels,rotation='vertical')
     ax.set_ylim([-5,20])
     plt.tight_layout()
-    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
+    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png', dpi=300)
     plt.close()
 
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
@@ -303,6 +302,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         pdb.set_trace()
     forecast = end+21
     fig, ax1 = plt.subplots(figsize=(8/2.54, 5/2.54))
+    #fig, ax1 = plt.subplots(figsize=(16,10))
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
@@ -351,7 +351,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
     #Plot formatting
     #ax1
-    #ax1.legend(loc='lower left', frameon=False, markerscale=2)
+    ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
@@ -364,8 +364,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.set_yticks([-1,-0.5,0,0.4])
 
     fig.tight_layout()
-    fig.savefig(outname, format = 'png')
-    fig.savefig(outname.split('.png')[0]+'.png', format = 'png')
+    fig.savefig(outname, format = 'png', dpi=300)
+    fig.savefig(outname.split('.png')[0]+'.png', format = 'png', dpi=300)
     plt.close()
 
 
@@ -406,6 +406,7 @@ NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockd
     'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
 
 fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+#fig, ax = plt.subplots(figsize=(12,4.5))
 i=1
 for npi in NPI:
     ax.scatter(1,i,marker=NPI_markers[npi], color = NPI_colors[npi])
@@ -414,11 +415,12 @@ for npi in NPI:
 ax.set_ylim([0,6])
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
+fig.savefig(outdir+'plots/NPI_markers.png', format = 'png', dpi=300)
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
 fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+#fig, ax = plt.subplots(figsize=(12,4.5))
 i=5
 for cov in covariate_colors:
     ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
@@ -426,10 +428,11 @@ for cov in covariate_colors:
     i-=1
 ax.set_xlim([0.999,3.5])
 ax.axis('off')
-fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
+fig.savefig(outdir+'plots/mobility_markers.png', format = 'png', dpi=300)
 
 #Simulation and forecast
 fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+#fig, ax = plt.subplots(figsize=(12,4.5))
 ax.plot([1,1.8],[1.5]*2, color = 'b', linewidth=8)
 ax.text(2.001,1.5,'Simulation')
 ax.plot([1,1.8],[1.45]*2, color ='g', linewidth=8)
@@ -437,4 +440,4 @@ ax.text(2.001,1.45,'Forecast')
 ax.set_xlim([0.999,3.02])
 ax.set_ylim([1.42,1.52])
 ax.axis('off')
-fig.savefig(outdir+'plots/foreacast_markers.png', format = 'png')
+fig.savefig(outdir+'plots/foreacast_markers.png', format = 'png', dpi=300)
