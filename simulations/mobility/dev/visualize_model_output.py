@@ -33,7 +33,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Mobility data
@@ -205,14 +205,14 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])-21 #3 week forecast #End of data for country i
+        end = int(stan_data['days_by_country'][i-1]) #3 week forecast #End of data for country i
         country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
         country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
         country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
         country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
         country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
         #Print final mobility value
-        print(country,country_grocery[end-1])
+        print(country,country_grocery[end])
 
         #Extract modeling results
         means = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))}
@@ -282,13 +282,13 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-06')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-05-21')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
 
 
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    forecast = end+7
+    forecast = end+21
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
     age_groups = {0:'0-9',1:'10-19',2:'20-29',3:'30-39',4:'40-49',5:'50-59',6:'60-69',7:'70-79',8:'80+'}
@@ -361,7 +361,10 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         ax1.set_ylim([0,max(y[:,forecast-1])])
     xticks=np.arange(forecast-1,0,-7)
     ax1.set_xticks(xticks)
-    ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+    try:
+        ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+    except:
+        pdb.set_trace()
     #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
     #ax2
     #ax2.set_ylabel('Relative change')
@@ -378,7 +381,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     fig, ax1 = plt.subplots(figsize=(8, 5))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:forecast],observed_y[:end+7], alpha = 0.5) #3 week forecast
+        ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
     #Sum all age groups
     ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
     ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)

@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
+parser.add_argument('--population', nargs=1, type= str, default=sys.stdin, help = 'Population sizes to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
@@ -57,7 +58,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(datadir, countries, N2, end_date):
+def read_and_format_data(datadir, countries, population, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -76,13 +77,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
-        #Get death distribution
-        deaths_per_age = pd.read_csv(datadir+'Sweden/deaths_age.csv')
-        deaths_per_age = deaths_per_age['Totalt_antal_avlidna'].values
-        deaths_per_age = deaths_per_age/np.sum(deaths_per_age) #Normalize counts
-        #Get age distribution
-        population_per_age = pd.read_csv(datadir+'Sweden/population_age.csv')
-        population_per_age = population_per_age['Fraction'].values
 
         #Create stan data
         #N2=84 #Increase for further forecast
@@ -91,8 +85,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2,
                     'x':np.arange(1,N2+1),
-                    'pop_frac_age':np.zeros((10,len(countries))),
-                    'death_frac_age':np.zeros((10,len(countries))),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((len(countries),N2,9)),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
@@ -102,13 +94,16 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
                     'SI':serial_interval[0:N2],
-                    'y':[] #index cases
+                    'y':[], #index cases
+                    'population_size':[] #Size of population
                     }
         #Infection to death distribution
         itd = infection_to_death()
 
         #Diamond princess fatality rates per age group
         dp_cfr = [0,0.002,0.002,0.002,0.004,0.013,0.036,0.08,0.148] #age groups: 0-9,10-19,20-29,30-39,40-49,50-59,60-69,70-79,80+
+        #Population sizes
+        pop_size = {'Sweden':10230000}
         #Covariate names
         covariate_names = ['retail_and_recreation_percent_change_from_baseline',
        'grocery_and_pharmacy_percent_change_from_baseline',
@@ -118,9 +113,8 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
-                #Add population fractions - need to change if more countries
-                stan_data['pop_frac_age'][:,c]=population_per_age
-                stan_data['death_frac_age'][:,c]=deaths_per_age
+                #Add population size
+                stan_data['population_size'].append(int(float(population[c])*1000000))
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
                 #Sort on date
@@ -261,13 +255,13 @@ def simulate(stan_data, stan_model, outdir):
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
+population = args.population[0].split(',')
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-
+stan_data = read_and_format_data(datadir, countries, population, days_to_simulate, end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
