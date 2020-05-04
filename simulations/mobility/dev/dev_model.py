@@ -95,18 +95,16 @@ def read_and_format_data(datadir, countries, end_date):
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Get population
-        worldbank_pop = pd.read_csv('../../../worldbank/population_total.csv')
+        worldbank_pop = pd.read_csv(datadir+'population_total.csv')
         #N2 - number of days to model
         N2 = get_N2(epidemic_data, countries[0])
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
-        pdb.set_trace()
         #Create stan data
-        #N2=84 #Increase for further forecast
         stan_data = {'M':len(countries), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
-                    'N2':0, #number of days to model
+                    'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((len(countries),N2,9)),
@@ -257,7 +255,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=1000,warmup=500,chains=8,thin=4, control={'adapt_delta': 0.9, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=2000,warmup=1000,chains=8,thin=4, control={'adapt_delta': 0.9, 'max_treedepth': 10})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
