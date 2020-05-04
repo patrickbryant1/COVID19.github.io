@@ -22,10 +22,8 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
-parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
-parser.add_argument('--population', nargs=1, type= str, default=sys.stdin, help = 'Population sizes to model (csv).')
+parser.add_argument('--country', nargs=1, type= str, default=sys.stdin, help = 'Country to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
-parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -58,7 +56,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(datadir, countries, population, N2, end_date):
+def read_and_format_data(datadir, countries, population, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -73,16 +71,15 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
-        # get CFR
-        cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
-        
+        #Get population
+	    worldbank_pop = pd.read_csv('../../../worldbank/population_total.csv')
 
         #Create stan data
         #N2=84 #Increase for further forecast
         stan_data = {'M':len(countries), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
-                    'N2':N2,
+                    'N2':0,
                     'x':np.arange(1,N2+1),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((len(countries),N2,9)),
@@ -92,7 +89,7 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
                     'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
-                    'SI':serial_interval[0:N2],
+                    'SI':,
                     'y':[], #index cases
                     'population_size':[] #Size of population
                     }
@@ -136,6 +133,13 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
 
                 #Hazard estimation
                 N = len(country_epidemic_data)
+		N2 = N+21 #3 week forecast
+		stan_data['N2']=N2
+		#Add serial interval
+		#SI
+        serial_interval = serial_interval_distribution(N2)
+		stan_data['SI'] = serial_interval[0:N2]
+		#Add number of days per country
                 stan_data['N'].append(N)
                 forecast = N2 - N
                 if forecast <0: #If the number of predicted days are less than the number available
@@ -173,19 +177,6 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
                 f = s*h #This will be fed to the Stan Model
                 stan_data['f'][c,:,:]=f
 
-                #Viusualize varying cfr
-                # for i in range(9):
-                #     plt.plot(np.arange(69),f[:,i], label = i)
-                # plt.legend()
-                # plt.show()
-
-
-                #Number of cases
-                # cases = np.zeros(N2)
-                # cases -=1 #Assign -1 for all forcast days
-                # cases[:N]=np.array(country_epidemic_data['cases'])
-                # stan_data['cases'][:,c]=cases
-                # stan_data['y'].append(int(cases[0])) # just the index case!#only the index case
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
@@ -260,14 +251,12 @@ def simulate(stan_data, stan_model, outdir):
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
-countries = args.countries[0].split(',')
-population = args.population[0].split(',')
+country = args.countries[0]
 stan_model = args.stan_model[0]
-days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, population, days_to_simulate, end_date)
+stan_data = read_and_format_data(datadir, country, end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
