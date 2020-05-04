@@ -57,7 +57,7 @@ transformed parameters {
     //For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
     //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
         //Define Rt, learned below
-    Rt[1,:,m] = mu1[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
+    Rt[m,:,m] = mu1[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[2,:,m] = mu2[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[3,:,m] = mu3[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[4,:,m] = mu4[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
