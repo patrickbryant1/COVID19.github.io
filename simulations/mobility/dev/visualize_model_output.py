@@ -237,6 +237,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
         outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit,
         country_work, country_residential, short_dates)
+
         #Cumulative
         plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction'],axis=1), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction'],axis=1),
         np.cumsum(higher_bound['prediction'],axis=1), np.cumsum(lower_bound25['prediction'],axis=1), np.cumsum(higher_bound75['prediction'],axis=1),
@@ -257,9 +258,9 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
         #Print R mean at beginning and end of model
         try:
-            result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][end],2))+','+str(np.round(means['Rt'][end+20],2))+'\n')#Print for table
+            result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0,:],2))+','+str(np.round(means['Rt'][end,:],2))+'\n')#Print for table
         except:
-            pdb.set_trace()
+            continue
     #Close outfile
     result_file.close()
 
@@ -304,14 +305,6 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         #ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
         #ax1.fill_between(x[end-1:forecast], lower_bound25[i,end-1:forecast], higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
 
-    #Sum all age groups
-    # ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
-    # ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
-    # ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
-    # ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
-    # ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
-    # ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
-
 
     #Plot NPIs
     #NPIs
@@ -341,19 +334,17 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
             ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
         npi_xvals.append(xval)
 
-
-    #Plot mobility data
-    #Use a twin of the other x axis
-    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    # ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
-    # ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
-    # ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
-    # ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
-    # ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
+    if ylabel == 'Rt':
+        #Plot mobility data
+        #Use a twin of the other x axis
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
+        ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
+        ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
+        ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
+        ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
 
     #Plot formatting
-    #ax1
-    #ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
     if ylabel=='Rt':
         ax1.set_ylim([0,4])
@@ -365,45 +356,35 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     except:
         pdb.set_trace()
-    #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
-    #ax2
-    #ax2.set_ylabel('Relative change')
-    #ax2.set_ylim([-1,0.4])
-    #ax2.set_yticks([-1,-0.5,0,0.4])
-    fig.legend()
+    fig.legend(frameon=False)
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     #fig.savefig(outname.split('.png')[0]+'.svg', format = 'svg')
     plt.close()
 
 
-    #Sum plot
-    fig, ax1 = plt.subplots(figsize=(8, 5))
-    #Plot observed dates
-    if len(observed_y)>1:
-        ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
-    #Sum all age groups
-    ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All', linewidth = 1.0)
-    ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
-    ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
-    ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
-    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
-    ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
-
-    ax1.set_ylabel(ylabel)
-    ax1.set_ylim([0,np.sum(higher_bound,axis=0)[forecast-1]])
-    xticks=np.arange(forecast-1,0,-7)
-    ax1.set_xticks(xticks)
-    ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
-    #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
-    #ax2
-    #ax2.set_ylabel('Relative change')
-    #ax2.set_ylim([-1,0.4])
-    #ax2.set_yticks([-1,-0.5,0,0.4])
-    fig.legend()
-    fig.tight_layout()
-    fig.savefig(outname.split('.png')[0]+'_all.png', format = 'png')
-    plt.close()
+    if ylabel != 'Rt':
+        #Sum plot
+        fig, ax1 = plt.subplots(figsize=(8, 5))
+        #Plot observed dates
+        if len(observed_y)>1:
+            ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
+        #Sum all age groups
+        ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All age groups', linewidth = 1.0)
+        ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
+        ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
+        ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
+        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
+        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
+        ax1.set_ylabel(ylabel)
+        ax1.set_ylim([0,np.sum(higher_bound,axis=0)[forecast-1]])
+        xticks=np.arange(forecast-1,0,-7)
+        ax1.set_xticks(xticks)
+        ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+        fig.legend()
+        fig.tight_layout()
+        fig.savefig(outname.split('.png')[0]+'_all.png', format = 'png')
+        plt.close()
 
 #####MAIN#####
 #Set font size
