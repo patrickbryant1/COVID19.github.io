@@ -75,8 +75,7 @@ def read_and_format_data(datadir, countries, population, N2, end_date):
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
-        #SI
-        serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
+        
 
         #Create stan data
         #N2=84 #Increase for further forecast
