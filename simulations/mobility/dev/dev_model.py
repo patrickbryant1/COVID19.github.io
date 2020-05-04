@@ -55,15 +55,38 @@ def serial_interval_distribution(N2):
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
         return serial.pdf(np.arange(1,N2+1))
+def get_N2(epidemic_data, country):
+    '''Get the number of days to model
+    '''
 
-def read_and_format_data(datadir, countries, population, end_date):
+    #Get country epidemic data
+    country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+    #Sort on date
+    country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
+    #Reset index
+    country_epidemic_data = country_epidemic_data.reset_index()
+
+    #Get all dates with at least 10 deaths
+    cum_deaths = country_epidemic_data['deaths'].cumsum()
+    death_index = cum_deaths[cum_deaths>=10].index[0]
+    di30 = death_index-30
+    #Get part of country_epidemic_data 30 days before day with at least 10 deaths
+    country_epidemic_data = country_epidemic_data.loc[di30:]
+    #Reset index
+    country_epidemic_data = country_epidemic_data.reset_index()
+
+    print(country, len(country_epidemic_data))
+    N = len(country_epidemic_data)
+
+    return N+21
+
+def read_and_format_data(datadir, countries, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
 
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
-
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
         epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
@@ -72,14 +95,18 @@ def read_and_format_data(datadir, countries, population, end_date):
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Get population
-	    worldbank_pop = pd.read_csv('../../../worldbank/population_total.csv')
-
+        worldbank_pop = pd.read_csv('../../../worldbank/population_total.csv')
+        #N2 - number of days to model
+        N2 = get_N2(epidemic_data, countries[0])
+        #SI
+        serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
+        pdb.set_trace()
         #Create stan data
         #N2=84 #Increase for further forecast
         stan_data = {'M':len(countries), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
-                    'N2':0,
+                    'N2':0, #number of days to model
                     'x':np.arange(1,N2+1),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
                     'f':np.zeros((len(countries),N2,9)),
@@ -89,7 +116,7 @@ def read_and_format_data(datadir, countries, population, end_date):
                     'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'EpidemicStart': [],
-                    'SI':,
+                    'SI':serial_interval[0:N2],
                     'y':[], #index cases
                     'population_size':[] #Size of population
                     }
@@ -98,8 +125,7 @@ def read_and_format_data(datadir, countries, population, end_date):
 
         #Diamond princess fatality rates per age group
         dp_cfr = [0,0.002,0.002,0.002,0.004,0.013,0.036,0.08,0.148] #age groups: 0-9,10-19,20-29,30-39,40-49,50-59,60-69,70-79,80+
-        #Population sizes
-        pop_size = {'Sweden':10230000}
+
         #Covariate names
         covariate_names = ['retail_and_recreation_percent_change_from_baseline',
        'grocery_and_pharmacy_percent_change_from_baseline',
@@ -110,7 +136,7 @@ def read_and_format_data(datadir, countries, population, end_date):
         for c in range(len(countries)):
                 country = countries[c]
                 #Add population size
-                stan_data['population_size'].append(int(float(population[c])*1000000))
+                stan_data['population_size'].append(int(worldbank_pop[worldbank_pop['Country Name']==country]['2018'].values[0]))
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
                 #Sort on date
@@ -133,13 +159,9 @@ def read_and_format_data(datadir, countries, population, end_date):
 
                 #Hazard estimation
                 N = len(country_epidemic_data)
-		N2 = N+21 #3 week forecast
-		stan_data['N2']=N2
-		#Add serial interval
-		#SI
-        serial_interval = serial_interval_distribution(N2)
-		stan_data['SI'] = serial_interval[0:N2]
-		#Add number of days per country
+
+
+		         #Add number of days per country
                 stan_data['N'].append(N)
                 forecast = N2 - N
                 if forecast <0: #If the number of predicted days are less than the number available
@@ -251,12 +273,12 @@ def simulate(stan_data, stan_model, outdir):
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
-country = args.countries[0]
+country = args.country[0]
 stan_model = args.stan_model[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-stan_data = read_and_format_data(datadir, country, end_date)
+stan_data = read_and_format_data(datadir, [country], end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
