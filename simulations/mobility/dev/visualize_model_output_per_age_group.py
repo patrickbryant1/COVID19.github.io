@@ -215,45 +215,49 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         print(country,country_grocery[end])
 
         #Extract modeling results
-        means = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))}
-        lower_bound = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))} #Estimated 2.5 %
-        higher_bound = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
-        lower_bound25 = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))} #Estimated 25%
-        higher_bound75 = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((9,days_to_simulate)), 'Rt':np.zeros((9,days_to_simulate))} #Estimated 55 % - together 75 % CI
+        means = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))}
+        lower_bound = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 2.5 %
+        higher_bound = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 97.5 % - together 95 % CI
+        lower_bound25 = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 25%
+        higher_bound75 = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
         for j in range(1,days_to_simulate+1):
             for var in ['prediction', 'E_deaths','Rt']:
                 for p in range(1,means[var].shape[0]+1):
-                    var_pij = summary[summary['Unnamed: 0']==var+'['+str(p)+','+str(j)+','+str(i)+']']
+                    if var == 'prediction':
+                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(p)+','+str(j)+','+str(i)+']']
+                    else:
+                        var_pij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
                     means[var][p-1,j-1]=var_pij['mean'].values[0]
                     lower_bound[var][p-1,j-1]=var_pij['2.5%'].values[0]
                     higher_bound[var][p-1,j-1]=var_pij['97.5%'].values[0]
                     lower_bound25[var][p-1,j-1]=var_pij['25%'].values[0]
                     higher_bound75[var][p-1,j-1]=var_pij['75%'].values[0]
 
+
         #Plot cases
         #Per day
-        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
-        higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
+        plot_shade_ci(days, end, dates[0], np.sum(means['prediction'], axis = 0), observed_country_cases,np.sum(lower_bound['prediction'],axis=0),
+        np.sum(higher_bound['prediction'], axis = 0), np.sum(lower_bound25['prediction'], axis = 0), np.sum(higher_bound75['prediction'], axis = 0), 'Cases per day',
         outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit,
         country_work, country_residential, short_dates)
 
         #Cumulative
-        plot_shade_ci(days, end, dates[0], np.cumsum(means['prediction'],axis=1), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction'],axis=1),
-        np.cumsum(higher_bound['prediction'],axis=1), np.cumsum(lower_bound25['prediction'],axis=1), np.cumsum(higher_bound75['prediction'],axis=1),
+        plot_shade_ci(days, end, dates[0], np.cumsum(np.sum(means['prediction'], axis = 0)), np.cumsum(observed_country_cases),np.cumsum(np.sum(lower_bound['prediction'], axis = 0)),
+        np.cumsum(np.sum(higher_bound['prediction'], axis = 0)), np.cumsum(np.sum(lower_bound25['prediction'], axis = 0)), np.cumsum(np.sum(higher_bound75['prediction'], axis = 0)),
         'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot Deaths
         #Per day
-        plot_shade_ci(days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
-        lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
+        plot_shade_ci(days, end,dates[0],means['E_deaths'][0,:],observed_country_deaths, lower_bound['E_deaths'][0,:], higher_bound['E_deaths'][0,:],
+        lower_bound25['E_deaths'][0,:], higher_bound75['E_deaths'][0,:], 'Deaths per day',
         outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Cumulative
-        plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths'],axis=1),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths'],axis=1), np.cumsum(higher_bound['E_deaths'],axis=1),
-        np.cumsum(lower_bound25['E_deaths'],axis=1), np.cumsum(higher_bound75['E_deaths'],axis=1), 'Cumulative deaths',
+        plot_shade_ci(days, end,dates[0],np.cumsum(means['E_deaths']),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
+        np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
         outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
-        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
+        plot_shade_ci(days,end,dates[0],means['Rt'][0,:],'', lower_bound['Rt'][0,:], higher_bound['Rt'][0,:], lower_bound25['Rt'][0,:],
+        higher_bound75['Rt'][0,:],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
         #Print R mean at beginning and end of model
@@ -292,18 +296,15 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     forecast = end+21
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
-    age_groups = {0:'0-9',1:'10-19',2:'20-29',3:'30-39',4:'40-49',5:'50-59',6:'60-69',7:'70-79',8:'80+'}
-    age_group_colors = {0:'tab:blue',1:'tab:orange',2:'tab:green',3:'tab:red',4:'tab:purple',5:'tab:brown',6:'tab:pink',7:'tab:gray',8:'tab:olive'}
-    #Plot per age group
-    for i in range(y.shape[0]):
-        ax1.plot(x[:end],y[i,:end], alpha=0.5, label=age_groups[i], linewidth = 3.0, color = age_group_colors[i])
-        #ax1.fill_between(x[:end], lower_bound[i,:end], higher_bound[i,:end], color='cornflowerblue', alpha=0.4)
-        #ax1.fill_between(x[:end], lower_bound25[i,:end], higher_bound75[i,:end], color='cornflowerblue', alpha=0.6)
+    #Plot simulation
+    ax1.plot(x[:end],y[:end], alpha=0.5, linewidth = 2.0, color = 'b')
+    ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
+    ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
 
-        #Plot predicted dates
-        ax1.plot(x[end-1:forecast],y[i,end-1:forecast], '--', alpha=0.5, linewidth = 3.0, color = age_group_colors[i])
-        #ax1.fill_between(x[end-1:forecast], lower_bound[i,end-1:forecast] ,higher_bound[i,end-1:forecast], color='forestgreen', alpha=0.4)
-        #ax1.fill_between(x[end-1:forecast], lower_bound25[i,end-1:forecast], higher_bound75[i,end-1:forecast], color='forestgreen', alpha=0.6)
+    #Plot predicted dates
+    ax1.plot(x[end-1:forecast],y[end-1:forecast], alpha=0.5, linewidth = 2.0, color = 'g')
+    ax1.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
+    ax1.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
 
 
     #Plot NPIs
@@ -317,10 +318,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
         'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
 
-    try:
-        y_npi =max(y[:,forecast-1])*0.9
-    except:
-        pdb.set_trace()
+
+    y_npi =max(higher_bound[:forecast])*0.9
     y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
@@ -334,22 +333,19 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
             ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
         npi_xvals.append(xval)
 
-    if ylabel == 'Rt':
-        #Plot mobility data
-        #Use a twin of the other x axis
-        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-        ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
-        ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
-        ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
-        ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
-        ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
+
+    #Plot mobility data
+    #Use a twin of the other x axis
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
+    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
+    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
+    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
+    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
 
     #Plot formatting
     ax1.set_ylabel(ylabel)
-    if ylabel=='Rt':
-        ax1.set_ylim([0,4])
-    else:
-        ax1.set_ylim([0,max(y[:,forecast-1])])
+    ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
     ax1.set_xticks(xticks)
     try:
@@ -362,29 +358,6 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #fig.savefig(outname.split('.png')[0]+'.svg', format = 'svg')
     plt.close()
 
-
-    if ylabel != 'Rt':
-        #Sum plot
-        fig, ax1 = plt.subplots(figsize=(8, 5))
-        #Plot observed dates
-        if len(observed_y)>1:
-            ax1.bar(x[:forecast],observed_y[:end+21], alpha = 0.5) #3 week forecast
-        #Sum all age groups
-        ax1.plot(x[:end],np.sum(y,axis=0)[:end], alpha=0.5, label='All age groups', linewidth = 1.0)
-        ax1.plot(x[end-1:forecast],np.sum(y,axis=0)[end-1:forecast], alpha=0.5, color='g', linewidth = 1.0)
-        ax1.fill_between(x[:end], np.sum(lower_bound,axis=0)[:end], np.sum(higher_bound,axis=0)[:end], color='cornflowerblue', alpha=0.4)
-        ax1.fill_between(x[:end], np.sum(lower_bound25,axis=0)[:end], np.sum(higher_bound75,axis=0)[:end], color='cornflowerblue', alpha=0.6)
-        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound,axis=0)[end-1:forecast] ,np.sum(higher_bound,axis=0)[end-1:forecast], color='forestgreen', alpha=0.4)
-        ax1.fill_between(x[end-1:forecast], np.sum(lower_bound25,axis=0)[end-1:forecast], np.sum(higher_bound75,axis=0)[end-1:forecast], color='forestgreen', alpha=0.6)
-        ax1.set_ylabel(ylabel)
-        ax1.set_ylim([0,np.sum(higher_bound,axis=0)[forecast-1]])
-        xticks=np.arange(forecast-1,0,-7)
-        ax1.set_xticks(xticks)
-        ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
-        fig.legend()
-        fig.tight_layout()
-        fig.savefig(outname.split('.png')[0]+'_all.png', format = 'png')
-        plt.close()
 
 #####MAIN#####
 #Set font size

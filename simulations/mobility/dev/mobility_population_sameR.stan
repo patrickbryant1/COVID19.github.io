@@ -34,7 +34,7 @@ parameters {
 
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
-    real convolution; //value of integration
+    real convolution[9]; //value of integration
     real cumulative_convolution; //For herd immunity
     matrix[N2, M] prediction[9]; //predict cases for each day for all countries
     matrix[N2, M] E_deaths; //sum of deaths over all age groups
@@ -52,21 +52,31 @@ transformed parameters {
         covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
 
       //Cases
+      //initial seed
       for (p in 1:9){
         prediction[p,1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
   					                                      //y is the index case
+      }
+
       	//for all days from 7 (1 after the cases in N0 days) to end of forecast
         for (i in (N0+1):N2) {
-              convolution=0; //reset
+          for (p in 1:9){
+            convolution[p]=0; //reset
+          }
               cumulative_convolution = 0;
-      	//loop through all days up to current (integration)
-          for(j in 1:(i-1)) {
-            convolution += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
-            cumulative_convolution += prediction[p,j,m];
+      	//loop through all days up to current
+          for(j in 1:(i-1)){
+            for (p in 1:9){ //go through all age groups
+              convolution[p] += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
+                                                      //i-j since that will be the fraction infected left from day j on day i
+              cumulative_convolution += prediction[p,j,m];
             }
-            prediction[p,i,m] = (1-(cumulative_convolution/population_size[m]))*Rt[i,m] * convolution; //Scale with average spread per case
-            }
-      }
+          }
+          for (p in 1:9){
+            prediction[p,i,m] = (1-(cumulative_convolution/population_size[m]))*Rt[i,m] * convolution[p]; //Scale with average spread per case
+          }
+        }
+
 
       //Deaths - use all cases, now that they are estimated
     	//Step through all days til end of forecast
