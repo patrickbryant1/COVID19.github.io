@@ -91,7 +91,13 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
                 #Save dates
                 stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
                 #Save deaths
-                stan_data['deaths_by_country'][:N,c] = country_epidemic_data['deaths']
+                deaths = np.array(country_epidemic_data['deaths'])
+                deaths_7 = np.zeros(N)
+                deaths_7[0:7] = np.sum(deaths[0:7])/7
+                for i in range(7,N):
+                    deaths_7[i] = np.sum(deaths[i-6:i+1])/7
+                stan_data['deaths_by_country'][:N,c] = deaths_7
+
                 #Save cases
                 stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
 
@@ -244,9 +250,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         #Downscale R due to herd immunity (Rt = R*(1-frac_inf))
         cum_cases = np.cumsum(means['prediction'])
         downscale = 1-(cum_cases/pop)
-        print(downscale)
-        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
+        plot_shade_ci(days,end,dates[0],means['Rt']*downscale,'', lower_bound['Rt']*downscale, higher_bound['Rt']*downscale, lower_bound25['Rt']*downscale,
+        higher_bound75['Rt']*downscale,'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
         #Print R mean at beginning and end of model
@@ -316,15 +321,18 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     y_step = y_npi/20
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
-        if country_npi[npi].values[0] == '0': #If nan
-            continue
-        xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
-        ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
-        if xval in npi_xvals:
-            ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
-        else:
-            ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
-        npi_xvals.append(xval)
+        try:
+            if country_npi[npi].values[0] == '0': #If nan
+                continue
+            xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
+            ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
+            if xval in npi_xvals:
+                ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
+            else:
+                ax1.scatter(xval, y_npi, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
+            npi_xvals.append(xval)
+        except:
+            break
 
 
     #Plot mobility data
@@ -337,6 +345,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
 
     #Plot formatting
+    #ax1
     ax1.set_ylabel(ylabel)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
     xticks=np.arange(forecast-1,0,-7)
@@ -345,6 +354,9 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     except:
         pdb.set_trace()
+    #ax2
+    ax2.set_ylim([-1,0.4])
+    #fig
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     #fig.savefig(outname.split('.png')[0]+'.svg', format = 'svg')
