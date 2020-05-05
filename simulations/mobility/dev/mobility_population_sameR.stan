@@ -77,7 +77,7 @@ transformed parameters {
           E_deaths[i,m]= 0; //ensure 0
           //Go through all days up to current
           for(j in 1:(i-1)){
-            E_deaths[i,m] += prediction[j,m]*(f[m,i-j,1]+f[m,i-j,2]+f[m,i-j,3]+f[m,i-j,4]+f[m,i-j,5]
+            E_deaths[i,m] += prediction[j,m]/9*(f[m,i-j,1]+f[m,i-j,2]+f[m,i-j,3]+f[m,i-j,4]+f[m,i-j,5]
             +f[m,i-j,6]+f[m,i-j,7]+f[m,i-j,8]+f[m,i-j,9]); //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
           }
         }
