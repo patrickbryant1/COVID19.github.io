@@ -109,7 +109,7 @@ def read_and_format_data(datadir, countries, end_date):
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
                     'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((len(countries),N2,9)),
+                    'f':np.zeros((N2,len(countries))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
@@ -173,7 +173,7 @@ def read_and_format_data(datadir, countries, end_date):
 
 
                 #Get hazard rates for all days in country data
-                h = np.zeros((N2,9)) #N2 = N+forecast
+                h = np.zeros(N2) #N2 = N+forecast
                 f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
                 for i in range(1,len(h)):
                     #for each day t, the death prob is the area btw [t-0.5, t+0.5]
@@ -183,22 +183,20 @@ def read_and_format_data(datadir, countries, end_date):
 
                 #The number of deaths today is the sum of the past infections weighted by their probability of death,
                 #where the probability of death depends on the number of days since infection.
-                s = np.zeros((N2,9))
-                for p in range(9):
-                    s[0,p] = 1
-                    for i in range(1,len(s)):
-                        #h is the percent increase in death
-                        #s is thus the relative survival fraction
-                        #The cumulative survival fraction will be the previous
-                        #times the survival probability
-                        #These will be used to track how large a fraction is left after each day
-                        #In the end all of this will amount to the adjusted death fraction
-                        s[i,p] = s[i-1,p]*(1-h[i-1,p]) #Survival fraction
+                s = np.zeros(N2)
+                s[0] = 1
+                for i in range(1,len(s)):
+                    #h is the percent increase in death
+                    #s is thus the relative survival fraction
+                    #The cumulative survival fraction will be the previous
+                    #times the survival probability
+                    #These will be used to track how large a fraction is left after each day
+                    #In the end all of this will amount to the adjusted death fraction
+                    s[i] = s[i-1]*(1-h[i-1]) #Survival fraction
 
                 #Multiplying s and h yields fraction dead of fraction survived
                 f = s*h #This will be fed to the Stan Model
-                stan_data['f'][c,:,:]=f
-
+                stan_data['f'][:,c]=f
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
