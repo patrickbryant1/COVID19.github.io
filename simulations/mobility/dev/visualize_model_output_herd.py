@@ -43,20 +43,12 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
-        #Get death distribution
-        deaths_per_age = pd.read_csv(datadir+'Sweden/deaths_age.csv')
-        deaths_per_age = deaths_per_age['Totalt_antal_avlidna'].values
-        deaths_per_age = deaths_per_age/np.sum(deaths_per_age) #Normalize counts
-        #Get age distribution
-        population_per_age = pd.read_csv(datadir+'Sweden/population_age.csv')
-        population_per_age = population_per_age['Fraction'].values
+
         #Model data - to be used for plotting
         stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
                     'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
                     'cases_by_country':np.zeros((days_to_simulate,len(countries))),
                     'days_by_country':np.zeros(len(countries)),
-                    'pop_frac_age':np.zeros((10,len(countries))),
-                    'death_frac_age':np.zeros((10,len(countries))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
                     'transit_stations_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
@@ -68,9 +60,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
-                #Add population fractions - need to change if more countries
-                stan_data['pop_frac_age'][:,c]=population_per_age
-                stan_data['death_frac_age'][:,c]=deaths_per_age
+
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
                 #Sort on date
@@ -138,7 +128,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
+def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, pop):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -191,10 +181,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     fig.savefig(outdir+'plots/alphas.png', format='png', dpi=300)
     plt.close()
 
-
-    #Get population fractions
-    population_per_age = stan_data['pop_frac_age']
-    deaths_per_age = stan_data['death_frac_age']
     #plot per country
     #Read in intervention dates
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
@@ -255,6 +241,10 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
         outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
+        #Downscale R due to herd immunity (Rt = R*(1-frac_inf))
+        cum_cases = np.cumsum(means['prediction'])
+        downscale = 1-(cum_cases/pop)
+        print(downscale)
         plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
@@ -370,6 +360,9 @@ countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 end_date = np.datetime64(args.end_date[0])
 short_dates = pd.read_csv(args.short_dates[0])
+#Get population size
+worldbank_pop = pd.read_csv(datadir+'population_total.csv')
+pop = int(worldbank_pop[worldbank_pop['Country Name']==countries[0]]['2018'].values[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
@@ -384,4 +377,4 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names,end_date)
 
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, pop)
