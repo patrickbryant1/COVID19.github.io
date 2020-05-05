@@ -94,6 +94,8 @@ def read_and_format_data(datadir, countries, end_date):
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+        # get CFR
+        cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #Get population
         worldbank_pop = pd.read_csv(datadir+'population_total.csv')
         #N2 - number of days to model
@@ -122,7 +124,7 @@ def read_and_format_data(datadir, countries, end_date):
         itd = infection_to_death()
 
         #Diamond princess fatality rates per age group
-        dp_cfr = [0,0.002,0.002,0.002,0.004,0.013,0.036,0.08,0.148] #age groups: 0-9,10-19,20-29,30-39,40-49,50-59,60-69,70-79,80+
+        #dp_cfr = [0,0.002,0.002,0.002,0.004,0.013,0.036,0.08,0.148] #age groups: 0-9,10-19,20-29,30-39,40-49,50-59,60-69,70-79,80+
 
         #Covariate names
         covariate_names = ['retail_and_recreation_percent_change_from_baseline',
@@ -133,6 +135,8 @@ def read_and_format_data(datadir, countries, end_date):
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
+                #Get fatality rate
+                cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
                 #Add population size
                 stan_data['population_size'].append(int(worldbank_pop[worldbank_pop['Country Name']==country]['2018'].values[0]))
                 #Get country epidemic data
@@ -158,7 +162,6 @@ def read_and_format_data(datadir, countries, end_date):
                 #Hazard estimation
                 N = len(country_epidemic_data)
 
-
 		         #Add number of days per country
                 stan_data['N'].append(N)
                 forecast = N2 - N
@@ -172,12 +175,11 @@ def read_and_format_data(datadir, countries, end_date):
                 #Get hazard rates for all days in country data
                 h = np.zeros((N2,9)) #N2 = N+forecast
                 f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
-                for p in range(9):
-                    for i in range(1,len(h)):
-                        #for each day t, the death prob is the area btw [t-0.5, t+0.5]
-                        #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
-                        #This will be the percent increase compared to the previous end interval
-                        h[i,p] = (dp_cfr[p]*(f[i*2+1]-f[i*2-1]))/(1-dp_cfr[p]*f[i*2-1])
+                for i in range(1,len(h)):
+                    #for each day t, the death prob is the area btw [t-0.5, t+0.5]
+                    #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
+                    #This will be the percent increase compared to the previous end interval
+                    h[i] = (cfr*(f[i*2+1]-f[i*2-1]))/(1-cfr*f[i*2-1])
 
                 #The number of deaths today is the sum of the past infections weighted by their probability of death,
                 #where the probability of death depends on the number of days since infection.
