@@ -25,10 +25,11 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
+def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, end_date):
         '''Read in and format all data needed for the model
         '''
 
@@ -36,6 +37,8 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
         epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
         #Mobility data
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
@@ -212,7 +215,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
         country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
         #Print final mobility value
-        print(country,country_grocery[end])
+        print(country,country_grocery[end-1])
 
         #Extract modeling results
         means = {'prediction':np.zeros((9,days_to_simulate)),'E_deaths':np.zeros((1,days_to_simulate)), 'Rt':np.zeros((1,days_to_simulate))}
@@ -296,6 +299,10 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     forecast = end+21
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
+    #Plot observed dates
+    if len(observed_y)>1:
+        ax1.bar(x[:end],observed_y[:end], alpha = 0.5) #3 week forecast
+
     #Plot simulation
     ax1.plot(x[:end],y[:end], alpha=0.5, linewidth = 2.0, color = 'b')
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
@@ -352,7 +359,6 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     except:
         pdb.set_trace()
-    fig.legend(frameon=False)
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     #fig.savefig(outname.split('.png')[0]+'.svg', format = 'svg')
@@ -366,6 +372,7 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
+end_date = np.datetime64(args.end_date[0])
 short_dates = pd.read_csv(args.short_dates[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
@@ -378,7 +385,7 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names,end_date)
 
 #Visualize
 visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
