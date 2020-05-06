@@ -22,8 +22,9 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
-parser.add_argument('--country', nargs=1, type= str, default=sys.stdin, help = 'Country to model (csv).')
+parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Country to model (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
+parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -51,42 +52,18 @@ def serial_interval_distribution(N2):
         '''Models the the time between when a person gets infected and when
         they subsequently infect another other people
         '''
-        serial_shape, serial_scale = conv_gamma_params(4.8,2.3)
+        serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
         return serial.pdf(np.arange(1,N2+1))
-def get_N2(epidemic_data, country):
-    '''Get the number of days to model
-    '''
 
-    #Get country epidemic data
-    country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
-    #Sort on date
-    country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
-    #Reset index
-    country_epidemic_data = country_epidemic_data.reset_index()
-
-    #Get all dates with at least 10 deaths
-    cum_deaths = country_epidemic_data['deaths'].cumsum()
-    death_index = cum_deaths[cum_deaths>=10].index[0]
-    di30 = death_index-30
-    #Get part of country_epidemic_data 30 days before day with at least 10 deaths
-    country_epidemic_data = country_epidemic_data.loc[di30:]
-    #Reset index
-    country_epidemic_data = country_epidemic_data.reset_index()
-
-    print(country, len(country_epidemic_data))
-    N = len(country_epidemic_data)
-
-    return N+21
-
-def read_and_format_data(datadir, countries, end_date):
+def read_and_format_data(datadir, countries, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200505.csv')
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
         epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
@@ -98,8 +75,6 @@ def read_and_format_data(datadir, countries, end_date):
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #Get population
         worldbank_pop = pd.read_csv(datadir+'population_total.csv')
-        #N2 - number of days to model
-        N2 = get_N2(epidemic_data, countries[0])
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
         #Create stan data
@@ -203,6 +178,7 @@ def read_and_format_data(datadir, countries, end_date):
                 deaths[:N]=np.array(country_epidemic_data['deaths'])
                 #Do a 7day sliding window to get more even death predictions
                 deaths_7 = np.zeros(N2)
+                deaths_7 -=1
                 deaths_7[0:7] = np.sum(deaths[0:7])/7
                 for i in range(7,N):
                     deaths_7[i] = np.sum(deaths[i-6:i+1])/7
@@ -255,7 +231,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=2000,warmup=1000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
@@ -271,12 +247,14 @@ def simulate(stan_data, stan_model, outdir):
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
-country = args.country[0]
+countries = args.countries[0].split(',')
 stan_model = args.stan_model[0]
+days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-stan_data = read_and_format_data(datadir, [country], end_date)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
