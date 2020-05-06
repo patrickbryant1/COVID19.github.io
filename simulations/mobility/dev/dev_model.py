@@ -178,6 +178,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 deaths[:N]=np.array(country_epidemic_data['deaths'])
                 #Do a 7day sliding window to get more even death predictions
                 deaths_7 = np.zeros(N2)
+                deaths_7 -=1
                 deaths_7[0:7] = np.sum(deaths[0:7])/7
                 for i in range(7,N):
                     deaths_7[i] = np.sum(deaths[i-6:i+1])/7
@@ -254,5 +255,6 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
