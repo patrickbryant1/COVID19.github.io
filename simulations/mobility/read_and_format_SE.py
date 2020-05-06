@@ -13,7 +13,7 @@ import pystan
 import pdb
 
 
-def format_SE():
+def format_SE(datadir,end_date):
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
         epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
@@ -53,11 +53,13 @@ def format_SE():
         mobility_data.replace(translations, inplace=True)
         epidemic_data.replace(translations, inplace=True)
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y-%m-%d')
-        return epidemic_data,mobility_data
+        cfr_by_country = pd.read_csv(datadir+"weighted_fatality_SE.csv")
+        cfr_by_country.replace(translations, inplace=True)
+        return epidemic_data,mobility_data,cfr_by_country
 
-def format_US():
+def format_US(datadir,end_date):
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
+        epidemic_data = pd.read_csv(datadir+'JHS-provinces-2020-05-05.csv')
         epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
         #epidemic_data=epidemic_data.rename(columns={"country":"countriesAndTerritories"})                 
         epidemic_data=epidemic_data.rename(columns={"new_confirmed_cases":"cases"})                 
@@ -68,28 +70,162 @@ def format_US():
         mobility_data = pd.read_csv(datadir+'US_Mobility_Report.csv')
         # We need to map the regions
         translations={
-
+'America-Alabama':'Alabama',
+'America-Alaska':'Alaska',
+'America-American_Samoa':'American_Samoa',
+'America-Arizona':'Arizona',
+'America-Arkansas':'Arkansas',
+'America-California':'California',
+'America-Chicago':'Chicago',
+'America-Colorado':'Colorado',
+'America-Connecticut':'Connecticut',
+'America-Delaware':'Delaware',
+'America-District_of_Columbia':'District_of_Columbia',
+'America-Florida':'Florida',
+'America-Georgia':'Georgia',
+'America-Guam':'Guam',
+'America-Hawaii':'Hawaii',
+'America-Idaho':'Idaho',
+'America-Illinois':'Illinois',
+'America-Indiana':'Indiana',
+'America-Iowa':'Iowa',
+'America-Kansas':'Kansas',
+'America-Kentucky':'Kentucky',
+'America-Louisiana':'Louisiana',
+'America-Maine':'Maine',
+'America-Maryland':'Maryland',
+'America-Massachusetts':'Massachusetts',
+'America-Michigan':'Michigan',
+'America-Minnesota':'Minnesota',
+'America-Mississippi':'Mississippi',
+'America-Missouri':'Missouri',
+'America-Montana':'Montana',
+'America-Nebraska':'Nebraska',
+'America-Nevada':'Nevada',
+'America-New_Hampshire':'New_Hampshire',
+'America-New_Jersey':'New_Jersey',
+'America-New_Mexico':'New_Mexico',
+'America-New_York':'New_York',
+'America-North_Carolina':'North_Carolina',
+'America-North_Dakota':'North_Dakota',
+'America-Northern_Mariana_Islands':'Northern_Mariana_Islands',
+'America-Ohio':'Ohio',
+'America-Oklahoma':'Oklahoma',
+'America-Oregon':'Oregon',
+'America-Pennsylvania':'Pennsylvania',
+'America-Puerto_Rico':'Puerto_Rico',
+'America-Recovered':'Recovered',
+'America-Rhode_Island':'Rhode_Island',
+'America-South_Carolina':'South_Carolina',
+'America-South_Dakota':'South_Dakota',
+'America-Tennessee':'Tennessee',
+'America-Texas':'Texas',
+'America-USA':'USA',
+'America-Utah':'Utah',
+'America-Vermont':'Vermont',
+'America-Virginia':'Virginia',
+'America-Virgin_Islands':'Virgin_Islands',
+'America-Washington':'Washington',
+'America-West_Virginia':'West_Virginia',
+'America-Wisconsin':'Wisconsin',
+'America-Wuhan_Evacuee':'Wuhan_Evacuee',
+'America-Wyoming':'Wyoming',
+'America-Washington,_D.C.':'Washington_D.C.',
+'Alabama':'Alabama',
+'Alaska':'Alaska',
+'American Samoa':'American_Samoa',
+'Arizona':'Arizona',
+'Arkansas':'Arkansas',
+'California':'California',
+'Chicago':'Chicago',
+'Colorado':'Colorado',
+'Connecticut':'Connecticut',
+'Delaware':'Delaware',
+'District of Columbia':'District_of_Columbia',
+'Florida':'Florida',
+'Georgia':'Georgia',
+'Guam':'Guam',
+'Hawaii':'Hawaii',
+'Idaho':'Idaho',
+'Illinois':'Illinois',
+'Indiana':'Indiana',
+'Iowa':'Iowa',
+'Kansas':'Kansas',
+'Kentucky':'Kentucky',
+'Louisiana':'Louisiana',
+'Maine':'Maine',
+'Maryland':'Maryland',
+'Massachusetts':'Massachusetts',
+'Michigan':'Michigan',
+'Minnesota':'Minnesota',
+'Mississippi':'Mississippi',
+'Missouri':'Missouri',
+'Montana':'Montana',
+'Nebraska':'Nebraska',
+'Nevada':'Nevada',
+'New Hampshire':'New_Hampshire',
+'New Jersey':'New_Jersey',
+'New Mexico':'New_Mexico',
+'New York':'New_York',
+'North Carolina':'North_Carolina',
+'North Dakota':'North_Dakota',
+'Northern Mariana Islands':'Northern_Mariana_Islands',
+'Ohio':'Ohio',
+'Oklahoma':'Oklahoma',
+'Oregon':'Oregon',
+'Pennsylvania':'Pennsylvania',
+'Puerto Rico':'Puerto_Rico',
+'Recovered':'Recovered',
+'Rhode Island':'Rhode_Island',
+'South Carolina':'South_Carolina',
+'South Dakota':'South_Dakota',
+'Tennessee':'Tennessee',
+'Texas':'Texas',
+'USA':'USA',
+'Utah':'Utah',
+'Vermont':'Vermont',
+'Virginia':'Virginia',
+'Virgin Islands':'Virgin_Islands',
+'Washington':'Washington',
+'West Virginia':'West_Virginia',
+'Wisconsin':'Wisconsin',
+'Wuhan Evacuee':'Wuhan_Evacuee',
+'Wyoming':'Wyoming',
+'Washington, D.C.':'Washington,_D.C.'
                 }
 
         mobility_data.replace(translations, inplace=True)
+        mobility_data=mobility_data.rename(columns={"country":"Maincountry"})                 
+        #mobility_data=mobility_data.rename(columns={"sub_region_1":"country"})                 
+
+        
         epidemic_data.replace(translations, inplace=True)
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y-%m-%d')
-        return epidemic_data,mobility_data
+
+        cfr_by_country = pd.read_csv(datadir+"weighted_fatality_US.csv")
+        cfr_by_country.replace(translations, inplace=True)
+        
+        #print (mobility_data[mobility_data["sub_region_1"]=="Alabama"])
+        #print (epidemic_data[epidemic_data["sub_region_1"]=="Alabama"])
+        #print (mobility_data[mobility_data["sub_region_1"]=="New_York"])
+        #print (epidemic_data[epidemic_data["sub_region_1"]=="New_York"])
+
+        
+        #sys.exit()
+        return epidemic_data,mobility_data,cfr_by_country
 
 def read_and_format_data(datadir, countries, N2, end_date,model):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
         if model== "SE":
-                epidemic_data,mobility_data=format_SE()
+                epidemic_data,mobility_data,cfr_by_country=format_SE(datadir,end_date)
         elif model == "US":
-                epidemic_data,mobility_data=formaT_US()
+                epidemic_data,mobility_data,cfr_by_country=format_US(datadir,end_date)
         else:
                 sys.exit()
                 
         # get CFR
-        cfr_by_country = pd.read_csv(datadir+"weighted_fatality_SE.csv")
-        cfr_by_country.replace(translations, inplace=True)
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
 
@@ -219,7 +355,7 @@ def read_and_format_data(datadir, countries, N2, end_date,model):
                 
                 #print("Dates:",country_cov_data['date'],country_epidemic_data['date'])
                 country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['date'])]
-                print ("Found",country_cov_data)
+                #print ("Found",country_cov_data)
                 end_date = max(country_cov_data['date']) #Last date for mobility data
                 for name in covariate_names:
                     country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
