@@ -12,11 +12,8 @@ import seaborn as sns
 import pystan
 import pdb
 
-def read_and_format_data(datadir, countries, N2, end_date):
-        '''Read in and format all data needed for the model
-        N2 = number of days to model
-        '''
 
+def format_se():
         #Get epidemic data
         epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
         epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
@@ -56,7 +53,61 @@ def read_and_format_data(datadir, countries, N2, end_date):
         mobility_data.replace(translations, inplace=True)
         epidemic_data.replace(translations, inplace=True)
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y-%m-%d')
+        return epidemic_data,mobility_data
 
+def format_se():
+        #Get epidemic data
+        epidemic_data = pd.read_csv(datadir+'FHM-2020-05-01.csv')
+        epidemic_data['date'] = pd.to_datetime(epidemic_data['date'], format='%Y-%m-%d')
+        #epidemic_data=epidemic_data.rename(columns={"country":"countriesAndTerritories"})                 
+        epidemic_data=epidemic_data.rename(columns={"new_confirmed_cases":"cases"})                 
+        epidemic_data=epidemic_data.rename(columns={"new_deaths":"deaths"})                 
+        #Select all data up to end_date
+        epidemic_data = epidemic_data[epidemic_data['date']<=end_date]
+        #Mobility data
+        mobility_data = pd.read_csv(datadir+'SE_Mobility_Report.csv')
+        # We need to map the regions
+        translations={
+                "Blekinge County":"Blekinge",
+                "Dalarna County":"Dalarna",
+                "Gavleborg County":"Gävleborg",
+                "Gotland County":"Gotland",
+                "Halland County":"Halland",
+                "Jamtland County":"JämtlandHärjedalen",
+                "Jämtland Härjedalen":"JämtlandHärjedalen",
+                "Jonkoping County":"Jönköping",
+                "Kalmar County":"Kalmar",
+                "Kronoberg County":"Kronoberg",
+                "Norrbotten County":"Norrbotten",
+                "Örebro County":"Örebro",
+                "Östergötland County":"Östergötland",
+                "Skåne County":"Skåne",
+                "Södermanland County":"Sörmland",
+                "Stockholm County":"Stockholm",
+                "Uppsala County":"Uppsala",
+                "Varmland County":"Värmland",
+                "Västerbotten County":"Västerbotten",
+                "Västernorrland County":"Västernorrland",
+                "Västmanland County":"Västmanland",
+                "Västra Götaland County":"VästraGötaland",
+                "Västra Götaland":"VästraGötaland"}
+
+        mobility_data.replace(translations, inplace=True)
+        epidemic_data.replace(translations, inplace=True)
+        mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y-%m-%d')
+        return epidemic_data,mobility_data
+
+def read_and_format_data(datadir, countries, N2, end_date,model):
+        '''Read in and format all data needed for the model
+        N2 = number of days to model
+        '''
+        if model== "SE":
+                epidemic_data,mobility_data=format_se()
+        elif model == "US":
+                epidemic_data,mobility_data=format_us()
+        else:
+                sys.exit()
+                
         # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality_SE.csv")
         cfr_by_country.replace(translations, inplace=True)
