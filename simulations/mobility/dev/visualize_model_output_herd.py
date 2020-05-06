@@ -247,11 +247,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
         outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
         #Plot R
-        #Downscale R due to herd immunity (Rt = R*(1-frac_inf))
-        cum_cases = np.cumsum(means['prediction'])
-        downscale = 1-(cum_cases/pop)
-        plot_shade_ci(days,end,dates[0],means['Rt']*downscale,'', lower_bound['Rt']*downscale, higher_bound['Rt']*downscale, lower_bound25['Rt']*downscale,
-        higher_bound75['Rt']*downscale,'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
+        plot_shade_ci(days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
+        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
         country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
 
         #Print R mean at beginning and end of model
@@ -372,9 +369,7 @@ countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 end_date = np.datetime64(args.end_date[0])
 short_dates = pd.read_csv(args.short_dates[0])
-#Get population size
-worldbank_pop = pd.read_csv(datadir+'population_total.csv')
-pop = int(worldbank_pop[worldbank_pop['Country Name']==countries[0]]['2018'].values[0])
+
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
