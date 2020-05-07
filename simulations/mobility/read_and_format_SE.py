@@ -251,6 +251,7 @@ def read_and_format_data(datadir, countries, N2, end_date,model):
                     'SI':serial_interval[0:N2],
                     'y':[] #index cases
                     }
+        print (stan_data)
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
@@ -263,7 +264,7 @@ def read_and_format_data(datadir, countries, N2, end_date,model):
         for c in range(len(countries)):
                 country = countries[c]
                 #Get fatality rate
-                #print(country)
+                print(country)
                 cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
 
                 #Get country epidemic data
@@ -276,7 +277,7 @@ def read_and_format_data(datadir, countries, N2, end_date,model):
 
                 #Get all dates with at least 10 deaths
                 cum_deaths = country_epidemic_data['deaths'].cumsum()
-                #print (cum_deaths)
+                print (cum_deaths)
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
                 #Add epidemic start to stan data
