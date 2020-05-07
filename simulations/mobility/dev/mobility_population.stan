@@ -1,11 +1,9 @@
 data {
-  int <lower=1> M; // number of countries
-  int <lower=1> N0; // number of days for which to impute infections
+  int<lower=1> M; // number of countries
+  int<lower=1> N0; // number of days for which to impute infections
   int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
-  real pop_frac_age[10,M]; //Population fractions per age in steps of 10 from 0 to 90+
-  real death_frac_age[10,M]; //Death fractions per age in steps of 10 from 0 to 90+
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, 9] f[M]; // h * s - change in fraction dead each day, 9 age groups
   matrix[N2, M] covariate1; //retail_and_recreation
@@ -15,6 +13,7 @@ data {
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
   real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
+  int<lower=1> population_size [M];
 }
 
 transformed data {
@@ -44,7 +43,9 @@ parameters {
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
     real convolution; //value of integration
+    real cumulative_convolution; //For herd immunity
     matrix[N2, M] prediction[9]; //predict cases for each day for all countries
+
     matrix[N2, M] E_deaths[9]; //sum of deaths over all age groups
     matrix[N2, M] Rt[9]; //Rt per age group to model spread
     real<lower=0> phi;
@@ -56,7 +57,7 @@ transformed parameters {
     //For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
     //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
         //Define Rt, learned below
-    Rt[m,:,m] = mu1[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
+    Rt[1,:,m] = mu1[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[2,:,m] = mu2[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[3,:,m] = mu3[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
     Rt[4,:,m] = mu4[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) + covariate3[,m] * (alpha[3])+ covariate4[,m] * (alpha[4]) - covariate5[,m] * (alpha[5]));
@@ -71,13 +72,15 @@ transformed parameters {
         prediction[p,1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
   					                                      //y is the index case
       	//for all days from 7 (1 after the cases in N0 days) to end of forecast
-            for (i in (N0+1):N2) {
-              convolution=0;//reset
+        for (i in (N0+1):N2) {
+              convolution=0; //reset
+              cumulative_convolution = 0;
       	//loop through all days up to current (integration)
           for(j in 1:(i-1)) {
             convolution += prediction[p,j,m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
+            cumulative_convolution += prediction[p,j,m];
             }
-            prediction[p,i,m] = Rt[p,i,m] * convolution; //Scale with average spread per case
+            prediction[p,i,m] = (1-(cumulative_convolution/population_size[m]))*Rt[p,i,m] * convolution; //Scale with average spread per case
             }
 
       //Deaths - use all cases, now that they are estimated
