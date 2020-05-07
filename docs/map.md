@@ -3,4 +3,7 @@ layout: page
 title: Map
 ---
 
-![Map](./map.html)
+[death_map](./death_map.html)
+
+
+[case_map](./case_map.html)
