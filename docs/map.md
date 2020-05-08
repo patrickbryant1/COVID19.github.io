@@ -1,9 +1,9 @@
 ---
-layout: page
 title: Map
+layout: page
+my_variable: map.html
 ---
 
-[death_map](./death_map.html)
-
-
-[case_map](./case_map.html)
+{% if page.my_variable %}
+  {% include {{ page.my_variable }} %}
+{% endif %}
