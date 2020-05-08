@@ -1,9 +1,18 @@
 ---
-title: Map
+title: Maps
 layout: page
-my_variable: map.html
+my_variable1: map_cases.html
+my_variable2: map_deaths.html
 ---
 
-{% if page.my_variable %}
-  {% include {{ page.my_variable }} %}
+## Cases per day
+{% if page.my_variable1 %}
+  {% include {{ page.my_variable1 }} %}
+{% endif %}
+
+
+
+## Deaths per day
+{% if page.my_variable2 %}
+  {% include {{ page.my_variable2 }} %}
 {% endif %}

@@ -13,9 +13,17 @@ from bokeh.palettes import brewer
 import json
 import shapely
 import matplotlib.pyplot as plt
+import sys
+import argparse
 import pdb
 
+#Arguments for argparse module:
+parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
 
+parser.add_argument('--metric', nargs=1, type= str, default=sys.stdin, help = 'cases or deaths.')
+
+
+###FUNCTIONS###
 def read_data():
     '''Read in all data for plotting
     '''
@@ -67,7 +75,7 @@ def read_data():
     ecdc_capital['y'] = [geometry.y for geometry in ecdc_capital['geometry']]
     ecdc_capital = ecdc_capital.drop('geometry', axis = 1).copy()
     ecdc_capital['deaths_size'] = ecdc_capital['norm_deaths']*1000000
-    ecdc_capital['cases_size'] = ecdc_capital['norm_cases']*20000
+    ecdc_capital['cases_size'] = ecdc_capital['norm_cases']*50000
     return geosource, ecdc_capital, dates
 
 def world_map(geosource, ecdc_capital, dates, metric):
@@ -77,29 +85,9 @@ def world_map(geosource, ecdc_capital, dates, metric):
             latitude=np.array(ecdc_capital['y']),
             date_index=np.array(ecdc_capital['date_index']),
             Metric=np.array(ecdc_capital[metric]),
-            Metric_size=np.array(ecdc_capital[metric+'_size']))
+            Metric_size=np.array(ecdc_capital[metric+'_size']),
+            country = np.array(ecdc_capital['countriesAndTerritories']))
     source = ColumnDataSource(data=data)
-
-    EpidemicDate = Slider(start=0, value=len(dates)-1, end=len(dates)-1, step=1, orientation='vertical', direction='rtl')
-
-    # this filter selects rows of data source that satisfy the constraint
-    custom_filter = CustomJSFilter(args=dict(slider=EpidemicDate), code="""
-        const indices = []
-        for (var i = 0; i < source.get_length(); i++) {
-            if (source.data['date_index'][i]== slider.value) {
-                indices.push(true)
-            } else {
-                indices.push(false)
-            }
-        }
-        return indices
-    """)
-    view = CDSView(source=source, filters=[custom_filter])
-
-    # force a re-render when the slider changes
-    EpidemicDate.js_on_change('value', CustomJS(args=dict(source=source), code="""
-       source.change.emit()
-    """))
 
     #Define a sequential multi-hue color palette.
     palette = brewer['YlGnBu'][9]
@@ -126,22 +114,43 @@ def world_map(geosource, ecdc_capital, dates, metric):
             tooltips = [ ('Country/region','@country'),
                         ('Population density', '@2017')]))
 
+
+    EpidemicDate = Slider(start=0, value=len(dates)-1, end=len(dates)-1, step=1, orientation='vertical', direction='rtl')
+
+    # this filter selects rows of data source that satisfy the constraint
+    custom_filter = CustomJSFilter(args=dict(slider=EpidemicDate), code="""
+        const indices = []
+        for (var i = 0; i < source.get_length(); i++) {
+            if (source.data['date_index'][i]== slider.value) {
+                indices.push(true)
+            } else {
+                indices.push(false)
+            }
+        }
+        return indices
+    """)
+    view = CDSView(source=source, filters=[custom_filter])
+
+    # force a re-render when the slider changes
+    EpidemicDate.js_on_change('value', CustomJS(args=dict(source=source), code="""
+       source.change.emit()
+    """))
+
     sites = p.circle('longitude', 'latitude', source=source, view=view,
                       size={'field':'Metric_size'}, alpha = 0.5, color = 'red')
     p.add_tools(HoverTool(renderers=[sites],
-            tooltips = [ (metric,'@Metric')]))
+            tooltips = [ ('Country/region','@country'), (metric,'@Metric')]))
 
-    inputs = column(EpidemicDate, width=200)
+    inputs = column(EpidemicDate)
     p.add_layout(color_bar, 'below')
     output_file('../docs/_includes/map_'+metric+'.html')
     save(layout([[inputs,p]]))
 
 
 ###MAIN###
+args = parser.parse_args()
+metric= args.metric[0]
 #Get and format data
 geosource, ecdc_capital, dates = read_data()
 #Make html plot
-world_map(geosource, ecdc_capital, dates, 'deaths')
-#Same with cases (reformatting necessary. geosoure can only be owned by one model)
-geosource, ecdc_capital, dates = read_data()
-world_map(geosource, ecdc_capital, dates, 'cases')
+world_map(geosource, ecdc_capital, dates, metric)
