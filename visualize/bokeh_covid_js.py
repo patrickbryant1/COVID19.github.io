@@ -13,15 +13,8 @@ from bokeh.palettes import brewer
 import json
 import shapely
 import matplotlib.pyplot as plt
-import sys
 import argparse
 import pdb
-
-#Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
-
-parser.add_argument('--metric', nargs=1, type= str, default=sys.stdin, help = 'cases or deaths.')
-
 
 ###FUNCTIONS###
 def read_data():
@@ -76,6 +69,14 @@ def read_data():
     ecdc_capital = ecdc_capital.drop('geometry', axis = 1).copy()
     ecdc_capital['deaths_size'] = ecdc_capital['norm_deaths']*1000000
     ecdc_capital['cases_size'] = ecdc_capital['norm_cases']*50000
+
+
+    #Mobility data
+    mobility_data = pd.read_csv('./Global_Mobility_Report.csv')
+    #Convert to datetime
+    mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+    #Match mobility data by date and country
+
     return geosource, ecdc_capital, dates
 
 def world_map(geosource, ecdc_capital, dates, metric):
@@ -104,11 +105,21 @@ def world_map(geosource, ecdc_capital, dates, metric):
     p = figure(title = metric+' per day and population size', plot_height = 600 , plot_width = 950,
                toolbar_location = 'below',
                tools = "pan, wheel_zoom, box_zoom, reset")
+    #Turn off plot lines
     p.xgrid.grid_line_color = None
-    p.ygrid.grid_line_color = None#Add patch renderer to figure.
+    p.ygrid.grid_line_color = None
+    p.xaxis.axis_line_color = None
+    p.yaxis.axis_line_color = None
+    p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
+    p.xaxis.minor_tick_line_color = None  # turn off x-axis minor ticks
+    p.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
+    p.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
+    p.xaxis.major_label_text_font_size = '0pt'  # turn off x-axis tick labels
+    p.yaxis.major_label_text_font_size = '0pt'  # turn off y-axis tick labels
+    #Add patch renderer to figure.
     land = p.patches('xs','ys', source = geosource,
               fill_color = {'field' :'2017', 'transform' : color_mapper},
-              line_color = 'black', line_width = 0.25, fill_alpha = 1)
+              line_color = 'grey', line_width = 0.25, fill_alpha = 1)
 
     p.add_tools(HoverTool(renderers=[land],
             tooltips = [ ('Country/region','@country'),
@@ -148,9 +159,11 @@ def world_map(geosource, ecdc_capital, dates, metric):
 
 
 ###MAIN###
-args = parser.parse_args()
-metric= args.metric[0]
 #Get and format data
 geosource, ecdc_capital, dates = read_data()
 #Make html plot
-world_map(geosource, ecdc_capital, dates, metric)
+world_map(geosource, ecdc_capital, dates, 'deaths')
+#Again for cases. Needs to be redone. Each model needs its own data.
+geosource, ecdc_capital, dates = read_data()
+#Make html plot
+world_map(geosource, ecdc_capital, dates, 'cases')
