@@ -46,34 +46,41 @@ def read_data():
     #Merge gdf_pop with ecdc
     ecdc_capital = gdf_pop.merge(ecdc_df, left_on = 'sov_a3', right_on ='countryterritoryCode', how = 'left')
     #Create date index
-    dates = ecdc_capital['dateRep'].unique()
+    ecdc_capital['dateRep'] = pd.to_datetime(ecdc_capital['dateRep'], format='%d/%m/%Y')
+    dates = ecdc_capital['dateRep'].dropna().unique() #Drop nans and get unique
+    dates = np.sort(dates) #sort
     ecdc_capital['date_index'] = 0
     for i in range(len(dates)):
         index = ecdc_capital[ecdc_capital['dateRep']==dates[i]].index
         ecdc_capital.loc[index,'date_index']=i+1
+
+    #Get the total population 2018 (worldbank data)
+    wb_data = pd.read_csv('../worldbank/population_total.csv')
+    ecdc_capital = ecdc_capital.merge(wb_data, left_on = 'countryterritoryCode', right_on ='Country Code', how = 'left')
+    #Normalize by population size
+    ecdc_capital['norm_deaths'] = ecdc_capital['deaths']/ecdc_capital['2018']
+    ecdc_capital['norm_cases'] = ecdc_capital['cases']/ecdc_capital['2018']
     #Create a geodf
-    ecdc_capital = gpd.GeoDataFrame(ecdc_capital,
-                                 geometry = ecdc_capital.geometry)
+    ecdc_capital = gpd.GeoDataFrame(ecdc_capital,geometry = ecdc_capital.geometry)
     # Get x and y coordinates
     ecdc_capital['x'] = [geometry.x for geometry in ecdc_capital['geometry']]
     ecdc_capital['y'] = [geometry.y for geometry in ecdc_capital['geometry']]
     ecdc_capital = ecdc_capital.drop('geometry', axis = 1).copy()
-    ecdc_capital['death_size'] = ecdc_capital['deaths']/10
+    ecdc_capital['deaths_size'] = ecdc_capital['norm_deaths']*1000000
+    ecdc_capital['cases_size'] = ecdc_capital['norm_cases']*20000
+    return geosource, ecdc_capital, dates
 
-
-    return geosource, ecdc_capital
-
-def world_map(geosource, ecdc_capital):
+def world_map(geosource, ecdc_capital, dates, metric):
     '''Create world map and write to html with javascript
     '''
     data = dict(longitude=np.array(ecdc_capital['x']),
             latitude=np.array(ecdc_capital['y']),
             date_index=np.array(ecdc_capital['date_index']),
-            Deaths=np.array(ecdc_capital['deaths']),
-            Death_size=np.array(ecdc_capital['death_size']))
+            Metric=np.array(ecdc_capital[metric]),
+            Metric_size=np.array(ecdc_capital[metric+'_size']))
     source = ColumnDataSource(data=data)
 
-    EpidemicDate = Slider(start=0, value=0, end=128, step=1)
+    EpidemicDate = Slider(start=0, value=len(dates)-1, end=len(dates)-1, step=1, orientation='vertical', direction='rtl')
 
     # this filter selects rows of data source that satisfy the constraint
     custom_filter = CustomJSFilter(args=dict(slider=EpidemicDate), code="""
@@ -102,11 +109,11 @@ def world_map(geosource, ecdc_capital):
     color_mapper = LinearColorMapper(palette = palette, low = 0, high = 500, nan_color = '#d9d9d9')
 
     #Create color bar.
-    color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8,
+    color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8, title='Population density per sq.km.',
                          width = 500, height = 20,
                          border_line_color=None,location = (0,0),
                          orientation = 'horizontal')
-    p = figure(title = 'Deaths per day', plot_height = 400 , plot_width = 600,
+    p = figure(title = metric+' per day and population size', plot_height = 600 , plot_width = 950,
                toolbar_location = 'below',
                tools = "pan, wheel_zoom, box_zoom, reset")
     p.xgrid.grid_line_color = None
@@ -120,16 +127,21 @@ def world_map(geosource, ecdc_capital):
                         ('Population density', '@2017')]))
 
     sites = p.circle('longitude', 'latitude', source=source, view=view,
-                      size={'field':'Death_size'}, alpha = 0.5, color = 'red')
+                      size={'field':'Metric_size'}, alpha = 0.5, color = 'red')
     p.add_tools(HoverTool(renderers=[sites],
-            tooltips = [ ('Deaths','@Deaths')]))
+            tooltips = [ (metric,'@Metric')]))
 
     inputs = column(EpidemicDate, width=200)
-
-    output_file('../docs/_includes/map.html')
+    p.add_layout(color_bar, 'below')
+    output_file('../docs/_includes/map_'+metric+'.html')
     save(layout([[inputs,p]]))
+
+
 ###MAIN###
 #Get and format data
-geosource, ecdc_capital = read_data()
+geosource, ecdc_capital, dates = read_data()
 #Make html plot
-world_map(geosource, ecdc_capital)
+world_map(geosource, ecdc_capital, dates, 'deaths')
+#Same with cases (reformatting necessary. geosoure can only be owned by one model)
+geosource, ecdc_capital, dates = read_data()
+world_map(geosource, ecdc_capital, dates, 'cases')
