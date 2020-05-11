@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--subregions', nargs=1, type= str, default=sys.stdin, help = 'Subregions to model (csv).')
+parser.add_argument('--population_data', nargs=1, type= str, default=sys.stdin, help = 'Subregion population (csv).')
+parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Subregion epidemic data (csv).')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
@@ -58,28 +60,27 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(datadir, countries, N2, end_date):
+def read_and_format_data(datadir, countries, subregions, population_data, epidemic_data, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200505.csv')
-        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['date'], format='%Y/%m/%d')
         #Select all data up to end_date
         epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
         #Mobility data
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+        #Get per country
+        mobility_data = mobility_data[mobility_data['country_region']==countries[0]]
         # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
-        #Get population
-        worldbank_pop = pd.read_csv(datadir+'population_total.csv')
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
         #Create stan data
-        stan_data = {'M':len(countries), #number of countries
+        stan_data = {'M':len(subregions), #number of countries
                     'N0':6, #number of days for which to impute infections
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
@@ -104,39 +105,48 @@ def read_and_format_data(datadir, countries, N2, end_date):
 
         #Covariate names
         covariate_names = ['retail_and_recreation_percent_change_from_baseline',
-       'grocery_and_pharmacy_percent_change_from_baseline',
-       'transit_stations_percent_change_from_baseline',
-       'workplaces_percent_change_from_baseline',
-       'residential_percent_change_from_baseline']
-        #Get data by country
-        for c in range(len(countries)):
-                country = countries[c]
-                #Get fatality rate
-                cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
-                #Add population size
-                stan_data['population_size'].append(int(worldbank_pop[worldbank_pop['Country Name']==country]['2018'].values[0]))
-                #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
-                #Sort on date
-                country_epidemic_data = country_epidemic_data.sort_values(by='dateRep')
-                #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
+                           'grocery_and_pharmacy_percent_change_from_baseline',
+                           'transit_stations_percent_change_from_baseline',
+                           'workplaces_percent_change_from_baseline',
+                           'residential_percent_change_from_baseline']
 
+        country = countries[0]
+        #Get fatality rate
+        cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
+
+        #Get data by country
+        for c in range(len(subregions)):
+                subregion = subregions[c]
+                subregion =' '.join(subregion.split('_'))
+                #Get country epidemic data
+                county_epidemic_data = epidemic_data[epidemic_data['country']==subregion.split('County')[0].strip()]
+                #Sort on date
+                county_epidemic_data = county_epidemic_data.sort_values(by='date')
+                #Reset index
+                county_epidemic_data = county_epidemic_data.reset_index()
+
+                #Make check that at least 10 deaths have been observed
                 #Get all dates with at least 10 deaths
-                cum_deaths = country_epidemic_data['deaths'].cumsum()
+                cum_deaths = county_epidemic_data['new_deaths'].cumsum()
+                if max(cum_deaths)<10:
+                    continue
+
+                #Add population size
+                stan_data['population_size'].append(int(population_data[population_data['County']==subregion]['Population'].values[0]))
+
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
                 #Add epidemic start to stan data
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
-                #Get part of country_epidemic_data 30 days before day with at least 10 deaths
-                country_epidemic_data = country_epidemic_data.loc[di30:]
+                #Get part of county_epidemic_data 30 days before day with at least 10 deaths
+                county_epidemic_data = county_epidemic_data.loc[di30:]
                 #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
+                county_epidemic_data = county_epidemic_data.reset_index()
 
-                print(country, len(country_epidemic_data))
+                print(country, len(county_epidemic_data))
 
                 #Hazard estimation
-                N = len(country_epidemic_data)
+                N = len(county_epidemic_data)
 
 		         #Add number of days per country
                 stan_data['N'].append(N)
@@ -176,7 +186,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
-                deaths[:N]=np.array(country_epidemic_data['deaths'])
+                deaths[:N]=np.array(county_epidemic_data['deaths'])
                 #Do a 7day sliding window to get more even death predictions
                 deaths_7 = np.zeros(N2)
                 deaths_7 -=1
@@ -189,31 +199,30 @@ def read_and_format_data(datadir, countries, N2, end_date):
 
                 #Covariates - assign the same shape as others (N2)
                 #Mobility data from Google
-                country_cov_data = mobility_data[mobility_data['country_region']==country]
-                if country == 'United_Kingdom': #Different assignments for UK
-                    country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
-                #Get whole country - no subregion
-                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                county_cov_data = mobility_data[mobility_data['sub_region_1']==subregion]
+                #Get whole county - no county subregion
+                county_cov_data =  country_cov_data[country_cov_data['sub_region_2'].isna()]
                 #Get matching dates
-                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['dateRep'])]
+                pdb.set_trace()
+                county_cov_data = county_cov_data[county_cov_data['date'].isin(county_epidemic_data['date'])]
                 end_date = max(country_cov_data['date']) #Last date for mobility data
                 for name in covariate_names:
-                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    for d in range(len(country_epidemic_data)): #loop through all country data
-                        row_d = country_epidemic_data.loc[d]
+                    county_epidemic_data.loc[county_epidemic_data.index,name] = 0 #Set all to 0
+                    for d in range(len(county_epidemic_data)): #loop through all country data
+                        row_d = county_epidemic_data.loc[d]
                         date_d = row_d['dateRep'] #Extract date
                         try:
                             change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
-                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                                county_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
                             continue #Date too far ahead
 
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['dateRep']>=end_date, name]=change_d
+                    county_epidemic_data.loc[county_epidemic_data['dateRep']>=end_date, name]=change_d
                     cov_i = np.zeros(N2)
-                    cov_i[:N] = np.array(country_epidemic_data[name])
+                    cov_i[:N] = np.array(county_epidemic_data[name])
                     #Add covariate info to forecast
                     cov_i[N:N2]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
@@ -222,6 +231,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
+        pdb.set_trace()
         return stan_data
 
 
@@ -250,12 +260,14 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 subregions = args.subregions[0].split(',')
+population_data = pd.read_csv(args.population_data[0])
+epidemic_data = pd.read_csv(args.epidemic_data[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, subregions, days_to_simulate, end_date)
+stan_data = read_and_format_data(datadir, countries, subregions, population_data, epidemic_data, days_to_simulate, end_date)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
