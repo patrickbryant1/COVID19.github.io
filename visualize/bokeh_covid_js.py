@@ -50,6 +50,7 @@ def read_data():
     ecdc_capital['dateRep'] = pd.to_datetime(ecdc_capital['dateRep'], format='%d/%m/%Y')
     dates = ecdc_capital['dateRep'].dropna().unique() #Drop nans and get unique
     dates = np.sort(dates) #sort
+    dates = np.array(dates, dtype='datetime64[D]')
     ecdc_capital['date_index'] = 0
     for i in range(len(dates)):
         index = ecdc_capital[ecdc_capital['dateRep']==dates[i]].index
@@ -96,13 +97,12 @@ def world_map(geosource, ecdc_capital, dates, metric):
     palette = palette[::-1]
     #Instantiate LinearColorMapper that linearly maps numbers in a range, into a sequence of colors. Input nan_color.
     color_mapper = LinearColorMapper(palette = palette, low = 0, high = 500, nan_color = '#d9d9d9')
-
     #Create color bar.
     color_bar = ColorBar(color_mapper=color_mapper, label_standoff=8, title='Population density per sq.km.',
                          width = 500, height = 20,
                          border_line_color=None,location = (0,0),
                          orientation = 'horizontal')
-    p = figure(title = metric+' per day and population size', plot_height = 600 , plot_width = 950,
+    p = figure(title = 'Deaths per day and population size on '+ str(dates[-1]), plot_height = 600 , plot_width = 950,
                toolbar_location = 'below',
                tools = "pan, wheel_zoom, box_zoom, reset")
     #Turn off plot lines
@@ -126,10 +126,12 @@ def world_map(geosource, ecdc_capital, dates, metric):
                         ('Population density', '@2017')]))
 
 
-    EpidemicDate = Slider(start=0, value=len(dates)-1, end=len(dates)-1, step=1, orientation='vertical', direction='rtl')
+    EpidemicDate = Slider(title='Epidemic day', start=0, value=len(dates)-1, end=len(dates)-1, step=1, orientation='vertical', direction='rtl')
 
     # this filter selects rows of data source that satisfy the constraint
     custom_filter = CustomJSFilter(args=dict(slider=EpidemicDate), code="""
+
+
         const indices = []
         for (var i = 0; i < source.get_length(); i++) {
             if (source.data['date_index'][i]== slider.value) {
@@ -163,7 +165,3 @@ def world_map(geosource, ecdc_capital, dates, metric):
 geosource, ecdc_capital, dates = read_data()
 #Make html plot
 world_map(geosource, ecdc_capital, dates, 'deaths')
-#Again for cases. Needs to be redone. Each model needs its own data.
-geosource, ecdc_capital, dates = read_data()
-#Make html plot
-world_map(geosource, ecdc_capital, dates, 'cases')
