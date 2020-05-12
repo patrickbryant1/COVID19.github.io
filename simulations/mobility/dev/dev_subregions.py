@@ -85,13 +85,13 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
-                    'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((N2,len(countries))),
-                    'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
+                    'deaths':np.zeros((N2,len(subregions)), dtype=int),
+                    'f':np.zeros((N2,len(subregions))),
+                    'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(subregions))),
+                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(subregions))),
+                    'transit_stations_percent_change_from_baseline':np.zeros((N2,len(subregions))),
+                    'workplaces_percent_change_from_baseline':np.zeros((N2,len(subregions))),
+                    'residential_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'EpidemicStart': [],
                     'SI':serial_interval[0:N2],
                     'y':[], #index cases
@@ -128,12 +128,17 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                 #Make check that at least 10 deaths have been observed
                 #Get all dates with at least 10 deaths
                 cum_deaths = county_epidemic_data['new_deaths'].cumsum()
-                if max(cum_deaths)<10:
+                try: #can be empty
+                    if max(cum_deaths)<10:
+                        continue
+                except:
                     continue
 
                 #Add population size
-                stan_data['population_size'].append(int(population_data[population_data['County']==subregion]['Population'].values[0]))
-
+                try:
+                    stan_data['population_size'].append(int(population_data[population_data['County']==subregion]['Population'].values[0]))
+                except:
+                    pdb.set_trace()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
                 #Add epidemic start to stan data
@@ -143,7 +148,7 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                 #Reset index
                 county_epidemic_data = county_epidemic_data.reset_index()
 
-                print(country, len(county_epidemic_data))
+                print(subregion, len(county_epidemic_data))
 
                 #Hazard estimation
                 N = len(county_epidemic_data)
@@ -186,7 +191,7 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                 #Number of deaths
                 deaths = np.zeros(N2)
                 deaths -=1 #Assign -1 for all forcast days
-                deaths[:N]=np.array(county_epidemic_data['deaths'])
+                deaths[:N]=np.array(county_epidemic_data['new_deaths'])
                 #Do a 7day sliding window to get more even death predictions
                 deaths_7 = np.zeros(N2)
                 deaths_7 -=1
@@ -201,18 +206,20 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                 #Mobility data from Google
                 county_cov_data = mobility_data[mobility_data['sub_region_1']==subregion]
                 #Get whole county - no county subregion
-                county_cov_data =  country_cov_data[country_cov_data['sub_region_2'].isna()]
+                county_cov_data =  county_cov_data[county_cov_data['sub_region_2'].isna()]
                 #Get matching dates
-                pdb.set_trace()
                 county_cov_data = county_cov_data[county_cov_data['date'].isin(county_epidemic_data['date'])]
-                end_date = max(country_cov_data['date']) #Last date for mobility data
+                try:
+                    end_date = max(county_cov_data['date']) #Last date for mobility data
+                except:
+                    pdb.set_trace()
                 for name in covariate_names:
                     county_epidemic_data.loc[county_epidemic_data.index,name] = 0 #Set all to 0
                     for d in range(len(county_epidemic_data)): #loop through all country data
                         row_d = county_epidemic_data.loc[d]
                         date_d = row_d['dateRep'] #Extract date
                         try:
-                            change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
+                            change_d = np.round(float(county_cov_data[county_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
                                 county_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
