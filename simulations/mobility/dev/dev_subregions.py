@@ -60,6 +60,38 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
+def se_transl(mobility_data, epidemic_data, population_data):
+    '''Ensure the county names are the same across dfs
+    '''
+    translations={"Blekinge County":"Blekinge",
+    "Dalarna County":"Dalarna",
+    "Gavleborg County":"Gävleborg",
+    "Gotland County":"Gotland",
+    "Halland County":"Halland",
+    "Jamtland County":"JämtlandHärjedalen",
+    "Jämtland Härjedalen":"JämtlandHärjedalen",
+    "Jonkoping County":"Jönköping",
+    "Kalmar County":"Kalmar",
+    "Kronoberg County":"Kronoberg",
+    "Norrbotten County":"Norrbotten",
+    "Örebro County":"Örebro",
+    "Östergötland County":"Östergötland",
+    "Skåne County":"Skåne",
+    "Södermanland County":"Sörmland",
+    "Stockholm County":"Stockholm",
+    "Uppsala County":"Uppsala",
+    "Varmland County":"Värmland",
+    "Västerbotten County":"Västerbotten",
+    "Västernorrland County":"Västernorrland",
+    "Västmanland County":"Västmanland",
+    "Västra Götaland County":"VästraGötaland",
+    "Västra Götaland":"VästraGötaland"}
+
+    mobility_data.replace(translations, inplace=True)
+    epidemic_data.replace(translations, inplace=True)
+    population_data.replace(translations, inplace=True)
+    return mobility_data, epidemic_data, population_data
+
 def read_and_format_data(datadir, countries, subregions, population_data, epidemic_data, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
@@ -75,6 +107,8 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Get per country
         mobility_data = mobility_data[mobility_data['country_region']==countries[0]]
+        #Fix varying names
+        mobility_data, epidemic_data, population_data = se_transl(mobility_data, epidemic_data, population_data)
         # get CFR
         cfr_by_country = pd.read_csv(datadir+"weighted_fatality.csv")
         #SI
@@ -114,6 +148,7 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
         #Get fatality rate
         cfr = cfr_by_country[cfr_by_country['Region, subregion, country or area *']==country]['weighted_fatality'].values[0]
 
+
         #Get data by country
         for c in range(len(subregions)):
                 subregion = subregions[c]
@@ -128,10 +163,8 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                 #Make check that at least 10 deaths have been observed
                 #Get all dates with at least 10 deaths
                 cum_deaths = county_epidemic_data['new_deaths'].cumsum()
-                try: #can be empty
-                    if max(cum_deaths)<10:
-                        continue
-                except:
+                if max(cum_deaths)<10:
+                    print(subregion, 'Cumulative deaths:',max(cum_deaths))
                     continue
 
                 #Add population size
@@ -238,7 +271,6 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-        pdb.set_trace()
         return stan_data
 
 

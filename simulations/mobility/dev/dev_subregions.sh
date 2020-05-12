@@ -2,7 +2,9 @@
 
 DATADIR=../data/
 COUNTRIES="Sweden"
-SUBREGIONS="Blekinge_County,Dalarna_County,Gavleborg_County,Gotland_County,Halland_County,Jamtland_County,Jonkoping_County,Kalmar_County,Kronoberg_County,Norrbotten_County,Örebro_County,Östergötland_County,Skåne_County,Södermanland_County,Stockholm_County,Uppsala_County,Varmland_County,Västerbotten_County,Västernorrland_County,Västmanland_County,Västra_Götaland_County"
+#SUBREGIONS="Blekinge,Dalarna,Gotland,Gävleborg,Halland,JämtlandHärjedalen,Jönköping,Kalmar,Kronoberg,Norrbotten,Skåne,Stockholm,Sörmland,Uppsala,Värmland,Västerbotten,Västernorrland,Västmanland,VästraGötaland,Örebro,Östergötland"
+SUBREGIONS="Dalarna,Gävleborg,Halland,JämtlandHärjedalen,Jönköping,Kalmar,Kronoberg,Norrbotten,Skåne,Stockholm,Sörmland,Uppsala,Värmland,Västerbotten,Västernorrland,Västmanland,VästraGötaland,Örebro,Östergötland"
+
 POP_DATA=$DATADIR'Sweden/county_pop.csv'
 EPI_DATA=$DATADIR'Sweden/FHM-2020-05-01.csv'
 STAN_MODEL=./mobility_herd.stan
