@@ -92,11 +92,11 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
                 stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
                 #Save deaths
                 deaths = np.array(country_epidemic_data['deaths'])
-                deaths_7 = np.zeros(N)
-                deaths_7[0:7] = np.sum(deaths[0:7])/7
-                for i in range(7,N):
-                    deaths_7[i] = np.sum(deaths[i-6:i+1])/7
-                stan_data['deaths_by_country'][:N,c] = deaths_7
+                #deaths_7 = np.zeros(N)
+                #deaths_7[0:7] = np.sum(deaths[0:7])/7
+                #for i in range(7,N):
+                #    deaths_7[i] = np.sum(deaths[i-6:i+1])/7
+                stan_data['deaths_by_country'][:N,c] = deaths
 
                 #Save cases
                 stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
