@@ -133,7 +133,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 country_epidemic_data = country_epidemic_data.reset_index()
 
                 print(country, len(country_epidemic_data))
-
+                print(country_epidemic_data.loc[0])
                 #Hazard estimation
                 N = len(country_epidemic_data)
 

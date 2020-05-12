@@ -34,7 +34,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200505.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -134,7 +134,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
 
         return stan_data
 
-def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, pop):
+def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
     '''Visualize results
     '''
     #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
@@ -278,7 +278,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-05-21')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-05-27')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
 
 
@@ -384,4 +384,4 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names,end_date)
 
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates, pop)
+visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
