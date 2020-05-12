@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- encoding: utf-8 -*-
 
 
 import argparse
@@ -298,7 +298,8 @@ def simulate(stan_data, stan_model, outdir):
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
-subregions = args.subregions[0].split(',')
+#subregions = args.subregions[0].split(',')
+subregions=['Dalarna','Gävleborg','Halland','JämtlandHärjedalen','Jönköping','Kalmar','Kronoberg','Norrbotten','Skåne','Stockholm','Sörmland','Uppsala','Värmland','Västerbotten','Västernorrland','Västmanland','VästraGötaland','Örebro','Östergötland']
 population_data = pd.read_csv(args.population_data[0])
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 stan_model = args.stan_model[0]
