@@ -262,10 +262,16 @@ def read_and_format_data(datadir, countries, subregions, population_data, epidem
                     #Add the latest available mobility data to all remaining days (including the forecast days)
                     county_epidemic_data.loc[county_epidemic_data['dateRep']>=end_date, name]=change_d
                     cov_i = np.zeros(N2)
+                    cov_7 = np.zeros(N2)
                     cov_i[:N] = np.array(county_epidemic_data[name])
+                    #Do a 7-day sliding window for smoothing
+                    cov_7[0:7]=np.sum(cov_i[0:7])/7
+                    for m in range(7,N):
+                        cov_7[m]=np.sum(cov_i[m-6:m+1])/7
+
                     #Add covariate info to forecast
-                    cov_i[N:N2]=cov_i[N-1]
-                    stan_data[name][:,c] = cov_i
+                    cov_7[N:N2]=cov_7[N-1]
+                    stan_data[name][:,c] = cov_7
 
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
