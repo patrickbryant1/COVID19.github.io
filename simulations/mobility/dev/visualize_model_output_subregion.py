@@ -82,41 +82,40 @@ def read_and_format_data(datadir, countries, subregions, epidemic_data, days_to_
 
 
         #Model data - to be used for plotting
-        stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
-                    'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
-                    'cases_by_country':np.zeros((days_to_simulate,len(countries))),
-                    'days_by_country':np.zeros(len(countries)),
-                    'retail_and_recreation_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
-                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
-                    'transit_stations_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
-                    'workplaces_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
-                    'residential_percent_change_from_baseline':np.zeros((days_to_simulate,len(countries))),
+        stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(subregions)), dtype='datetime64[D]'),
+                    'deaths_by_country':np.zeros((days_to_simulate,len(subregions))),
+                    'cases_by_country':np.zeros((days_to_simulate,len(subregions))),
+                    'days_by_country':np.zeros(len(subregions)),
+                    'retail_and_recreation_percent_change_from_baseline':np.zeros((days_to_simulate,len(subregions))),
+                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((days_to_simulate,len(subregions))),
+                    'transit_stations_percent_change_from_baseline':np.zeros((days_to_simulate,len(subregions))),
+                    'workplaces_percent_change_from_baseline':np.zeros((days_to_simulate,len(subregions))),
+                    'residential_percent_change_from_baseline':np.zeros((days_to_simulate,len(subregions))),
                     }
 
 
         #Get data by country
-        for c in range(len(countries)):
-                country = countries[c]
-
+        for c in range(len(subregions)):
+                subregion = subregions[c]
                 #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+                county_epidemic_data = epidemic_data[epidemic_data['country']==subregion.split('County')[0].strip()]
                 #Sort on date
-                country_epidemic_data = country_epidemic_data.sort_values(by='date')
+                county_epidemic_data = county_epidemic_data.sort_values(by='date')
                 #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
+                county_epidemic_data = county_epidemic_data.reset_index()
 
                 #Get all dates with at least 10 deaths
-                cum_deaths = country_epidemic_data['deaths'].cumsum()
+                cum_deaths = county_epidemic_data['new_deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
-                #Get part of country_epidemic_data 30 days before day with at least 10 deaths
-                country_epidemic_data = country_epidemic_data.loc[di30:]
+                #Get part of county_epidemic_data 30 days before day with at least 10 deaths
+                county_epidemic_data = county_epidemic_data.loc[di30:]
                 #Reset index
-                country_epidemic_data = country_epidemic_data.reset_index()
+                county_epidemic_data = county_epidemic_data.reset_index()
 
-                print(country, len(country_epidemic_data))
+                print(subregion, len(county_epidemic_data))
                 #Check that foreacast is really a forecast
-                N = len(country_epidemic_data)
+                N = len(county_epidemic_data)
                 stan_data['days_by_country'][c]=N
                 forecast = days_to_simulate - N
                 if forecast <0: #If the number of predicted days are less than the number available
@@ -126,9 +125,9 @@ def read_and_format_data(datadir, countries, subregions, epidemic_data, days_to_
                     pdb.set_trace()
 
                 #Save dates
-                stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['date'], dtype='datetime64[D]')
+                stan_data['dates_by_country'][:N,c] = np.array(county_epidemic_data['date'], dtype='datetime64[D]')
                 #Save deaths
-                deaths = np.array(country_epidemic_data['deaths'])
+                deaths = np.array(county_epidemic_data['new_deaths'])
                 #deaths_7 = np.zeros(N)
                 #deaths_7[0:7] = np.sum(deaths[0:7])/7
                 #for i in range(7,N):
@@ -136,35 +135,34 @@ def read_and_format_data(datadir, countries, subregions, epidemic_data, days_to_
                 stan_data['deaths_by_country'][:N,c] = deaths
 
                 #Save cases
-                stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
+                stan_data['cases_by_country'][:N,c] = county_epidemic_data['new_confirmed_cases']
 
-                #Covariates - assign the same shape as others (days_to_simulate)
+                #Covariates - assign the same shape as others (N2)
                 #Mobility data from Google
-                country_cov_data = mobility_data[mobility_data['country_region']==country]
-                if country == 'United_Kingdom': #Different assignments for UK
-                    country_cov_data = mobility_data[mobility_data['country_region']=='United Kingdom']
-                #Get whole country - no subregion
-                country_cov_data =  country_cov_data[country_cov_data['sub_region_1'].isna()]
+                county_cov_data = mobility_data[mobility_data['sub_region_1']==subregion]
+                #Get whole county - no county subregion
+                county_cov_data =  county_cov_data[county_cov_data['sub_region_2'].isna()]
                 #Get matching dates
-                country_cov_data = country_cov_data[country_cov_data['date'].isin(country_epidemic_data['date'])]
-                end_date = max(country_cov_data['date']) #Last date for mobility data
+                county_cov_data = county_cov_data[county_cov_data['date'].isin(county_epidemic_data['date'])]
+                end_date = max(county_cov_data['date']) #Last date for mobility data
+
                 for name in covariate_names:
-                    country_epidemic_data.loc[country_epidemic_data.index,name] = 0 #Set all to 0
-                    for d in range(len(country_epidemic_data)): #loop through all country data
-                        row_d = country_epidemic_data.loc[d]
+                    county_epidemic_data.loc[county_epidemic_data.index,name] = 0 #Set all to 0
+                    for d in range(len(county_epidemic_data)): #loop through all country data
+                        row_d = county_epidemic_data.loc[d]
                         date_d = row_d['date'] #Extract date
                         try:
-                            change_d = np.round(float(country_cov_data[country_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
+                            change_d = np.round(float(county_cov_data[county_cov_data['date']==date_d][name].values[0])/100, 2) #Match mobility change on date
                             if not np.isnan(change_d):
-                                country_epidemic_data.loc[d,name] = change_d #Add to right date in country data
+                                county_epidemic_data.loc[d,name] = change_d #Add to right date in country data
                         except:
                             continue #Date too far ahead
 
 
                     #Add the latest available mobility data to all remaining days (including the forecast days)
-                    country_epidemic_data.loc[country_epidemic_data['date']>=end_date, name]=change_d
+                    county_epidemic_data.loc[county_epidemic_data['date']>=end_date, name]=change_d
                     cov_i = np.zeros(days_to_simulate)
-                    cov_i[:N] = np.array(country_epidemic_data[name])
+                    cov_i[:N] = np.array(county_epidemic_data[name])
                     #Add covariate info to forecast
                     cov_i[N:days_to_simulate]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
@@ -229,7 +227,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     intervention_df = pd.read_csv(datadir+'interventions_only.csv')
     result_file = open(outdir+'plots/summary_means.csv', 'w')
     result_file.write('Country,Epidemic Start,R0 at start,R0 29 Mar,R0 Apr 19\n') #Write headers
-    for i in range(1,len(countries)+1):
+    for i in range(1,len(subregions)+1):
 
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
@@ -322,7 +320,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
     forecast = end+21
-    fig, ax1 = plt.subplots(figsize=(8, 5))
+    fig, ax1 = plt.subplots(figsize=(4, 2.5))
 
     #Plot observed dates
     if len(observed_y)>1:
@@ -399,7 +397,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
 
 #####MAIN#####
 #Set font size
-matplotlib.rcParams.update({'font.size': 9})
+matplotlib.rcParams.update({'font.size': 12})
 args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
@@ -423,4 +421,4 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 stan_data = read_and_format_data(datadir, countries, subregions, epidemic_data, days_to_simulate, covariate_names, end_date)
 
 #Visualize
-visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
+visualize_results(outdir, subregions, stan_data, days_to_simulate, short_dates)
