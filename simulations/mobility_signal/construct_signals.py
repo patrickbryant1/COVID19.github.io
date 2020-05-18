@@ -66,6 +66,9 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 country_mobility_data = mobility_data[mobility_data['country_region']==country]
                 #Get whole country - no subregion
                 country_mobility_data =  country_mobility_data[country_mobility_data['sub_region_1'].isna()]
+                if len(country_mobility_data)<2:
+                    print('No mobility data for', country)
+                    continue
                 #Merge
                 country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'dateRep', right_on ='date', how = 'left')
 
@@ -108,49 +111,69 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 signal_array[4,:]=country_signal_data['workplaces_signal']
                 signal_array[5,:]=country_signal_data['residential_signal']
                 #Get pearsonr for different time delays in mobility response
-                C_c = correlate_signals(signal_array)
+                C_mob_delay, C_R_delay = cov_signals(signal_array)
                 #Plot
-                plot_correlations(C_c, outdir, country)
+                plot_cov(C_mob_delay, C_R_delay, outdir, country)
             except:
                 continue
 
-def correlate_signals(signal_array):
-    '''Correlate the R values with the mobility data
+def cov_signals(signal_array):
+    '''Analyze the covariance of the R values with the mobility data
     using different time delays (s)
     '''
     s_max = signal_array.shape[1]
-    C_c = np.zeros((5,s_max-2)) #Save correaltions btw signals for different s
+    C_mob_delay = np.zeros((5,s_max-2)) #Save covariance btw signals for different delays in mobility
+    C_R_delay = np.zeros((5,s_max-2)) #Save covariance btw signals for different delays in R
     #Loop through all s and calculate correlations
     for s in range(s_max-2): #s is the number of future days to correlate the mobility data over
         for m in range(1,6):#all mobility data
-
             if s == 0:
-                r,p = pearsonr(signal_array[0,:],signal_array[m,s:])
+                c_mob = np.cov(signal_array[0,:],signal_array[m,s:])[0,1]
+                c_R = np.cov(signal_array[m,:],signal_array[0,s:])[0,1] #pos 0 of the array contains the R values
             else:
-                r,p = pearsonr(signal_array[0,:-s],signal_array[m,s:])
+                c_mob = np.cov(signal_array[0,:-s],signal_array[m,s:])[0,1]
+                c_R = np.cov(signal_array[m,:-s],signal_array[0,s:])[0,1]
             #Assign correlation
-            C_c[m-1,s]=r
-    return C_c
+            C_mob_delay[m-1,s]=c_mob
+            C_R_delay[m-1,s]=c_R
 
-def plot_correlations(C_c, outdir, country):
-    '''Plot the correlation (PearsonR) btw the R values
+    return C_mob_delay, C_R_delay
+
+def plot_cov(C_mob_delay, C_R_delay, outdir, country):
+    '''Plot the covariance btw the R values
     and different time delays (s)
     '''
     keys = ['retail and recreation', 'grocery and pharmacy',
             'transit stations','workplaces','residential']
     colors = ['tab:red','tab:purple','tab:pink','tab:olive','tab:cyan']
+
+    #Mobility delay
     fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
     for i in range(5):
-        ax.plot(range(C_c.shape[1]),C_c[i,:], label=keys[i], color = colors[i], linewidth = 1.0)
+        ax.plot(range(C_mob_delay.shape[1]),C_mob_delay[i,:], label=keys[i], color = colors[i], linewidth = 1.0)
     ax.set_title(country)
     ax.set_xlabel('mobility time delay (days)')
-    ax.set_ylim([-1,1])
+    #ax.set_ylim([-1,1])
     ax.set_xlim([0,40])
-    ax.set_ylabel('Pearson R')
+    ax.set_ylabel('Covariance')
     fig.tight_layout()
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    fig.savefig(outdir+country+'.png',  format='png')
+    fig.savefig(outdir+country+'_mobility_delay.png',  format='png')
+    plt.close()
+    #R delay
+    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+    for i in range(5):
+        ax.plot(range(C_R_delay.shape[1]),C_R_delay[i,:], label=keys[i], color = colors[i], linewidth = 1.0)
+    ax.set_title(country)
+    ax.set_xlabel('R0 time delay (days)')
+    #ax.set_ylim([-1,1])
+    ax.set_xlim([0,40])
+    ax.set_ylabel('Covariance')
+    fig.tight_layout()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    fig.savefig(outdir+country+'_R_delay.png',  format='png')
     plt.close()
 
 def compare_smoothing(country_signal_data, outdir):
