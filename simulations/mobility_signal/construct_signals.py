@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
+from scipy.signal import savgol_filter
 import pdb
 
 
@@ -61,16 +61,6 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             #Merge dfs
             country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
 
-            #Construct signals
-            country_signals = {
-                    'R_signal':np.zeros(len(country_epidemic_data)),
-                    'retail_and_recreation_percent_change_from_baseline':np.zeros(len(country_epidemic_data)),
-                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros(len(country_epidemic_data)),
-                    'transit_stations_percent_change_from_baseline':np.zeros(len(country_epidemic_data)),
-                    'workplaces_percent_change_from_baseline':np.zeros(len(country_epidemic_data)),
-                    'residential_percent_change_from_baseline':np.zeros(len(country_epidemic_data))
-                    }
-
             #Mobility data from Google
             country_mobility_data = mobility_data[mobility_data['country_region']==country]
             #Get whole country - no subregion
@@ -85,15 +75,45 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             country_signal_data['transit_signal'] = 0
             country_signal_data['workplaces_signal'] = 0
             country_signal_data['residential_signal'] = 0
-            for i in len(country_signal_data-1): #loop through data to construct signal
+            #Look at the smoothing
+            #compare_smoothing(country_signal_data, outdir)
+            #Smooth
+            country_signal_data['Median(R)'] = savgol_filter(country_signal_data['Median(R)'], 5,3)
+            country_signal_data['retail_and_recreation_percent_change_from_baseline'] = savgol_filter(country_signal_data['retail_and_recreation_percent_change_from_baseline'], 7,3)
+            country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'] = savgol_filter(country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'], 7,3)
+            country_signal_data['transit_stations_percent_change_from_baseline'] = savgol_filter(country_signal_data['transit_stations_percent_change_from_baseline'], 7,3)
+            country_signal_data['workplaces_percent_change_from_baseline'] = savgol_filter(country_signal_data['workplaces_percent_change_from_baseline'], 7,3)
+            country_signal_data['residential_percent_change_from_baseline'] = savgol_filter(country_signal_data['residential_percent_change_from_baseline'], 7,3)
+
+            for i in range(len(country_signal_data)-1): #loop through data to construct signal
                 row_i = country_signal_data.loc[i]
                 row_i_1 = country_signal_data.loc[i+1]
-                country_signal_data.iloc[i+1,'R_signal']='Median(R)'
-
+                country_signal_data.loc[i+1,'R_signal']=row_i_1['Median(R)']-row_i['Median(R)']
+                country_signal_data.loc[i+1,'retail_signal']=row_i_1['retail_and_recreation_percent_change_from_baseline']-row_i['retail_and_recreation_percent_change_from_baseline']
+                country_signal_data.loc[i+1,'grocery_signal']=row_i_1['grocery_and_pharmacy_percent_change_from_baseline']-row_i['grocery_and_pharmacy_percent_change_from_baseline']
+                country_signal_data.loc[i+1,'transit_signal']=row_i_1['transit_stations_percent_change_from_baseline']-row_i['transit_stations_percent_change_from_baseline']
+                country_signal_data.loc[i+1,'workplaces_signal']=row_i_1['workplaces_percent_change_from_baseline']-row_i['workplaces_percent_change_from_baseline']
+                country_signal_data.loc[i+1,'residential_signal']=row_i_1['residential_percent_change_from_baseline']-row_i['residential_percent_change_from_baseline']
 
             pdb.set_trace()
+def compare_smoothing(country_signal_data, outdir):
+    '''Compare different kinds of smoothing
+    '''
+    keys = ['Median(R)', 'retail_and_recreation_percent_change_from_baseline',
+    'grocery_and_pharmacy_percent_change_from_baseline',
+    'transit_stations_percent_change_from_baseline',
+    'workplaces_percent_change_from_baseline',
+    'residential_percent_change_from_baseline']
 
-
+    for key in keys:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(range(len(country_signal_data)),country_signal_data[key], label='No smoothing')
+        #savgol
+        savgol_smoothing = savgol_filter(country_signal_data[key], 7,3)
+        ax.plot(range(len(country_signal_data)),savgol_smoothing, label='Savgol smoothing')
+        ax.set_title(key)
+        plt.legend()
+        fig.savefig(outdir+key+'.png',  format='png', dpi=300)
 
 
 #####MAIN#####
