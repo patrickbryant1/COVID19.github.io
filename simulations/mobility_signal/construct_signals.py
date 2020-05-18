@@ -147,7 +147,10 @@ def plot_correlations(C_c, outdir, country):
     ax.set_ylim([-1,1])
     ax.set_ylabel('Pearson R')
     fig.tight_layout()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     fig.savefig(outdir+country+'.png',  format='png')
+    plt.close()
 
 def compare_smoothing(country_signal_data, outdir):
     '''Compare different kinds of smoothing
