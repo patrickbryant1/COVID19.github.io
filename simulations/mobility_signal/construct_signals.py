@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.signal import savgol_filter
+from scipy.stats import pearsonr
 import pdb
 
 
@@ -84,7 +85,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             country_signal_data['transit_stations_percent_change_from_baseline'] = savgol_filter(country_signal_data['transit_stations_percent_change_from_baseline'], 7,3)
             country_signal_data['workplaces_percent_change_from_baseline'] = savgol_filter(country_signal_data['workplaces_percent_change_from_baseline'], 7,3)
             country_signal_data['residential_percent_change_from_baseline'] = savgol_filter(country_signal_data['residential_percent_change_from_baseline'], 7,3)
-
+            #Calculate signals
             for i in range(len(country_signal_data)-1): #loop through data to construct signal
                 row_i = country_signal_data.loc[i]
                 row_i_1 = country_signal_data.loc[i+1]
@@ -95,7 +96,33 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 country_signal_data.loc[i+1,'workplaces_signal']=row_i_1['workplaces_percent_change_from_baseline']-row_i['workplaces_percent_change_from_baseline']
                 country_signal_data.loc[i+1,'residential_signal']=row_i_1['residential_percent_change_from_baseline']-row_i['residential_percent_change_from_baseline']
 
-            pdb.set_trace()
+            #Make an array
+            signal_array = np.zeros((6,len(country_signal_data)))
+            signal_array[0,:]=country_signal_data['R_signal']
+            signal_array[1,:]=country_signal_data['retail_signal']
+            signal_array[2,:]=country_signal_data['grocery_signal']
+            signal_array[3,:]=country_signal_data['transit_signal']
+            signal_array[4,:]=country_signal_data['workplaces_signal']
+            signal_array[5,:]=country_signal_data['residential_signal']
+            correlate_signals(signal_array)
+
+def correlate_signals(signal_array):
+    '''
+    '''
+    s_max = signal_array.shape[1]
+    C_c = np.zeros((5,s_max-1)) #Save correaltions btw signals for different s
+    #Loop through all s and calculate correlations
+    for s in range(s_max-1): #s is the number of future days to correlate the mobility data over
+        for m in range(1,6):#all mobility data
+
+            if s == 0:
+                r,p = pearsonr(signal_array[0,:],signal_array[m,s:])
+            else:
+                r,p = pearsonr(signal_array[0,:-s],signal_array[m,s:])
+            #Assign correlation
+            C_c[m-1,s]=r
+
+    pdb.set_trace()
 def compare_smoothing(country_signal_data, outdir):
     '''Compare different kinds of smoothing
     '''
