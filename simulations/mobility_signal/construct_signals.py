@@ -145,6 +145,7 @@ def plot_correlations(C_c, outdir, country):
     ax.set_title(country)
     ax.set_xlabel('mobility time delay (days)')
     ax.set_ylim([-1,1])
+    ax.set_xlim([0,40])
     ax.set_ylabel('Pearson R')
     fig.tight_layout()
     ax.spines['top'].set_visible(False)
