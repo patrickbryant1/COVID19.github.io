@@ -315,5 +315,6 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = read_and_format_data(datadir, countries, subregions, population_data, epidemic_data, days_to_simulate, end_date)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
