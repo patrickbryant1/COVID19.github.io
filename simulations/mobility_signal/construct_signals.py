@@ -104,12 +104,12 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
 
                 #Make an array
                 signal_array = np.zeros((6,len(country_signal_data)))
-                signal_array[0,:]=country_signal_data['R_signal']
-                signal_array[1,:]=country_signal_data['retail_signal']
-                signal_array[2,:]=country_signal_data['grocery_signal']
-                signal_array[3,:]=country_signal_data['transit_signal']
-                signal_array[4,:]=country_signal_data['workplaces_signal']
-                signal_array[5,:]=country_signal_data['residential_signal']
+                signal_array[0,:]=country_signal_data['R_signal'][1:]
+                signal_array[1,:]=country_signal_data['retail_signal'][1:]
+                signal_array[2,:]=country_signal_data['grocery_signal'][1:]
+                signal_array[3,:]=country_signal_data['transit_signal'][1:]
+                signal_array[4,:]=country_signal_data['workplaces_signal'][1:]
+                signal_array[5,:]=country_signal_data['residential_signal'][1:]
                 #Get pearsonr for different time delays in mobility response
                 C_mob_delay, C_R_delay = cov_signals(signal_array)
                 #Plot
