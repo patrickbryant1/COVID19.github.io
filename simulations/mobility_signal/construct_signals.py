@@ -26,7 +26,7 @@ parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, he
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
+def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname):
         '''Read in and format all data needed for the signal correlation analysis
         '''
 
@@ -74,11 +74,13 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             #Get data for day >= t_c, where t_c is the day where 80 % of the max death count has been reached
             death_t = max(country_epidemic_data['deaths'])*0.8
             signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
-            #country_epidemic_data = country_epidemic_data.loc[signal_start:]
+            if above_t == True:
+                country_epidemic_data = country_epidemic_data.loc[signal_start:]
             start_dates.append(country_epidemic_data.loc[signal_start,'dateRep'])
+
             #Merge dfs
-            #country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
-            country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
+            country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
+            #country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -94,20 +96,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 print('No mobility data for', country)
                 continue
             #Merge
-            country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'dateRep', right_on ='date', how = 'left')
-            #if min(country_signal_data['date'])<min(country_mobility_data['date']):
-            #    country_signal_data = country_mobility_data.merge(country_signal_data, left_on = 'date', right_on ='date', how = 'left')
-            #else:
-            #    country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
-            #Construct signals
-            country_signal_data['R_signal'] = 0
-            country_signal_data['retail_signal'] = 0
-            country_signal_data['grocery_signal'] = 0
-            country_signal_data['transit_signal'] = 0
-            country_signal_data['workplaces_signal'] = 0
-            country_signal_data['residential_signal'] = 0
-            #Look at the smoothing
-            #compare_smoothing(country_signal_data, outdir)
+            country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
+
             #Smooth
             if len(country_signal_data)<=7:
                 print(country, len(country_signal_data))
@@ -119,30 +109,17 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             country_signal_data['workplaces_percent_change_from_baseline'] = savgol_filter(country_signal_data['workplaces_percent_change_from_baseline'], 7,3)
             country_signal_data['residential_percent_change_from_baseline'] = savgol_filter(country_signal_data['residential_percent_change_from_baseline'], 7,3)
 
-            #Calculate signals
-            for i in range(len(country_signal_data)-1): #loop through data to construct signal
-                row_i = country_signal_data.loc[i]
-                row_i_1 = country_signal_data.loc[i+1]
-                country_signal_data.loc[i+1,'R_signal']=row_i_1['Median(R)']-row_i['Median(R)']
-                country_signal_data.loc[i+1,'retail_signal']=row_i_1['retail_and_recreation_percent_change_from_baseline']-row_i['retail_and_recreation_percent_change_from_baseline']
-                country_signal_data.loc[i+1,'grocery_signal']=row_i_1['grocery_and_pharmacy_percent_change_from_baseline']-row_i['grocery_and_pharmacy_percent_change_from_baseline']
-                country_signal_data.loc[i+1,'transit_signal']=row_i_1['transit_stations_percent_change_from_baseline']-row_i['transit_stations_percent_change_from_baseline']
-                country_signal_data.loc[i+1,'workplaces_signal']=row_i_1['workplaces_percent_change_from_baseline']-row_i['workplaces_percent_change_from_baseline']
-                country_signal_data.loc[i+1,'residential_signal']=row_i_1['residential_percent_change_from_baseline']-row_i['residential_percent_change_from_baseline']
+            #Look at the smoothing
+            #compare_smoothing(country_signal_data, outdir)
+
             #Make an array
-            signal_array = np.zeros((6,len(country_signal_data)-1))
-            # signal_array[0,:]=country_signal_data['R_signal'][1:]
-            # signal_array[1,:]=country_signal_data['retail_signal'][1:]
-            # signal_array[2,:]=country_signal_data['grocery_signal'][1:]
-            # signal_array[3,:]=country_signal_data['transit_signal'][1:]
-            # signal_array[4,:]=country_signal_data['workplaces_signal'][1:]
-            # signal_array[5,:]=country_signal_data['residential_signal'][1:]
-            signal_array[0,:]=country_signal_data['Median(R)'][1:]
-            signal_array[1,:]=country_signal_data['retail_and_recreation_percent_change_from_baseline'][1:]
-            signal_array[2,:]=country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'][1:]
-            signal_array[3,:]=country_signal_data['transit_stations_percent_change_from_baseline'][1:]
-            signal_array[4,:]=country_signal_data['workplaces_percent_change_from_baseline'][1:]
-            signal_array[5,:]=country_signal_data['residential_percent_change_from_baseline'][1:]
+            signal_array = np.zeros((6,len(country_signal_data)))
+            signal_array[0,:]=country_signal_data['Median(R)']
+            signal_array[1,:]=country_signal_data['retail_and_recreation_percent_change_from_baseline']
+            signal_array[2,:]=country_signal_data['grocery_and_pharmacy_percent_change_from_baseline']
+            signal_array[3,:]=country_signal_data['transit_stations_percent_change_from_baseline']
+            signal_array[4,:]=country_signal_data['workplaces_percent_change_from_baseline']
+            signal_array[5,:]=country_signal_data['residential_percent_change_from_baseline']
 
             #Check NaNs
             if len(signal_array[np.isnan(signal_array)])>1:
@@ -152,17 +129,40 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             C_mob_delay, C_R_delay = corr_signals(signal_array)
             C_mob_delay_all.append(C_mob_delay)#Save
             C_R_delay_all.append(C_R_delay)
-            #Plot
+            #Plot per country
             #plot_corr(C_mob_delay, C_R_delay, outdir, country, 'Pearson R')
             #For montage script
             fetched_countries.append(country)
         #Plot all countries in overlap per mobility category
-        plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir)
+        days_to_include=21
+        plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, outname)
+
         #Write montage script
         write_montage(fetched_countries, outdir)
 
+def corr_signals(signal_array):
+    '''Analyze the correlation of the R values with the mobility data
+    using different time delays (s)
+    '''
+    s_max = signal_array.shape[1]
+    C_mob_delay = np.zeros((5,s_max-2)) #Save covariance btw signals for different delays in mobility
+    C_R_delay = np.zeros((5,s_max-2)) #Save covariance btw signals for different delays in R
+    #Loop through all s and calculate correlations
+    for s in range(s_max-2): #s is the number of future days to correlate the mobility data over
+        for m in range(1,6):#all mobility data
+            if s == 0:
+                c_mob = pearsonr(signal_array[0,:],signal_array[m,s:])[0]
+                c_R = pearsonr(signal_array[m,:],signal_array[0,s:])[0]#pos 0 of the array contains the R values
+            else:
+                c_mob = pearsonr(signal_array[0,:-s],signal_array[m,s:])[0]
+                c_R = pearsonr(signal_array[m,:-s],signal_array[0,s:])[0]
+            #Assign correlation
+            C_mob_delay[m-1,s]=c_mob
+            C_R_delay[m-1,s]=c_R
+    return C_mob_delay, C_R_delay
 
-def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
+
+def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir, days_to_include, outname):
     '''Plot all countries in overlay per mobility category
     '''
 
@@ -172,12 +172,11 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
 
 
     #Mobility delay
-    plotted_countries = 0
-    days_to_include = 21
     for i in range(5):
         all_countries_x = []
         all_countries_y = []
-        fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+        plotted_countries = 0
+        fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
         for j in range(len(C_mob_delay_all)):
             if C_mob_delay_all[j].shape[1]<days_to_include:
                 continue
@@ -195,7 +194,7 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
         fig.tight_layout()
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        fig.savefig(outdir+'all/'+keys[i]+'_mobility_delay_all.png',  format='png')
+        fig.savefig(outdir+'all/'+keys[i]+outname,  format='png')
         plt.close()
         print('Plotting',plotted_countries, 'countries')
 
@@ -280,16 +279,10 @@ mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
 
 #Construct signals
-construct_signals(R_estimates, epidemic_data, mobility_data, outdir)
-
-#Mobility markers
-covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
-fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
-i=5
-for cov in covariate_colors:
-    ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
-    ax.text(2.001,i,cov)
-    i-=1
-ax.set_xlim([0.999,3.5])
-ax.axis('off')
-fig.savefig(outdir+'mobility_markers.png', format = 'png')
+above_t = False #get data above threshold or not
+outname='_mobility_delay_all_whole_epi.png'
+construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname)
+print('Whole plotted')
+above_t = True #get data above threshold or not
+outname='_mobility_delay_all_above_80.png'
+construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname)
