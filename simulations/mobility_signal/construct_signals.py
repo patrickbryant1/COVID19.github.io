@@ -76,11 +76,12 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
             if above_t == True:
                 country_epidemic_data = country_epidemic_data.loc[signal_start:]
-            start_dates.append(country_epidemic_data.loc[signal_start,'dateRep'])
-
-            #Merge dfs
-            country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
-            #country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
+                start_dates.append(country_epidemic_data.loc[signal_start,'dateRep'])
+                #Merge dfs
+                country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
+            else:
+                #Merge dfs
+                country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -99,7 +100,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
 
             #Smooth
-            if len(country_signal_data)<=7:
+            if len(country_signal_data)<=21:
                 print(country, len(country_signal_data))
                 continue
             country_signal_data['Median(R)'] = savgol_filter(country_signal_data['Median(R)'], 7,3)
@@ -279,10 +280,10 @@ mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
 
 #Construct signals
-above_t = False #get data above threshold or not
-outname='_mobility_delay_all_whole_epi.png'
-construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname)
-print('Whole plotted')
+#above_t = False #get data above threshold or not
+#outname='_mobility_delay_all_whole_epi.png'
+#construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname)
+#print('Whole plotted')
 above_t = True #get data above threshold or not
 outname='_mobility_delay_all_above_80.png'
 construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname)
