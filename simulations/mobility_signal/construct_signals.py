@@ -34,7 +34,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Convert mobility data to datetime
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
-
+        #Get epidemic data due to last mobility date, 2020-05-09
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=max(mobility_data['date'])]
         #Mobility key conversions
         key_conversions = {'United_States_of_America':'United_States'}
 
@@ -57,8 +58,11 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 country_R = pd.read_csv(R_estimates+country+'_R_estimate.csv')
             except:
                 print('Cant read '+country+'_R_estimate.csv' )
+                continue
             #Fix datetime
             country_R['date'] = pd.to_datetime(country_R['date'], format='%d/%m/%Y')
+            #Get R estimates due to last mobility date, 2020-05-09
+            country_R = country_R[country_R['date']<=max(mobility_data['date'])]
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
             #Sort on date
@@ -66,12 +70,12 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             #Reset index
             country_epidemic_data = country_epidemic_data.reset_index()
             #Get data for day >= t_c, where t_c is the day where 80 % of the max death count has been reached
-            #death_t = max(country_epidemic_data['deaths'])
+            #death_t = max(country_epidemic_data['deaths'])*0.8
             #signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
-            #Get all dates with at least 10 deaths
             #country_epidemic_data = country_epidemic_data.loc[signal_start:]
             #Merge dfs
             country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
+            #country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -87,10 +91,11 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
                 print('No mobility data for', country)
                 continue
             #Merge
-            if min(country_signal_data['date'])<min(country_mobility_data['date']):
-                country_signal_data = country_mobility_data.merge(country_signal_data, left_on = 'date', right_on ='date', how = 'left')
-            else:
-                country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
+            country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'dateRep', right_on ='date', how = 'left')
+            #if min(country_signal_data['date'])<min(country_mobility_data['date']):
+            #    country_signal_data = country_mobility_data.merge(country_signal_data, left_on = 'date', right_on ='date', how = 'left')
+            #else:
+            #    country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
             #Construct signals
             country_signal_data['R_signal'] = 0
             country_signal_data['retail_signal'] = 0
@@ -212,6 +217,7 @@ def plot_corr(C_mob_delay, C_R_delay, outdir, country, ylabel):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     fig.savefig(outdir+country+'_R_delay.png',  format='png')
+    plt.show()
     plt.close()
 
 def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
@@ -220,26 +226,46 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
 
     keys = ['retail and recreation', 'grocery and pharmacy',
             'transit stations','workplaces','residential']
-    colors = ['tab:red','tab:purple','tab:pink','tab:olive','tab:cyan']
+    colors = ['Reds','Purples','Oranges','Greens','Blues']
 
     print('Plotting',len(C_mob_delay_all), 'countries')
     #Mobility delay
     for i in range(5):
         all_countries_x = []
         all_countries_y = []
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
         for j in range(len(C_mob_delay_all)):
             all_countries_x.extend(np.arange(C_mob_delay_all[j].shape[1]))
             all_countries_y.extend(C_mob_delay_all[j][i,:])
-        sns.kdeplot(all_countries_x,all_countries_y, shade = True)
+        sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
         ax.set_title(keys[i])
         ax.set_xlabel('mobility time delay (days)')
         ax.set_ylabel(ylabel)
+
         fig.tight_layout()
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.savefig(outdir+'all/'+keys[i]+'_mobility_delay_all.png',  format='png')
         plt.close()
+    #R delay
+    for i in range(5):
+        all_countries_x = []
+        all_countries_y = []
+        fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+        for j in range(len(C_mob_delay_all)):
+            all_countries_x.extend(np.arange(C_R_delay_all[j].shape[1]))
+            all_countries_y.extend(C_R_delay_all[j][i,:])
+        sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
+        ax.set_title(keys[i])
+        ax.set_xlabel('R time delay (days)')
+        ax.set_ylabel(ylabel)
+
+        fig.tight_layout()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.savefig(outdir+'all/'+keys[i]+'_R_delay_all.png',  format='png')
+        plt.close()
+
 
 
 def write_montage(fetched_countries, outdir):

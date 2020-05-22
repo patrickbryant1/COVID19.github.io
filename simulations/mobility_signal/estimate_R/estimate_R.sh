@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-EPIDATA=/home/patrick/viral_mutation_to_phenotype/data/ecdc_20200505.csv
+EPIDATA=/home/patrick/COVID19.github.io/simulations/mobility/data/ecdc_20200521.csv
 OUTDIR=/home/patrick/results/COVID19/R_estimates/
 COUNTRIES=/home/patrick/COVID19.github.io/simulations/mobility_signal/estimate_R/countries.txt
 time for i in {1..209}
