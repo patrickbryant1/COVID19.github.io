@@ -51,6 +51,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
         #Save correlations for overlay
         C_mob_delay_all = []
         C_R_delay_all = []
+        #Save start dates for epidemic data
+        start_dates = []
         #Get unique countries
         countries = epidemic_data['countriesAndTerritories'].unique()
         for country in countries:
@@ -70,12 +72,13 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             #Reset index
             country_epidemic_data = country_epidemic_data.reset_index()
             #Get data for day >= t_c, where t_c is the day where 80 % of the max death count has been reached
-            #death_t = max(country_epidemic_data['deaths'])*0.8
-            #signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
-            #country_epidemic_data = country_epidemic_data.loc[signal_start:]
+            death_t = max(country_epidemic_data['deaths'])*0.8
+            signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
+            country_epidemic_data = country_epidemic_data.loc[signal_start:]
+            start_dates.append(country_epidemic_data.loc[signal_start,'dateRep'])
             #Merge dfs
-            country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
-            #country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
+            #country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='dateRep', how = 'left')
+            country_signal_data = country_epidemic_data.merge(country_R, left_on = 'dateRep', right_on ='date', how = 'left')
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -153,7 +156,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir):
             #plot_corr(C_mob_delay, C_R_delay, outdir, country, 'Pearson R')
             #For montage script
             fetched_countries.append(country)
-
+        pdb.set_trace()
         #Plot all countries in overlap per mobility category
         plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir)
         #Write montage script
@@ -228,16 +231,24 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
             'transit stations','workplaces','residential']
     colors = ['Reds','Purples','Oranges','Greens','Blues']
 
-    print('Plotting',len(C_mob_delay_all), 'countries')
+
     #Mobility delay
+    plotted_countries = 0
+    days_to_include = 21
     for i in range(5):
         all_countries_x = []
         all_countries_y = []
         fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
         for j in range(len(C_mob_delay_all)):
-            all_countries_x.extend(np.arange(C_mob_delay_all[j].shape[1]))
-            all_countries_y.extend(C_mob_delay_all[j][i,:])
-        sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
+            if C_mob_delay_all[j].shape[1]<days_to_include:
+                continue
+            else:
+                plotted_countries +=1
+                all_countries_x.extend(np.arange(days_to_include))
+                all_countries_y.extend(C_mob_delay_all[j][i,:days_to_include])
+                all_countries_x.extend(-np.arange(days_to_include))
+                all_countries_y.extend(C_R_delay_all[j][i,:days_to_include])
+            sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
         ax.set_title(keys[i])
         ax.set_xlabel('mobility time delay (days)')
         ax.set_ylabel(ylabel)
@@ -247,24 +258,25 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir):
         ax.spines['right'].set_visible(False)
         fig.savefig(outdir+'all/'+keys[i]+'_mobility_delay_all.png',  format='png')
         plt.close()
+    print('Plotting',plotted_countries, 'countries')
     #R delay
-    for i in range(5):
-        all_countries_x = []
-        all_countries_y = []
-        fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
-        for j in range(len(C_mob_delay_all)):
-            all_countries_x.extend(np.arange(C_R_delay_all[j].shape[1]))
-            all_countries_y.extend(C_R_delay_all[j][i,:])
-        sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
-        ax.set_title(keys[i])
-        ax.set_xlabel('R time delay (days)')
-        ax.set_ylabel(ylabel)
-
-        fig.tight_layout()
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        fig.savefig(outdir+'all/'+keys[i]+'_R_delay_all.png',  format='png')
-        plt.close()
+    # for i in range(5):
+    #     all_countries_x = []
+    #     all_countries_y = []
+    #     fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+    #     for j in range(len(C_mob_delay_all)):
+    #         all_countries_x.extend(np.arange(C_R_delay_all[j].shape[1]))
+    #         all_countries_y.extend(C_R_delay_all[j][i,:])
+    #     sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[i])
+    #     ax.set_title(keys[i])
+    #     ax.set_xlabel('R time delay (days)')
+    #     ax.set_ylabel(ylabel)
+    #
+    #     fig.tight_layout()
+    #     ax.spines['top'].set_visible(False)
+    #     ax.spines['right'].set_visible(False)
+    #     fig.savefig(outdir+'all/'+keys[i]+'_R_delay_all.png',  format='png')
+    #     plt.close()
 
 
 
