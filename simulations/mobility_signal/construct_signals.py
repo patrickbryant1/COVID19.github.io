@@ -71,6 +71,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             country_R['date'] = pd.to_datetime(country_R['date'], format='%d/%m/%Y')
             #Get R estimates due to last mobility date, 2020-05-09
             country_R = country_R[country_R['date']<=max(mobility_data['date'])]
+            #Select R values below 5
+            country_R = country_R[country_R['Median(R)']<=5]
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
             #Sort on date
@@ -88,6 +90,11 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             else:
                 #Merge dfs
                 country_signal_data = country_R.merge(country_epidemic_data, left_on = 'date', right_on ='date', how = 'left')
+
+            #Check enough data is present
+            if len(country_signal_data)<days_to_include:
+                print(country, len(country_signal_data))
+                continue
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -110,9 +117,6 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
                 country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
 
             #Smooth
-            if len(country_signal_data)<days_to_include:
-                print(country, len(country_signal_data))
-                continue
             country_signal_data['Median(R)'] = savgol_filter(country_signal_data['Median(R)'], 7,3)
             country_signal_data['retail_and_recreation_percent_change_from_baseline'] = savgol_filter(country_signal_data['retail_and_recreation_percent_change_from_baseline'], 7,3)
             country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'] = savgol_filter(country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'], 7,3)
@@ -147,7 +151,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
                     days_before_80.append(signal_start)
                     days_after_80.append(len(country_signal_data)-signal_start)
                 except:
-                    pdb.set_trace()
+                    print(country, 'has too little data')
+                    continue
             #Get pearsonr for different time delays in mobility response
             C_mob_delay, C_R_delay = corr_signals(signal_array)
             C_mob_delay_all.append(C_mob_delay)#Save
@@ -158,7 +163,6 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             fetched_countries.append(country)
             #Sanity check - see origin of all corr >0.5
             sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country)
-        pdb.set_trace()
         #Plot all countries in overlap per mobility category
         plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, outname)
 
@@ -168,8 +172,9 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
 def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
     '''Sanity check - see origin of all corr >0.5
     '''
-    pos_above_05 = np.where(C_mob_delay>0.5)
+    pos_above_05 = np.where(C_mob_delay<=-0.5)
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    ncols=0 #Number of plotted curves
     for i in range(len(pos_above_05[0])):
         #plot R against mobility
         n = pos_above_05[0][i]
@@ -180,13 +185,14 @@ def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
         else:
             R_data = signal_array[0,:-m]
             mob_data = signal_array[n+1,m:]
-        if n==1:
+        if n==2 and m<=30 and and m>=10:
             plt.plot(R_data,mob_data, label=m)
+            ncols+=1
 
     ax.set_title(country)
     ax.set_xlabel('R')
-    ax.set_ylabel('grocery mobility')
-    plt.legend()
+    ax.set_ylabel('retail mobility')
+    plt.legend(loc="lower left", mode = "expand", ncol = ncols)
     fig.tight_layout()
     fig.savefig(outdir+'sanity_check/'+country+'.png',  format='png')
 
@@ -292,11 +298,10 @@ def write_montage(fetched_countries, outdir):
     '''
     with open(outdir+'montage.sh', 'w') as file:
         file.write('OUTDIR=/home/patrick/COVID19.github.io/docs/assets\n')
-        file.write("for type in '_R_delay' '_mobility_delay'\n")
         file.write('  do\n')
         fig_num=1
         for i in range(0,len(fetched_countries)-9,9):
-            file.write('    montage '+"$type'.png' ".join(fetched_countries[i:i+9])+"$type'.png' -tile 3x3 -geometry +2+2 $OUTDIR'/countries_"+str(fig_num)+"'$type'.png'\n")
+            file.write('    montage '+'.png '.join(fetched_countries[i:i+9])+'.png -tile 3x3 -geometry +2+2 /countries_'+str(fig_num)+'.png\n')
             fig_num+=1
         file.write('done')
 
