@@ -157,13 +157,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             #For montage script
             fetched_countries.append(country)
             #Sanity check - see origin of all corr >0.5
-            pos_above_05 = np.where(C_mob_delay>0.5)
-            pos_above_05_i = pos_above_05[0][0] #take first
-            pos_above_05_j = pos_above_05[1][np.where(C_mob_delay[pos_above_05]==max(C_mob_delay[pos_above_05]))]
-            pos_above_05_R=signal_array[0,:pos_above_05_j]
-            pos_above_05_mob=signal_array[pos_above_05_i,pos_above_05_j]
-            pdb.set_trace()
-            neg_above_05 = np.where(C_R_delay>0.5)
+            sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country)
         pdb.set_trace()
         #Plot all countries in overlap per mobility category
         plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, outname)
@@ -171,7 +165,31 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
         #Write montage script
         write_montage(fetched_countries, outdir)
 
-def sanity_check(C_mob_delay, C_R_delay, signal_array)
+def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
+    '''Sanity check - see origin of all corr >0.5
+    '''
+    pos_above_05 = np.where(C_mob_delay>0.5)
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    for i in range(len(pos_above_05[0])):
+        #plot R against mobility
+        n = pos_above_05[0][i]
+        m = pos_above_05[1][i]
+        if m ==0:
+            R_data = signal_array[0,:]
+            mob_data = signal_array[n+1,:]
+        else:
+            R_data = signal_array[0,:-m]
+            mob_data = signal_array[n+1,m:]
+        if n==1:
+            plt.plot(R_data,mob_data, label=m)
+
+    ax.set_title(country)
+    ax.set_xlabel('R')
+    ax.set_ylabel('grocery mobility')
+    plt.legend()
+    fig.tight_layout()
+    fig.savefig(outdir+'sanity_check/'+country+'.png',  format='png')
+
 def corr_signals(signal_array):
     '''Analyze the correlation of the R values with the mobility data
     using different time delays (s)
