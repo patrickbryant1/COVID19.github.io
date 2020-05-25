@@ -230,8 +230,9 @@ def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
         else:
             R_data = signal_array[0,:-m]
             mob_data = signal_array[n+1,m:]
-        if n==2 and m<=30 and m>=10:
-            plt.plot(R_data,mob_data, label=m)
+        if n==2 and m<=21 and m>=10:
+            plt.plot(R_data,mob_data)
+            plt.scatter(R_data,mob_data, label=m, s=5)
             ncols+=1
 
     ax.set_title(country)
