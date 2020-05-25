@@ -172,7 +172,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             fetched_countries.append(country)
             #Sanity check - see origin of all corr >0.5
             sanity_check(C_mob_delay[:,:days_to_include], C_R_delay[:,:days_to_include], signal_array, outdir, country)
-
+            #Plot R and mobility
+            plot_R_mobility(country_signal_data, country, outdir)
         #Plot start dates
         plot_start_dates(start_dates, outdir)
         #Plot all countries in overlap per mobility category
@@ -180,6 +181,27 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
 
         #Write montage script
         #write_montage(fetched_countries, outdir)
+def plot_R_mobility(country_signal_data, country, outdir):
+    '''Plot mobility and R
+    '''
+    fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
+    x=np.arange(len(country_signal_data))
+    ax1.plot(x, country_signal_data['Median(R)'], color = 'b', linewidth=2)
+    ax2 = ax1.twinx()
+    ax2.plot(x,country_signal_data['retail_and_recreation_percent_change_from_baseline'], alpha=0.5, color='tab:red', linewidth = 1.0)
+    ax2.plot(x,country_signal_data['grocery_and_pharmacy_percent_change_from_baseline'], alpha=0.5, color='tab:purple', linewidth = 1.0)
+    ax2.plot(x,country_signal_data['transit_stations_percent_change_from_baseline'], alpha=0.5, color='tab:pink', linewidth = 1.0)
+    ax2.plot(x,country_signal_data['workplaces_percent_change_from_baseline'], alpha=0.5, color='tab:olive', linewidth = 1.0)
+    ax2.plot(x,country_signal_data['residential_percent_change_from_baseline'], alpha=0.5, color='tab:cyan', linewidth = 1.0)
+    xticks=np.arange(0,len(country_signal_data),7)
+    ax1.set_xticks(xticks)
+    ax1.set_xticklabels(np.array(country_signal_data['date'], dtype='datetime64[D]')[xticks], rotation='vertical')
+    ax1.set_title(country)
+    ax1.set_ylabel('Median R')
+    ax2.set_ylabel('Mobility change')
+    fig.tight_layout()
+    fig.savefig(outdir+'sanity_check/'+country+'R_and_mobility.png',  format='png')
+
 
 def plot_start_dates(start_dates, outdir):
     '''Plot date for start of included
