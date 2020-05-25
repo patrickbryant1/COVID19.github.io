@@ -128,8 +128,9 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             #compare_smoothing(country_signal_data, outdir)
 
             #Check that enough days are present
-            if len(country_signal_data)<days_to_include:
+            if len(country_signal_data)<days_to_include+2: #at least 2 extra days for corr
                 print(country, 'contains only', len(country_signal_data), 'days of data')
+                continue
 
             #Make an array
             signal_array = np.zeros((6,len(country_signal_data)))
@@ -162,6 +163,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
 
             #Get pearsonr for different time delays in mobility response
             C_mob_delay, C_R_delay = corr_signals(signal_array)
+
             C_mob_delay_all.append(C_mob_delay)#Save
             C_R_delay_all.append(C_R_delay)
             #Plot per country
@@ -177,7 +179,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
         plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, fetched_countries, outname)
 
         #Write montage script
-        write_montage(fetched_countries, outdir)
+        #write_montage(fetched_countries, outdir)
 
 def plot_start_dates(start_dates, outdir):
     '''Plot date for start of included
@@ -257,7 +259,7 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir, days
         fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
         for j in range(len(C_mob_delay_all)):
             if C_mob_delay_all[j].shape[1]<days_to_include:
-                print(fetched_countries[i], 'Has too little data')
+                print(fetched_countries[j], 'has too little data')
                 continue
             else:
                 plotted_countries +=1
