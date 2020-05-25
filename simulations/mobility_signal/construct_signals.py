@@ -82,9 +82,9 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             #Get data for day >= t_c, where t_c is the day where 80 % of the max death count has been reached
             death_t = max(country_epidemic_data['deaths'])*0.8
             signal_start = min(country_epidemic_data[country_epidemic_data['deaths']>=death_t].index)
+            start_date = country_epidemic_data.loc[signal_start,'date']
             if above_t == True:
                 country_epidemic_data = country_epidemic_data.loc[signal_start:]
-                start_dates.append(country_epidemic_data.loc[signal_start,'date'])
                 #Merge dfs
                 country_signal_data = country_epidemic_data.merge(country_R, left_on = 'date', right_on ='date', how = 'left')
             else:
@@ -127,6 +127,10 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             #Look at the smoothing
             #compare_smoothing(country_signal_data, outdir)
 
+            #Check that enough days are present
+            if len(country_signal_data)<days_to_include:
+                print(country, 'contains only', len(country_signal_data), 'days of data')
+
             #Make an array
             signal_array = np.zeros((6,len(country_signal_data)))
             signal_array[0,:]=country_signal_data['Median(R)']
@@ -141,6 +145,8 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
                 print(country, 'contains NaNs')
                 #pdb.set_trace()
                 continue
+            else:
+                start_dates.append(start_date) #Save start date
             #Reset index
             country_signal_data = country_signal_data.reset_index()
 
@@ -153,6 +159,7 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
                 except:
                     print(country, 'has too little data')
                     continue
+
             #Get pearsonr for different time delays in mobility response
             C_mob_delay, C_R_delay = corr_signals(signal_array)
             C_mob_delay_all.append(C_mob_delay)#Save
@@ -162,12 +169,26 @@ def construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t
             #For montage script
             fetched_countries.append(country)
             #Sanity check - see origin of all corr >0.5
-            sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country)
+            sanity_check(C_mob_delay[:,:days_to_include], C_R_delay[:,:days_to_include], signal_array, outdir, country)
+
+        #Plot start dates
+        plot_start_dates(start_dates, outdir)
         #Plot all countries in overlap per mobility category
-        plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, outname)
+        plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, 'Pearson R', outdir, days_to_include, fetched_countries, outname)
 
         #Write montage script
         write_montage(fetched_countries, outdir)
+
+def plot_start_dates(start_dates, outdir):
+    '''Plot date for start of included
+    date per country
+    '''
+    fig, ax = plt.subplots(figsize=(12/2.54, 9/2.54))
+    ax.hist(start_dates)
+    ax.set_xlabel('Date for 80% of max deaths')
+    fig.tight_layout()
+    fig.savefig(outdir+'all/80_date_distribution.png',  format='png')
+    plt.close()
 
 def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
     '''Sanity check - see origin of all corr >0.5
@@ -185,7 +206,7 @@ def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
         else:
             R_data = signal_array[0,:-m]
             mob_data = signal_array[n+1,m:]
-        if n==2 and m<=30 and and m>=10:
+        if n==2 and m<=30 and m>=10:
             plt.plot(R_data,mob_data, label=m)
             ncols+=1
 
@@ -195,6 +216,7 @@ def sanity_check(C_mob_delay, C_R_delay, signal_array, outdir, country):
     plt.legend(loc="lower left", mode = "expand", ncol = ncols)
     fig.tight_layout()
     fig.savefig(outdir+'sanity_check/'+country+'.png',  format='png')
+    plt.close()
 
 def corr_signals(signal_array):
     '''Analyze the correlation of the R values with the mobility data
@@ -218,7 +240,7 @@ def corr_signals(signal_array):
     return C_mob_delay, C_R_delay
 
 
-def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir, days_to_include, outname):
+def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir, days_to_include, fetched_countries, outname):
     '''Plot all countries in overlay per mobility category
     '''
 
@@ -235,6 +257,7 @@ def plot_corr_all_countries(C_mob_delay_all, C_R_delay_all, ylabel, outdir, days
         fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
         for j in range(len(C_mob_delay_all)):
             if C_mob_delay_all[j].shape[1]<days_to_include:
+                print(fetched_countries[i], 'Has too little data')
                 continue
             else:
                 plotted_countries +=1
@@ -296,14 +319,13 @@ def plot_corr(C_mob_delay, C_R_delay, outdir, country, ylabel):
 def write_montage(fetched_countries, outdir):
     '''Write script for montage
     '''
-    with open(outdir+'montage.sh', 'w') as file:
+    with open(outdir+'/sanity_check/montage.sh', 'w') as file:
         file.write('OUTDIR=/home/patrick/COVID19.github.io/docs/assets\n')
-        file.write('  do\n')
         fig_num=1
         for i in range(0,len(fetched_countries)-9,9):
             file.write('    montage '+'.png '.join(fetched_countries[i:i+9])+'.png -tile 3x3 -geometry +2+2 /countries_'+str(fig_num)+'.png\n')
             fig_num+=1
-        file.write('done')
+
 
 def compare_smoothing(country_signal_data, outdir):
     '''Compare different kinds of smoothing
@@ -335,12 +357,13 @@ mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
 
 #Construct signals
-above_t = False #get data above threshold or not
-outname='_mobility_delay_all_whole_epi.png'
-days_to_include=28
-construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname, days_to_include)
-print('Whole plotted')
-#above_t = True #get data above threshold or not
-#outname='_mobility_delay_all_above_80.png'
+#above_t = False #get data above threshold or not
+#outname='_mobility_delay_all_whole_epi.png'
+#days_to_include=28
 #construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname, days_to_include)
+#print('Whole plotted')
+above_t = True #get data above threshold or not
+outname='_mobility_delay_all_above_80.png'
+days_to_include=21
+construct_signals(R_estimates, epidemic_data, mobility_data, outdir, above_t, outname, days_to_include)
 print('Above 80 plotted')
