@@ -40,14 +40,22 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         key_conversions = {'United_States_of_America':'United States'}
 
         #Covariate names
-        covariate_names = ['retail_and_recreation_percent_change_from_baseline',
-                           'grocery_and_pharmacy_percent_change_from_baseline',
-                           'transit_stations_percent_change_from_baseline',
-                           'workplaces_percent_change_from_baseline',
-                           'residential_percent_change_from_baseline']
+        covariate_names = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+                           'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
+                           'transit_stations_percent_change_from_baseline':'tab:pink',
+                           'workplaces_percent_change_from_baseline':'tab:olive',
+                           'residential_percent_change_from_baseline':'tab:cyan'}
 
-        #Save fetched countries for montage script
+
+        #Save fetched countries, death percentages and mobility data
         fetched_countries = []
+        death_percentage = []
+        retail = []
+        grocery = []
+        transit = []
+        work = []
+        residential = []
+
         #Save start dates for epidemic data
         start_dates = []
         #Get unique countries
@@ -83,14 +91,23 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 continue
 
             #Get biggest drop - decide by plotting
-            drop_dates = identify_drop(country_mobility_data, country, drop_dates, outdir)
+            #drop_dates = identify_drop(country_mobility_data, country, drop_dates, covariate_names, outdir)
 
+            #Get date for after drop and corresponding mobility values
+            country_drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0]
+            mobility_levels = country_mobility_data[country_mobility_data['date']==country_drop_date]
+            retail.append(mobility_levels['retail_and_recreation_percent_change_from_baseline'].values[0])
+            grocery.append(mobility_levels['grocery_and_pharmacy_percent_change_from_baseline'].values[0])
+            transit.append(mobility_levels['transit_stations_percent_change_from_baseline'].values[0])
+            work.append(mobility_levels['workplaces_percent_change_from_baseline'].values[0])
+            residential.append(mobility_levels['residential_percent_change_from_baseline'].values[0])
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
             percent_dead_last_week = np.zeros(len(country_deaths))
             for i in range(death_start+7,len(country_deaths)): #Loop over all deaths and calculate % for week intervals
                 percent_dead_last_week[i] = np.sum(country_deaths[i-7:i])/np.sum(country_deaths[:i])
 
+            death_percentage.append(percent_dead_last_week[-1])
             #Plot
             #plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:], label=country)
             fetched_countries.append(country)
@@ -110,15 +127,23 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
 
         print(len(fetched_countries), 'countries are included in the analysis')
+        drop_df = pd.DataFrame() #Save drop values
+        drop_df['Country'] = fetched_countries
+        drop_df['Death percentage'] = death_percentage
+        drop_df['retail'] = retail
+        drop_df['grocery and pharmacy'] = grocery
+        drop_df['transit'] =transit
+        drop_df['work'] = work
+        drop_df['residential'] = residential
+        drop_df.to_csv('drop_df.csv')
 
-def identify_drop(country_mobility_data, country, drop_dates, outdir):
+        #plot relationships
+        plot_death_vs_drop(drop_df, outdir)
+
+        return None
+def identify_drop(country_mobility_data, country, drop_dates, covariate_names, outdir):
     '''Identify the mobility drop
     '''
-    covariate_names = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
-                       'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
-                       'transit_stations_percent_change_from_baseline':'tab:pink',
-                       'workplaces_percent_change_from_baseline':'tab:olive',
-                       'residential_percent_change_from_baseline':'tab:cyan'}
 
     country_drop_index = drop_dates[drop_dates['Country']==country].index[0]
     drop_day = int(drop_dates.loc[country_drop_index, 'after_drop']) #day for drop effect
@@ -145,8 +170,25 @@ def identify_drop(country_mobility_data, country, drop_dates, outdir):
     plt.close()
     return drop_dates
 
+def plot_death_vs_drop(drop_df, outdir):
+    '''Plot relationship btw death percentage today and mobility drop at lockdown
+    '''
+    covariates = {'retail':'tab:red',
+                    'grocery and pharmacy':'tab:purple',
+                    'transit':'tab:pink',
+                    'work':'tab:olive',
+                    'residential':'tab:cyan'}
 
-
+    for key in covariates:
+        fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+        ax.scatter(drop_df[key], drop_df['Death percentage'], color = covariates[key])
+        ax.set_xlabel('Mobility change in drop')
+        ax.set_ylabel('Death percentage 21 May')
+        ax.set_yscale('log')
+        ax.set_title(key)
+        fig.tight_layout()
+        fig.savefig(outdir+key+'.png',  format='png')
+        plt.close()
 #####MAIN#####
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
