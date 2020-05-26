@@ -51,7 +51,9 @@ def construct_drop(epidemic_data, mobility_data, outdir):
         start_dates = []
         #Get unique countries
         countries = epidemic_data['countriesAndTerritories'].unique()
-        fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
+        #fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
+        drop_points = open(outdir+'drop_dates.csv', 'w')
+        drop_points.write('Country,before_drop,after_drop\n')
         for country in countries:
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
@@ -72,46 +74,62 @@ def construct_drop(epidemic_data, mobility_data, outdir):
             if len(country_mobility_data)<2:
                 print('No mobility data for', country)
                 continue
+
             #calculate % deaths last week of total number of deaths
             country_deaths = np.array(country_epidemic_data['deaths'])
             if max(country_deaths)<10:
                 print('Less than 10 deaths per day for', country)
                 continue
+
+            #Get biggest drop - decide by plotting
+            identify_drop(country_mobility_data, country, outdir)
+            drop_points.write(country+',,\n')
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
             percent_dead_last_week = np.zeros(len(country_deaths))
             for i in range(death_start+7,len(country_deaths)): #Loop over all deaths and calculate % for week intervals
                 percent_dead_last_week[i] = np.sum(country_deaths[i-7:i])/np.sum(country_deaths[:i])
-            #Plot
-            plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:])
-            fetched_countries.append(country)
 
-        #Format plot
-        ax.set_yscale('log')
-        ax.set_xscale('log')
-        ax.set_xlabel('Days since 1 week after first death')
-        ax.set_ylabel('% deaths last week')
-        ax.set_xlim([20,100])
-        fig.tight_layout()
-        plt.show()
-        pdb.set_trace()
+            #Plot
+            #plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:], label=country)
+            fetched_countries.append(country)
+            #Format plot
+            # if len(fetched_countries)%10 ==0:
+            #     ax.set_yscale('log')
+            #     ax.set_xscale('log')
+            #     ax.set_xlabel('Days since 1 week after first death')
+            #     ax.set_ylabel('% deaths last week')
+            #     ax.set_xlim([20,100])
+            #     plt.legend()
+            #     fig.tight_layout()
+            #     fig.savefig(outdir+'countries_'+str(int(len(fetched_countries)/10)),  format='png')
+            #     plt.close()
+            #     fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
+
+
 
         print(len(fetched_countries), 'countries are included in the analysis')
-            # #Merge
-            # #Merge to the shortest one
-            # if len(country_signal_data)>len(country_mobility_data):
-            #     country_signal_data = country_mobility_data.merge(country_signal_data, left_on = 'date', right_on ='date', how = 'left')
-            # else:
-            #     country_signal_data = country_signal_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
-            #
-            # #Make an array
-            # signal_array = np.zeros((6,len(country_signal_data)))
-            # signal_array[0,:]=country_signal_data['Median(R)']
-            # signal_array[1,:]=country_signal_data['retail_and_recreation_percent_change_from_baseline']
-            # signal_array[2,:]=country_signal_data['grocery_and_pharmacy_percent_change_from_baseline']
-            # signal_array[3,:]=country_signal_data['transit_stations_percent_change_from_baseline']
-            # signal_array[4,:]=country_signal_data['workplaces_percent_change_from_baseline']
-            # signal_array[5,:]=country_signal_data['residential_percent_change_from_baseline']
+
+def identify_drop(country_mobility_data, country, outdir):
+    '''Identify the mobility drop
+    '''
+    covariate_names = ['retail_and_recreation_percent_change_from_baseline',
+                       'grocery_and_pharmacy_percent_change_from_baseline',
+                       'transit_stations_percent_change_from_baseline',
+                       'workplaces_percent_change_from_baseline',
+                       'residential_percent_change_from_baseline']
+    fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
+    for name in covariate_names:
+        #construct a 1-week sliding average
+        data = np.array(country_mobility_data[name])
+        y = np.zeros(len(country_mobility_data)-7)
+        for i in range(7,len(data)):
+            y[i-7]=np.average(data[i-7:i])
+        plt.plot(np.arange(7,len(country_mobility_data)), y)
+
+    fig.tight_layout()
+    fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
+
 
 
 def plot_all_countries():
