@@ -1,52 +1,52 @@
-Country,after_drop,date
-Afghanistan,60,
-Argentina,43,
-Austria,40,
-Bangladesh,48,
-Belgium,45,
-Bolivia,45,
-Bosnia_and_Herzegovina,45,
-Brazil,43,
-Cameroon,60,
-Canada,50,
-Chile,45,
-Colombia,45,
-Czechia,40,
-Denmark,40,
-Dominican_Republic,45,
-Ecuador,45,
-Egypt,45,
-Finland,48,
-France,45,
-Germany,43,
-Honduras,40,
-Hungary,45,
-India,45,
-Indonesia,65,
-Ireland,50,
-Israel,60,
-Italy,45,
-Japan,skip,
-Kuwait,80,
-Mexico,72,
-Moldova,45,
-Netherlands,47,
-Nigeria,55,
-Norway,40,
-Pakistan,45,
-Panama,60,
-Peru,42,
-Philippines,50,
-Poland,45,
-Portugal,45,
-Romania,45,
-Saudi_Arabia,65,
-Serbia,70,
-South_Africa,60,
-Spain,50,
-Sweden,50,
-Switzerland,42,
-Turkey,52,
-United_Arab_Emirates,60,
-United_Kingdom,50,
-United_States_of_America,60,
+,Country,after_drop,date
+0,Afghanistan,60,2020-04-15 00:00:00
+1,Argentina,43,2020-03-29 00:00:00
+2,Austria,40,2020-03-26 00:00:00
+3,Bangladesh,48,2020-04-03 00:00:00
+4,Belgium,45,2020-03-31 00:00:00
+5,Bolivia,45,2020-03-31 00:00:00
+6,Bosnia_and_Herzegovina,45,2020-03-31 00:00:00
+7,Brazil,43,2020-03-29 00:00:00
+8,Cameroon,60,2020-04-15 00:00:00
+9,Canada,50,2020-04-05 00:00:00
+10,Chile,45,2020-03-31 00:00:00
+11,Colombia,45,2020-03-31 00:00:00
+12,Czechia,40,2020-03-26 00:00:00
+13,Denmark,40,2020-03-26 00:00:00
+14,Dominican_Republic,45,2020-03-31 00:00:00
+15,Ecuador,45,2020-03-31 00:00:00
+16,Egypt,45,2020-03-31 00:00:00
+17,Finland,48,2020-04-03 00:00:00
+18,France,45,2020-03-31 00:00:00
+19,Germany,43,2020-03-29 00:00:00
+20,Honduras,40,2020-03-26 00:00:00
+21,Hungary,45,2020-03-31 00:00:00
+22,India,45,2020-03-31 00:00:00
+23,Indonesia,65,2020-04-20 00:00:00
+24,Ireland,50,2020-04-05 00:00:00
+25,Israel,60,2020-04-15 00:00:00
+26,Italy,45,2020-03-31 00:00:00
+27,Japan,0,2020-02-15 00:00:00
+28,Kuwait,80,2020-05-05 00:00:00
+29,Mexico,72,2020-04-27 00:00:00
+30,Moldova,45,2020-03-31 00:00:00
+31,Netherlands,47,2020-04-02 00:00:00
+32,Nigeria,55,2020-04-10 00:00:00
+33,Norway,40,2020-03-26 00:00:00
+34,Pakistan,45,2020-03-31 00:00:00
+35,Panama,60,2020-04-15 00:00:00
+36,Peru,42,2020-03-28 00:00:00
+37,Philippines,50,2020-04-05 00:00:00
+38,Poland,45,2020-03-31 00:00:00
+39,Portugal,45,2020-03-31 00:00:00
+40,Romania,45,2020-03-31 00:00:00
+41,Saudi_Arabia,65,2020-04-20 00:00:00
+42,Serbia,70,2020-04-25 00:00:00
+43,South_Africa,60,2020-04-15 00:00:00
+44,Spain,50,2020-04-05 00:00:00
+45,Sweden,50,2020-04-05 00:00:00
+46,Switzerland,42,2020-03-28 00:00:00
+47,Turkey,52,2020-04-07 00:00:00
+48,United_Arab_Emirates,60,2020-04-15 00:00:00
+49,United_Kingdom,50,2020-04-05 00:00:00
+50,United_States_of_America,60,2020-04-15 00:00:00

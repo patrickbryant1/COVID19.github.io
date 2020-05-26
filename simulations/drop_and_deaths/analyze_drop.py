@@ -124,7 +124,7 @@ def identify_drop(country_mobility_data, country, drop_dates, outdir):
     drop_day = int(drop_dates.loc[country_drop_index, 'after_drop']) #day for drop effect
     drop_date = country_mobility_data.loc[drop_day, 'date'] #date for drop effect
     drop_dates.loc[country_drop_index,'date'] = drop_date
-    
+
     fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
@@ -136,9 +136,12 @@ def identify_drop(country_mobility_data, country, drop_dates, outdir):
         plt.plot(np.arange(7,len(country_mobility_data)), y, color = covariate_names[name])
         plt.axvline(drop_day)
         plt.text(drop_day,0,np.array(drop_date,  dtype='datetime64[D]'))
+
+    ax.set_xlabel('Days since first death')
+    ax.set_ylabel('Mobility change')
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
-
+    plt.close()
     return drop_dates
 
 def plot_all_countries():
