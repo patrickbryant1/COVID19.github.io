@@ -22,10 +22,11 @@ parser = argparse.ArgumentParser(description = '''Analyze the lockdown effect in
 
 parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Google mobility data (csv).')
+parser.add_argument('--drop_dates', nargs=1, type= str, default=sys.stdin, help = 'Dates to use for drop values in mobility.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def construct_drop(epidemic_data, mobility_data, outdir):
+def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         '''Read in and format all data needed for the drop analysis
         '''
 
@@ -52,8 +53,7 @@ def construct_drop(epidemic_data, mobility_data, outdir):
         #Get unique countries
         countries = epidemic_data['countriesAndTerritories'].unique()
         #fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
-        drop_points = open(outdir+'drop_dates.csv', 'w')
-        drop_points.write('Country,before_drop,after_drop\n')
+
         for country in countries:
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
@@ -74,7 +74,8 @@ def construct_drop(epidemic_data, mobility_data, outdir):
             if len(country_mobility_data)<2:
                 print('No mobility data for', country)
                 continue
-
+            #reset index
+            country_mobility_data = country_mobility_data.reset_index()
             #calculate % deaths last week of total number of deaths
             country_deaths = np.array(country_epidemic_data['deaths'])
             if max(country_deaths)<10:
@@ -82,8 +83,8 @@ def construct_drop(epidemic_data, mobility_data, outdir):
                 continue
 
             #Get biggest drop - decide by plotting
-            identify_drop(country_mobility_data, country, outdir)
-            drop_points.write(country+',,\n')
+            drop_dates = identify_drop(country_mobility_data, country, drop_dates, outdir)
+
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
             percent_dead_last_week = np.zeros(len(country_deaths))
@@ -110,14 +111,20 @@ def construct_drop(epidemic_data, mobility_data, outdir):
 
         print(len(fetched_countries), 'countries are included in the analysis')
 
-def identify_drop(country_mobility_data, country, outdir):
+def identify_drop(country_mobility_data, country, drop_dates, outdir):
     '''Identify the mobility drop
     '''
-    covariate_names = ['retail_and_recreation_percent_change_from_baseline',
-                       'grocery_and_pharmacy_percent_change_from_baseline',
-                       'transit_stations_percent_change_from_baseline',
-                       'workplaces_percent_change_from_baseline',
-                       'residential_percent_change_from_baseline']
+    covariate_names = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+                       'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
+                       'transit_stations_percent_change_from_baseline':'tab:pink',
+                       'workplaces_percent_change_from_baseline':'tab:olive',
+                       'residential_percent_change_from_baseline':'tab:cyan'}
+
+    country_drop_index = drop_dates[drop_dates['Country']==country].index[0]
+    drop_day = int(drop_dates.loc[country_drop_index, 'after_drop']) #day for drop effect
+    drop_date = country_mobility_data.loc[drop_day, 'date'] #date for drop effect
+    drop_dates.loc[country_drop_index,'date'] = drop_date
+    
     fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
@@ -125,12 +132,14 @@ def identify_drop(country_mobility_data, country, outdir):
         y = np.zeros(len(country_mobility_data)-7)
         for i in range(7,len(data)):
             y[i-7]=np.average(data[i-7:i])
-        plt.plot(np.arange(7,len(country_mobility_data)), y)
 
+        plt.plot(np.arange(7,len(country_mobility_data)), y, color = covariate_names[name])
+        plt.axvline(drop_day)
+        plt.text(drop_day,0,np.array(drop_date,  dtype='datetime64[D]'))
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
 
-
+    return drop_dates
 
 def plot_all_countries():
     '''Plot all countries in overlay per mobility category
@@ -165,5 +174,6 @@ matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
+drop_dates = pd.read_csv(args.drop_dates[0])
 outdir = args.outdir[0]
-construct_drop(epidemic_data, mobility_data, outdir)
+construct_drop(epidemic_data, mobility_data, drop_dates, outdir)
