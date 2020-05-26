@@ -11,8 +11,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from scipy.signal import savgol_filter
 from scipy.stats import pearsonr
+from sklearn.linear_model import LinearRegression
 import pdb
 
 
@@ -63,6 +63,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
 
         for country in countries:
+            if country == 'Japan':
+                continue
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
             #Sort on date
@@ -78,7 +80,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
             country_mobility_data = mobility_data[mobility_data['country_region']==mob_key]
             #Get whole country - no subregion
-            country_mobility_data =  country_mobility_data[country_mobility_data['sub_region_1'].isna()]
+            country_mobility_data = country_mobility_data[country_mobility_data['sub_region_1'].isna()]
             if len(country_mobility_data)<2:
                 print('No mobility data for', country)
                 continue
@@ -86,12 +88,10 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             country_mobility_data = country_mobility_data.reset_index()
             #calculate % deaths last week of total number of deaths
             country_deaths = np.array(country_epidemic_data['deaths'])
+            country_dates = np.array(country_epidemic_data['date'])
             if max(country_deaths)<10:
                 print('Less than 10 deaths per day for', country)
                 continue
-
-            #Get biggest drop - decide by plotting
-            #drop_dates = identify_drop(country_mobility_data, country, drop_dates, covariate_names, outdir)
 
             #Get date for after drop and corresponding mobility values
             country_drop_day = drop_dates[drop_dates['Country']==country]['after_drop'].values[0]
@@ -106,12 +106,15 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
+            start_date = country_dates[0]
             percent_dead_last_week = np.zeros(len(country_deaths))
             for i in range(death_start+7,len(country_deaths)): #Loop over all deaths and calculate % for week intervals
                 percent_dead_last_week[i] = np.sum(country_deaths[i-7:i])/np.sum(country_deaths[:i])
 
             death_percentage.append(percent_dead_last_week[-1])
             #Plot
+            #Get biggest drop - decide by plotting
+            identify_drop(country_mobility_data, country, drop_dates, covariate_names, percent_dead_last_week, death_start, start_date, outdir)
             #plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:], label=country)
             fetched_countries.append(country)
             #Format plot
@@ -138,14 +141,14 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         drop_df['transit'] = fetched_mobility['transit_stations_percent_change_from_baseline']
         drop_df['work'] = fetched_mobility['workplaces_percent_change_from_baseline']
         drop_df['residential'] = fetched_mobility['residential_percent_change_from_baseline']
-        pdb.set_trace()
         drop_df.to_csv('drop_df.csv')
 
         #plot relationships
         plot_death_vs_drop(drop_df, outdir)
 
-        return None
-def identify_drop(country_mobility_data, country, drop_dates, covariate_names, outdir):
+        return drop_df
+
+def identify_drop(country_mobility_data, country, drop_dates, covariate_names, percent_dead_last_week, death_start, start_date, outdir):
     '''Identify the mobility drop
     '''
 
@@ -153,27 +156,32 @@ def identify_drop(country_mobility_data, country, drop_dates, covariate_names, o
     drop_day = int(drop_dates.loc[country_drop_index, 'after_drop']) #day for drop effect
     drop_date = country_mobility_data.loc[drop_day, 'date'] #date for drop effect
     drop_dates.loc[country_drop_index,'date'] = drop_date
-
-    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+    #Align the mobility and the death data
+    mob_start = country_mobility_data[country_mobility_data['date']==start_date].index[0]
+    fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
         data = np.array(country_mobility_data[name])
-        y = np.zeros(len(country_mobility_data)-7)
+        y = np.zeros(len(country_mobility_data))
         for i in range(7,len(data)):
-            y[i-7]=np.average(data[i-7:i])
+            y[i]=np.average(data[i-7:i])
 
-        plt.plot(np.arange(7,len(country_mobility_data)), y, color = covariate_names[name])
+        ax1.plot(np.arange(mob_start,len(country_mobility_data)), y[mob_start:], color = covariate_names[name])
         plt.axvline(drop_day)
         plt.text(drop_day,0,np.array(drop_date,  dtype='datetime64[D]'))
 
-    ax.set_xlabel('Days since first death')
-    ax.set_ylabel('Mobility change')
-    ax.set_title(country)
+    ax1.set_xlabel('Days since first death')
+    ax1.set_ylabel('Mobility change')
+    ax1.set_title(country)
+    ax2 = ax1.twinx()
+    ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[7:], color = 'k')
+    ax2.set_ylabel('% deaths')
     fig.tight_layout()
+    plt.show()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
 
-    return drop_dates
+    return None
 
 def plot_death_vs_drop(drop_df, outdir):
     '''Plot relationship btw death percentage today and mobility drop at lockdown
@@ -189,11 +197,23 @@ def plot_death_vs_drop(drop_df, outdir):
         ax.scatter(drop_df[key], drop_df['Death percentage'], color = covariates[key])
         ax.set_xlabel('Mobility change in drop')
         ax.set_ylabel('Death percentage 21 May')
-        ax.set_yscale('log')
+        #ax.set_yscale('log')
         ax.set_title(key)
         fig.tight_layout()
         fig.savefig(outdir+key+'.png',  format='png')
         plt.close()
+
+def linear_reg(drop_df):
+    '''Pareform LR
+    '''
+    y = np.array(drop_df['Death percentage'])
+    X = [np.array(drop_df['retail']),np.array(drop_df['grocery and pharmacy']),np.array(drop_df['transit']),np.array(drop_df['work']),np.array(drop_df['residential'])]
+    X = np.array(X)
+    X=X.T
+    reg = LinearRegression().fit(X, y)
+    print('Score:',reg.score(X,y))
+    print('Coef.', reg.coef_)
+    pdb.set_trace()
 #####MAIN#####
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
@@ -202,4 +222,6 @@ epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 drop_dates = pd.read_csv(args.drop_dates[0])
 outdir = args.outdir[0]
-construct_drop(epidemic_data, mobility_data, drop_dates, outdir)
+drop_df = construct_drop(epidemic_data, mobility_data, drop_dates, outdir)
+#drop_df=pd.read_csv('drop_df.csv')
+#linear_reg(drop_df)
