@@ -125,7 +125,7 @@ def identify_drop(country_mobility_data, country, drop_dates, outdir):
     drop_date = country_mobility_data.loc[drop_day, 'date'] #date for drop effect
     drop_dates.loc[country_drop_index,'date'] = drop_date
 
-    fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
+    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
         data = np.array(country_mobility_data[name])
@@ -139,37 +139,13 @@ def identify_drop(country_mobility_data, country, drop_dates, outdir):
 
     ax.set_xlabel('Days since first death')
     ax.set_ylabel('Mobility change')
+    ax.set_title(country)
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
     return drop_dates
 
-def plot_all_countries():
-    '''Plot all countries in overlay per mobility category
-    '''
 
-    keys = ['retail and recreation', 'grocery and pharmacy',
-            'transit stations','workplaces','residential']
-    colors = ['Reds','Purples','Oranges','Greens','Blues']
-
-
-    #Mobility delay
-    for i in range(5):
-        all_countries_x = []
-        all_countries_y = []
-        plotted_countries = 0
-        fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-
-        ax.set_title(keys[i])
-        ax.set_xlabel('mobility time delay (days)')
-        ax.set_ylabel(ylabel)
-        ax.set_xlim([-days_to_include-2, days_to_include+2])
-        fig.tight_layout()
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        fig.savefig(outdir+'all/'+keys[i]+outname,  format='png')
-        plt.close()
-        print('Plotting',plotted_countries, 'countries')
 
 #####MAIN#####
 #Set font size
