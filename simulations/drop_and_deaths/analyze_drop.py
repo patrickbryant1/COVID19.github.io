@@ -50,11 +50,11 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #Save fetched countries, death percentages and mobility data
         fetched_countries = []
         death_percentage = []
-        retail = []
-        grocery = []
-        transit = []
-        work = []
-        residential = []
+        fetched_mobility = {'retail_and_recreation_percent_change_from_baseline':[],
+                           'grocery_and_pharmacy_percent_change_from_baseline':[],
+                           'transit_stations_percent_change_from_baseline':[],
+                           'workplaces_percent_change_from_baseline':[],
+                           'residential_percent_change_from_baseline':[]}
 
         #Save start dates for epidemic data
         start_dates = []
@@ -94,13 +94,16 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             #drop_dates = identify_drop(country_mobility_data, country, drop_dates, covariate_names, outdir)
 
             #Get date for after drop and corresponding mobility values
-            country_drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0]
-            mobility_levels = country_mobility_data[country_mobility_data['date']==country_drop_date]
-            retail.append(mobility_levels['retail_and_recreation_percent_change_from_baseline'].values[0])
-            grocery.append(mobility_levels['grocery_and_pharmacy_percent_change_from_baseline'].values[0])
-            transit.append(mobility_levels['transit_stations_percent_change_from_baseline'].values[0])
-            work.append(mobility_levels['workplaces_percent_change_from_baseline'].values[0])
-            residential.append(mobility_levels['residential_percent_change_from_baseline'].values[0])
+            country_drop_day = drop_dates[drop_dates['Country']==country]['after_drop'].values[0]
+            for name in covariate_names:
+                #construct a 1-week sliding average
+                data = np.array(country_mobility_data[name])
+                y = np.zeros(len(country_mobility_data))
+                for i in range(7,len(data)):
+                    y[i]=np.average(data[i-7:i])
+
+                fetched_mobility[name].append(y[country_drop_day])
+
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
             percent_dead_last_week = np.zeros(len(country_deaths))
@@ -130,11 +133,12 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         drop_df = pd.DataFrame() #Save drop values
         drop_df['Country'] = fetched_countries
         drop_df['Death percentage'] = death_percentage
-        drop_df['retail'] = retail
-        drop_df['grocery and pharmacy'] = grocery
-        drop_df['transit'] =transit
-        drop_df['work'] = work
-        drop_df['residential'] = residential
+        drop_df['retail'] = fetched_mobility['retail_and_recreation_percent_change_from_baseline']
+        drop_df['grocery and pharmacy'] = fetched_mobility['grocery_and_pharmacy_percent_change_from_baseline']
+        drop_df['transit'] = fetched_mobility['transit_stations_percent_change_from_baseline']
+        drop_df['work'] = fetched_mobility['workplaces_percent_change_from_baseline']
+        drop_df['residential'] = fetched_mobility['residential_percent_change_from_baseline']
+        pdb.set_trace()
         drop_df.to_csv('drop_df.csv')
 
         #plot relationships
@@ -168,6 +172,7 @@ def identify_drop(country_mobility_data, country, drop_dates, covariate_names, o
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
+
     return drop_dates
 
 def plot_death_vs_drop(drop_df, outdir):
