@@ -286,13 +286,36 @@ def linear_reg(drop_df, outdir):
     fig.tight_layout()
     fig.savefig(outdir+'reg_coef.png',  format='png')
     plt.close()
-    #3D plot - France messes it up
+
+    #2D plots
+    colors = ['b','g']
+    fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
+    for i in range(2):
+        fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
+        ax.scatter(X[:,i], y, color =colors[i])
+        z = np.polyfit(X[:,i],y, deg=3)
+        p = np.poly1d(z)
+        ax.plot(np.sort(X[:,i]),p(np.sort(X[:,i])))
+        ax.set_ylabel('% dead last week')
+        ax.set_xlabel(col_names[i+1])
+        ax.set_title(col_names[i+1])
+        fig.legend()
+        fig.savefig(outdir+str(i)+'_coef.png',  format='png')
+    pdb.set_trace()
+    #3D plot
+    B1, B2 = np.meshgrid(X[:,0], X[:,1])
+    B3 = np.zeros((len(y),len(y)))
+    for i in range(len(y)):
+        B3[i,:]=y[i]
+    fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
     ax = plt.axes(projection='3d')
     ax.scatter3D(X[:,0], X[:,1], y, color ='magenta')
-    ax.plot_trisurf(X[:,0], X[:,1], y, cmap='viridis')
+    #ax.plot_trisurf(X[:,0], X[:,1], y, cmap='viridis')
     ax.set_xlabel('% cases at drop start')
     ax.set_ylabel('% cases at drop end')
     ax.set_zlabel('% dead last week')
+    ax.plot_surface(B1, B2, B3,alpha=0.2)
+    #fig.savefig(outdir+'3D_coef.png',  format='png')
     plt.show()
     pdb.set_trace()
 #####MAIN#####
