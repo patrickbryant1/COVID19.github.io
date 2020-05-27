@@ -36,6 +36,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         epidemic_data = epidemic_data.rename(columns={'dateRep':'date'})
         #Convert mobility data to datetime
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+        #Convert drop dates to datetime
+        drop_dates['date'] = pd.to_datetime(drop_dates['date'], format='%Y/%m/%d')
         #Mobility key conversions
         key_conversions = {'United_States_of_America':'United States'}
 
@@ -63,8 +65,6 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
 
         for country in countries:
-            if country == 'Japan':
-                continue
             #Get country epidemic data
             country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
             #Sort on date
@@ -86,9 +86,10 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 continue
             #reset index
             country_mobility_data = country_mobility_data.reset_index()
+            mobility_start = country_mobility_data['date'][0]
+            mobility_end = max(country_mobility_data['date'])
             #calculate % deaths last week of total number of deaths
             country_deaths = np.array(country_epidemic_data['deaths'])
-            country_dates = np.array(country_epidemic_data['date'])
             if max(country_deaths)<10:
                 print('Less than 10 deaths per day for', country)
                 continue
@@ -106,15 +107,17 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
-            start_date = country_dates[0]
             percent_dead_last_week = np.zeros(len(country_deaths))
             for i in range(death_start+7,len(country_deaths)): #Loop over all deaths and calculate % for week intervals
                 percent_dead_last_week[i] = np.sum(country_deaths[i-7:i])/np.sum(country_deaths[:i])
-
+            #Save todays percentage
             death_percentage.append(percent_dead_last_week[-1])
+            #Add death percentage to df and merge with mobility
+            country_epidemic_data['death_percentage'] = percent_dead_last_week
+            country_epidemic_data = country_epidemic_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
             #Plot
             #Get biggest drop - decide by plotting
-            identify_drop(country_mobility_data, country, drop_dates, covariate_names, percent_dead_last_week, death_start, start_date, outdir)
+            identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
             #plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:], label=country)
             fetched_countries.append(country)
             #Format plot
@@ -148,36 +151,38 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
         return drop_df
 
-def identify_drop(country_mobility_data, country, drop_dates, covariate_names, percent_dead_last_week, death_start, start_date, outdir):
+def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir):
     '''Identify the mobility drop
     '''
 
-    country_drop_index = drop_dates[drop_dates['Country']==country].index[0]
-    drop_day = int(drop_dates.loc[country_drop_index, 'after_drop']) #day for drop effect
-    drop_date = country_mobility_data.loc[drop_day, 'date'] #date for drop effect
-    drop_dates.loc[country_drop_index,'date'] = drop_date
-    #Align the mobility and the death data
-    mob_start = country_mobility_data[country_mobility_data['date']==start_date].index[0]
-    fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
+    drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0] #date for drop effect
+    drop_index = country_epidemic_data[country_epidemic_data['date']==drop_date].index[0]
+
+    msi
+    #Percent dead last week
+    percent_dead_last_week = np.array(country_epidemic_data['death_percentage'])
+    fig, ax1 = plt.subplots(figsize=(12/2.54, 9/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
-        data = np.array(country_mobility_data[name])
-        y = np.zeros(len(country_mobility_data))
-        for i in range(7,len(data)):
+        data = np.array(country_epidemic_data[name])
+        y = np.zeros(len(country_epidemic_data))
+        for i in range(7,len(y)):
             y[i]=np.average(data[i-7:i])
-
-        ax1.plot(np.arange(mob_start,len(country_mobility_data)), y[mob_start:], color = covariate_names[name])
-        plt.axvline(drop_day)
-        plt.text(drop_day,0,np.array(drop_date,  dtype='datetime64[D]'))
+        country_epidemic_data[name]=y
+        y_index = country_epidemic_data[name].dropna().index #remove NaNs
+        ax1.plot(np.arange(y_index[0],y_index[-1]), y[y_index[0]:y_index[-1]], color = covariate_names[name])
+    #Plot date for value used as drop
+    plt.axvline(drop_index)
+    plt.text(drop_index,0,np.array(drop_date,  dtype='datetime64[D]'))
 
     ax1.set_xlabel('Days since first death')
     ax1.set_ylabel('Mobility change')
     ax1.set_title(country)
     ax2 = ax1.twinx()
-    ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[7:], color = 'k')
+    ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[death_start+7:], color = 'k')
     ax2.set_ylabel('% deaths')
+    ax1.set_xlim([y_index[0], len(country_epidemic_data)]) #start of mobility til end of death %
     fig.tight_layout()
-    plt.show()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
 
