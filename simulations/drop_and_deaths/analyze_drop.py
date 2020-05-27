@@ -148,7 +148,12 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
         #plot relationships
         plot_death_vs_drop(drop_df, outdir)
-
+        #Print countries in increaseing death % order
+        drop_df = drop_df.sort_values(by='Death percentage')
+        countries= np.array(drop_df['Country'])
+        for i in range(0,len(drop_df),9):
+            print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
+        pdb.set_trace()
         return drop_df
 
 def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir):
