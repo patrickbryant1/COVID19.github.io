@@ -54,6 +54,9 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #Save fetched countries, death percentages and mobility data
         fetched_countries = []
         death_percentage = []
+        drop_start_cases = [] #%cases at drop start
+        drop_end_cases = [] #%cases at drop end
+        drop_duration = []
         fetched_mobility = {'retail_and_recreation_percent_change_from_baseline':[],
                            'grocery_and_pharmacy_percent_change_from_baseline':[],
                            'transit_stations_percent_change_from_baseline':[],
@@ -93,7 +96,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             #calculate % deaths last week of total number of deaths
             country_deaths = np.array(country_epidemic_data['deaths'])
             if max(country_deaths)<10:
-                print('Less than 10 deaths per day for', country)
+                print('Less than 10 deaths per day reached for', country)
                 continue
 
             #Get date for after drop and corresponding mobility values
@@ -107,6 +110,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                     y[i]=np.average(data[i-7:i])
 
                 fetched_mobility[name].append(y[country_drop_day])
+
 
             #Get index for first death
             death_start = np.where(country_deaths>0)[0][0]
@@ -125,6 +129,14 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             for i in range(7,len(country_epidemic_data)):
                 sm_cases[i]=np.average(cases[i-7:i])
             country_epidemic_data['smoothed_cases']=sm_cases
+            #Get %cases at drop start and end
+            country_drop_end = drop_dates[drop_dates['Country']==country]['drop_end'].values[0]
+            dsi = country_epidemic_data[country_epidemic_data['date']==country_drop_start].index[0] #drop start index
+            dei = country_epidemic_data[country_epidemic_data['date']==country_drop_end].index[0] #drop end index
+
+            drop_start_cases.extend(country_epidemic_data.loc[dsi,'smoothed_cases']) #%cases at drop start
+            drop_end_cases = [] #%cases at drop end
+            drop_duration = []
 
             #Get biggest drop - decide by plotting
             identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
