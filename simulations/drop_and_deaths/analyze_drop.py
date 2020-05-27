@@ -158,10 +158,13 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
     drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0] #date for drop effect
     drop_index = country_epidemic_data[country_epidemic_data['date']==drop_date].index[0]
 
-    msi
+    if mobility_start>min(country_epidemic_data['date']):
+        msi = country_epidemic_data[country_epidemic_data['date']==mobility_start].index[0]
+    else:
+        msi=0
     #Percent dead last week
     percent_dead_last_week = np.array(country_epidemic_data['death_percentage'])
-    fig, ax1 = plt.subplots(figsize=(12/2.54, 9/2.54))
+    fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
         data = np.array(country_epidemic_data[name])
@@ -170,18 +173,20 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
             y[i]=np.average(data[i-7:i])
         country_epidemic_data[name]=y
         y_index = country_epidemic_data[name].dropna().index #remove NaNs
-        ax1.plot(np.arange(y_index[0],y_index[-1]), y[y_index[0]:y_index[-1]], color = covariate_names[name])
+        ax1.plot(np.arange(msi,y_index[-1]), y[msi:y_index[-1]], color = covariate_names[name])
     #Plot date for value used as drop
     plt.axvline(drop_index)
     plt.text(drop_index,0,np.array(drop_date,  dtype='datetime64[D]'))
 
-    ax1.set_xlabel('Days since first death')
+    ax1.set_xlabel('Epidemic day')
     ax1.set_ylabel('Mobility change')
     ax1.set_title(country)
     ax2 = ax1.twinx()
     ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[death_start+7:], color = 'k')
-    ax2.set_ylabel('% deaths')
-    ax1.set_xlim([y_index[0], len(country_epidemic_data)]) #start of mobility til end of death %
+    ax2.set_ylabel('% deaths last week')
+    ax1.set_xlim([msi, len(country_epidemic_data)]) #start of mobility til end of death %
+    ax1.set_ylim([-85,30])
+    ax2.set_ylim([0,1])
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
