@@ -37,7 +37,9 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #Convert mobility data to datetime
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Convert drop dates to datetime
-        drop_dates['date'] = pd.to_datetime(drop_dates['date'], format='%Y/%m/%d')
+        drop_dates['drop_start'] = pd.to_datetime(drop_dates['drop_start'], format='%Y/%m/%d')
+        drop_dates['drop_end'] = pd.to_datetime(drop_dates['drop_end'], format='%Y/%m/%d')
+
         #Mobility key conversions
         key_conversions = {'United_States_of_America':'United States'}
 
@@ -95,8 +97,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 continue
 
             #Get date for after drop and corresponding mobility values
-            country_drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0]
-            country_drop_day = country_mobility_data[country_mobility_data['date']==country_drop_date].index[0]
+            country_drop_end = drop_dates[drop_dates['Country']==country]['drop_end'].values[0]
+            country_drop_day = country_mobility_data[country_mobility_data['date']==country_drop_end].index[0]
             for name in covariate_names:
                 #construct a 1-week sliding average
                 data = np.array(country_mobility_data[name])
@@ -147,20 +149,28 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         countries= np.array(drop_df['Country'])
         for i in range(0,len(drop_df),9):
             print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
-        pdb.set_trace()
         return drop_df
 
 def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir):
     '''Identify the mobility drop
     '''
 
-    drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0] #date for drop effect
-    drop_index = country_epidemic_data[country_epidemic_data['date']==drop_date].index[0]
+    drop_start_date = drop_dates[drop_dates['Country']==country]['drop_start'].values[0] #date for drop start
+    drop_end_date = drop_dates[drop_dates['Country']==country]['drop_end'].values[0] #date for drop effect
+
+
+    drop_end_index = country_epidemic_data[country_epidemic_data['date']==drop_end_date].index[0]
 
     if mobility_start>min(country_epidemic_data['date']):
         msi = country_epidemic_data[country_epidemic_data['date']==mobility_start].index[0]
     else:
         msi=0
+    #Check that start of drop is included in epidemic data - otherwise set to start of mobility
+    if drop_start_date<min(country_epidemic_data['date']):
+        drop_start_index=msi
+    else:
+        drop_start_index = country_epidemic_data[country_epidemic_data['date']==drop_start_date].index[0]
+
     #Percent dead last week
     percent_dead_last_week = np.array(country_epidemic_data['death_percentage'])
     fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
@@ -173,9 +183,11 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
         country_epidemic_data[name]=y
         y_index = country_epidemic_data[name].dropna().index #remove NaNs
         ax1.plot(np.arange(msi,y_index[-1]), y[msi:y_index[-1]], color = covariate_names[name])
-    #Plot date for value used as drop
-    plt.axvline(drop_index, color='k')
-    plt.text(drop_index,0,np.array(drop_date,  dtype='datetime64[D]'))
+    #Plot date for values used as drop start and end
+    plt.axvline(drop_start_index, color='k')
+    plt.text(drop_start_index,-20,np.array(drop_start_date,  dtype='datetime64[D]'))
+    plt.axvline(drop_end_index, color='k')
+    plt.text(drop_end_index,0,np.array(drop_end_date,  dtype='datetime64[D]'))
 
     ax1.set_xlabel('Epidemic day')
     ax1.set_ylabel('Mobility change')
