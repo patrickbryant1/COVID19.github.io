@@ -95,7 +95,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 continue
 
             #Get date for after drop and corresponding mobility values
-            country_drop_day = drop_dates[drop_dates['Country']==country]['after_drop'].values[0]
+            country_drop_date = drop_dates[drop_dates['Country']==country]['date'].values[0]
+            country_drop_day = country_mobility_data[country_mobility_data['date']==country_drop_date].index[0]
             for name in covariate_names:
                 #construct a 1-week sliding average
                 data = np.array(country_mobility_data[name])
@@ -115,24 +116,17 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             #Add death percentage to df and merge with mobility
             country_epidemic_data['death_percentage'] = percent_dead_last_week
             country_epidemic_data = country_epidemic_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
-            #Plot
+
+            #Smooth cases
+            sm_cases = np.zeros(len(country_epidemic_data))
+            cases = np.array(country_epidemic_data['cases'])
+            for i in range(7,len(country_epidemic_data)):
+                sm_cases[i]=np.average(cases[i-7:i])
+            country_epidemic_data['smoothed_cases']=sm_cases
+
             #Get biggest drop - decide by plotting
             identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
-            #plt.plot(np.arange(len(country_deaths)-death_start-7),percent_dead_last_week[death_start+7:], label=country)
             fetched_countries.append(country)
-            #Format plot
-            # if len(fetched_countries)%10 ==0:
-            #     ax.set_yscale('log')
-            #     ax.set_xscale('log')
-            #     ax.set_xlabel('Days since 1 week after first death')
-            #     ax.set_ylabel('% deaths last week')
-            #     ax.set_xlim([20,100])
-            #     plt.legend()
-            #     fig.tight_layout()
-            #     fig.savefig(outdir+'countries_'+str(int(len(fetched_countries)/10)),  format='png')
-            #     plt.close()
-            #     fig, ax = plt.subplots(figsize=(18/2.54, 12/2.54))
-
 
 
         print(len(fetched_countries), 'countries are included in the analysis')
@@ -180,7 +174,7 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
         y_index = country_epidemic_data[name].dropna().index #remove NaNs
         ax1.plot(np.arange(msi,y_index[-1]), y[msi:y_index[-1]], color = covariate_names[name])
     #Plot date for value used as drop
-    plt.axvline(drop_index)
+    plt.axvline(drop_index, color='k')
     plt.text(drop_index,0,np.array(drop_date,  dtype='datetime64[D]'))
 
     ax1.set_xlabel('Epidemic day')
@@ -188,6 +182,9 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
     ax1.set_title(country)
     ax2 = ax1.twinx()
     ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[death_start+7:], color = 'k')
+    #Cases
+    cases = np.array(country_epidemic_data['smoothed_cases'])/max(country_epidemic_data['smoothed_cases'])
+    ax2.bar(np.arange(len(cases)), cases, alpha = 0.3, color = 'g')
     ax2.set_ylabel('% deaths last week')
     ax1.set_xlim([msi, len(country_epidemic_data)]) #start of mobility til end of death %
     ax1.set_ylim([-85,30])
