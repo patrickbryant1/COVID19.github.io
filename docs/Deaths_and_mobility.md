@@ -3,9 +3,6 @@ layout: page
 title: Analyzing the relationship between the death rate and the lockdown
 ---
 
-## Death percentage vs mobility drop upon lockdown
-![death_vs_mob](./assets/death_vs_mob.png)
-
 ## 51 Countries (All countries for which the level of at least 10 deaths per day has been reached)
 ![countries_1](./assets/drop_date1.png)
 ![countries_2](./assets/drop_date2.png)

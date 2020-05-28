@@ -52,12 +52,12 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                            'residential_percent_change_from_baseline':'tab:cyan'}
 
 
-        #Save fetched countries, death percentages and mobility data
+        #Save fetched countries, death per million and mobility data
         fetched_countries = []
-        death_percentage = []
+        death_per_million = []
         drop_start_cases = [] #%cases at drop start
         drop_end_cases = [] #%cases at drop end
-        case_percentage = [] #%cases at prediction date
+        cases_per_million = [] #%cases at prediction date
         drop_duration = []
         fetched_mobility = {'retail_and_recreation_percent_change_from_baseline':[],
                            'grocery_and_pharmacy_percent_change_from_baseline':[],
@@ -109,28 +109,28 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 sm_deaths[i-1]=np.average(country_deaths[i-7:i])
             sm_deaths[0:6] = sm_deaths[7]
             country_epidemic_data['smoothed_deaths']=sm_deaths
+            #Get population in millions
+            country_pop = country_epidemic_data['popData2018'].values[0]/1000000
+            #calculate deaths per million
+            #Get index for first death
+            death_start = np.where(country_deaths>0)[0][0]
+            #Add death per million to df
+            country_epidemic_data['death_per_million'] =sm_deaths/country_pop
 
             #Get date for after drop and corresponding mobility values
             country_drop_end = drop_dates[drop_dates['Country']==country]['drop_end'].values[0]
-            country_drop_day = country_mobility_data[country_mobility_data['date']==country_drop_end].index[0]
+            country_drop_ei = country_mobility_data[country_mobility_data['date']==country_drop_end].index[0]
             for name in covariate_names:
                 #construct a 1-week sliding average to smooth the mobility data
                 data = np.array(country_mobility_data[name])
                 y = np.zeros(len(country_mobility_data))
                 for i in range(7,len(data)):
                     y[i]=np.average(data[i-7:i])
+                y[0:6] = y[7]
+                country_mobility_data[name]=y
+                fetched_mobility[name].append(y[country_drop_ei])
 
-                fetched_mobility[name].append(y[country_drop_day])
-
-            #calculate % deaths last week of total number of deaths
-            #Get index for first death
-            death_start = np.where(country_deaths>0)[0][0]
-            percent_dead_last_week = np.zeros(len(sm_deaths))
-            for i in range(death_start+6,len(sm_deaths)): #Loop over all deaths and calculate % for week intervals
-                percent_dead_last_week[i] = np.sum(sm_deaths[i-7:i])/np.sum(sm_deaths[:i])
-
-            #Add death percentage to df and merge with mobility
-            country_epidemic_data['death_percentage'] = percent_dead_last_week
+            #Merge epidemic data with mobility data
             country_epidemic_data = country_epidemic_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
 
             #Smooth cases
@@ -139,7 +139,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             for i in range(7,len(country_epidemic_data)):
                 sm_cases[i-1]=np.average(cases[i-7:i])
             sm_cases[0:6] = sm_cases[7]
-            country_epidemic_data['smoothed_cases']=sm_cases/max(sm_cases)
+            country_epidemic_data['cases_per_million']=sm_cases/country_pop
+
             #Get %cases at drop start and end
             country_drop_start = drop_dates[drop_dates['Country']==country]['drop_start'].values[0]
             dsi = country_epidemic_data[country_epidemic_data['date']==country_drop_start].index[0] #drop start index
@@ -152,23 +153,23 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             if death_delay>=len(country_epidemic_data):
                 death_delay = len(country_epidemic_data)-1
                 print(country, 'has only', len(country_epidemic_data)-1-dsi, 'days of epidemic data after drop')
-            death_percentage.append(country_epidemic_data.loc[death_delay,'death_percentage'])
-            drop_start_cases.append(country_epidemic_data.loc[dsi,'smoothed_cases']) #%cases at drop start
-            drop_end_cases.append(country_epidemic_data.loc[dei,'smoothed_cases'])
-            case_percentage.append(country_epidemic_data.loc[death_delay,'smoothed_cases'])
+            death_per_million.append(country_epidemic_data.loc[death_delay,'death_per_million'])
+            drop_start_cases.append(country_epidemic_data.loc[dsi,'cases_per_million']) #%cases at drop start
+            drop_end_cases.append(country_epidemic_data.loc[dei,'cases_per_million'])
+            cases_per_million.append(country_epidemic_data.loc[death_delay,'cases_per_million'])
             drop_duration.append(dei-dsi)
             #Get biggest drop - decide by plotting
-            #identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
+            identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
             fetched_countries.append(country)
 
 
         print(len(fetched_countries), 'countries are included in the analysis')
         drop_df = pd.DataFrame() #Save drop values
         drop_df['Country'] = fetched_countries
-        drop_df['Death percentage'] = death_percentage
-        drop_df['drop_start_cases'] = drop_start_cases#%cases at drop start
-        drop_df['drop_end_cases'] = drop_end_cases #%cases at drop end
-        drop_df['Case percentage'] = case_percentage #%cases at assessment point
+        drop_df['Deaths per million'] = death_per_million
+        drop_df['drop_start_cases'] = drop_start_cases#cases per million  at drop start
+        drop_df['drop_end_cases'] = drop_end_cases #cases per million  at drop end
+        drop_df['Cases per million'] = cases_per_million #cases per million at assessment point
         drop_df['drop_duration'] = drop_duration
         drop_df['retail'] = fetched_mobility['retail_and_recreation_percent_change_from_baseline']
         drop_df['grocery and pharmacy'] = fetched_mobility['grocery_and_pharmacy_percent_change_from_baseline']
@@ -180,7 +181,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #plot relationships
         plot_death_vs_drop(drop_df, outdir)
         #Print countries in increaseing death % order
-        drop_df = drop_df.sort_values(by='Death percentage')
+        drop_df = drop_df.sort_values(by='Deaths per million')
         countries= np.array(drop_df['Country'])
         for i in range(0,len(drop_df),9):
             print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
@@ -207,16 +208,11 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
         drop_start_index = country_epidemic_data[country_epidemic_data['date']==drop_start_date].index[0]
 
     #Percent dead last week
-    percent_dead_last_week = np.array(country_epidemic_data['death_percentage'])
+    death_per_million = np.array(country_epidemic_data['death_per_million'])
     fig, ax1 = plt.subplots(figsize=(9/2.54, 6/2.54))
     for name in covariate_names:
         #construct a 1-week sliding average
-        data = np.array(country_epidemic_data[name])
-        y = np.zeros(len(country_epidemic_data))
-        for i in range(7,len(y)):
-            y[i-1]=np.average(data[i-7:i])
-        y[0:6] = y[7]
-        country_epidemic_data[name]=y
+        y = np.array(country_epidemic_data[name])
         y_index = country_epidemic_data[name].dropna().index #remove NaNs
         ax1.plot(np.arange(msi,y_index[-1]), y[msi:y_index[-1]], color = covariate_names[name])
     #Plot date for values used as drop start and end
@@ -229,17 +225,18 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
     ax1.set_ylabel('Mobility change')
     ax1.set_title(country)
     ax2 = ax1.twinx()
-    ax2.plot(np.arange(death_start+7,len(percent_dead_last_week)), percent_dead_last_week[death_start+7:], color = 'k')
+    ax2.bar(np.arange(death_start+7,len(death_per_million)), death_per_million[death_start+7:], color = 'grey', alpha = 0.5)
     #Cases
-    cases = np.array(country_epidemic_data['smoothed_cases'])/max(country_epidemic_data['smoothed_cases'])
-    ax2.bar(np.arange(len(cases)), cases, alpha = 0.3, color = 'g')
-    ax2.set_ylabel('% deaths last week')
+    #cases = np.array(country_epidemic_data['cases_per_million'])
+    #ax2.bar(np.arange(len(cases)), cases, alpha = 0.3, color = 'g')
+    ax2.set_ylabel('Deaths per million')
     ax1.set_xlim([msi, len(country_epidemic_data)]) #start of mobility til end of death %
     ax1.set_ylim([-85,30])
-    ax2.set_ylim([0,1])
+    #ax2.set_ylim([0,15])
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
+
 
     return None
 
@@ -254,9 +251,9 @@ def plot_death_vs_drop(drop_df, outdir):
 
     for key in covariates:
         fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-        ax.scatter(drop_df[key], drop_df['Case percentage'], color = covariates[key])
+        ax.scatter(drop_df[key], drop_df['Deaths per million'], color = covariates[key])
         ax.set_xlabel('Mobility change in drop')
-        ax.set_ylabel('Case percentage 56 days after drop start')
+        ax.set_ylabel('Deaths per million 56 days after drop start')
         #ax.set_yscale('log')
         ax.set_title(key)
         fig.tight_layout()
@@ -266,21 +263,27 @@ def plot_death_vs_drop(drop_df, outdir):
 def linear_reg(drop_df, outdir):
     '''Pareform LR
     '''
-    y = np.array(drop_df['Case percentage'])
+    y = np.array(drop_df['Deaths per million'])
     X = [np.array(drop_df['drop_start_cases']), np.array(drop_df['drop_end_cases']),
        np.array(drop_df['drop_duration']), np.array(drop_df['retail']),
        np.array(drop_df['grocery and pharmacy']), np.array(drop_df['transit']),
        np.array(drop_df['work']),np.array(drop_df['residential'])]
     X = np.array(X)
     X=X.T
-    reg = LinearRegression().fit(X, y)
-    score= reg.score(X,y)
+    Z=np.abs(X)
+    Z=Z+0.000001
+    Z = np.log(Z)
+    logy=np.log(y)
+
+
+    reg = LinearRegression().fit(Z, logy)
+    score= reg.score(Z,y)
     coef = reg.coef_
     print('Score:',score)
     print('Coef.', coef)
 
     #Visualize
-    col_names = ['','% cases drop start', '% cases drop end', 'drop duration', 'retail',
+    col_names = ['','cases per million at drop start', 'cases  per million at drop end', 'drop duration', 'retail',
             'grocery and pharmacy', 'transit', 'work', 'residential']
     fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
     ax.bar(np.arange(8), coef)
@@ -293,34 +296,22 @@ def linear_reg(drop_df, outdir):
     #2D plots
     colors = ['b','g']
     fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
-    for i in range(2):
+    for i in range(8):
         fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
-        ax.scatter(X[:,i], y, color =colors[i])
-        z = np.polyfit(X[:,i],y, deg=3)
-        p = np.poly1d(z)
-        ax.plot(np.sort(X[:,i]),p(np.sort(X[:,i])))
-        ax.set_ylabel('% Cases')
+        ax.scatter(np.abs(X[:,i]), y)
+        #z = np.polyfit(X[:,i],y, deg=3)
+        #p = np.poly1d(z)
+        #ax.plot(np.sort(X[:,i]),p(np.sort(X[:,i])))
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_ylabel('Deaths per million')
         ax.set_xlabel(col_names[i+1])
-        ax.set_title(col_names[i+1])
+        R,p = pearsonr(Z[:,i],logy)
+        ax.set_title(col_names[i+1]+'|R='+str(np.round(R,2)))
         fig.legend()
         fig.savefig(outdir+str(i)+'_coef.png',  format='png')
     pdb.set_trace()
-    #3D plot
-    B1, B2 = np.meshgrid(X[:,0], X[:,1])
-    B3 = np.zeros((len(y),len(y)))
-    for i in range(len(y)):
-        B3[i,:]=y[i]
-    fig, ax = plt.subplots(figsize=(12/2.54, 12/2.54))
-    ax = plt.axes(projection='3d')
-    ax.scatter3D(X[:,0], X[:,1], y, color ='magenta')
-    #ax.plot_trisurf(X[:,0], X[:,1], y, cmap='viridis')
-    ax.set_xlabel('% cases at drop start')
-    ax.set_ylabel('% cases at drop end')
-    ax.set_zlabel('% Cases')
-    ax.plot_surface(B1, B2, B3,alpha=0.2)
-    #fig.savefig(outdir+'3D_coef.png',  format='png')
-    plt.show()
-    pdb.set_trace()
+
 #####MAIN#####
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
@@ -329,6 +320,6 @@ epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 drop_dates = pd.read_csv(args.drop_dates[0])
 outdir = args.outdir[0]
-#drop_df = construct_drop(epidemic_data, mobility_data, drop_dates, outdir)
+drop_df = construct_drop(epidemic_data, mobility_data, drop_dates, outdir)
 drop_df=pd.read_csv('drop_df.csv')
 linear_reg(drop_df, outdir)
