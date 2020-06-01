@@ -1,27 +1,17 @@
 data {
   int <lower=1> M; // number of countries
-  int <lower=1> N0; // number of days for which to impute infections
-  int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
-  int<lower=1> N2; // days of observed data + # of days to forecast
-  real<lower=0> x[N2]; // index of days (starting at 1)
-  int cases[N2,M]; // reported cases, not used in model - estimated through SI
-  int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
-  matrix[N2, M] f; // h * s - change in fraction dead each day
-  matrix[N2, M] covariate1; //retail_and_recreation
-  matrix[N2, M] covariate2; //grocery_and_pharmacy
-  matrix[N2, M] covariate3; //transit_stations
-  matrix[N2, M] covariate4; //workplace
-  matrix[N2, M] covariate5; //residential
-  int EpidemicStart[M];
-  real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
-}
-
-transformed data {
-  real delta = 1e-5; //We’ll need to add a small positive term,δ to the diagonal of the covariance 			    //matrix in order to ensure that our covariance matrix remains positive definite.
+  int <lower=1> N; // number of weeks to model
+  int deaths_at_drop_end[M]; // Deaths per million at drop end
+  int observed_deaths[N, M]; // Observed deaths per million N = 4,5,6,7 and 8 weeks later
+  int reg_deaths[N, M]; // Predicted deaths per million duu to simple linear regression N = 4,5,6,7 and 8 weeks later
+  real covariate1[M] ; //retail_and_recreation at drop end
+  real covariate2[M]; //grocery_and_pharmacy at drop end
+  real covariate3[M]; //transit_stations at drop end
+  real covariate4[M]; //workplace at drop end
+  real covariate5[M]; //residential at drop end
 }
 
 parameters {
-  real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
@@ -32,12 +22,10 @@ parameters {
   real<lower=0> tau;
 }
 
-//The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
+//The transformed parameters are the prediction of the number of deaths
 transformed parameters {
-    real convolution; //value of integration
-    matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
-    matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
-    matrix[N2, M] Rt = rep_matrix(0,N2,M);
+    real pred_deaths; //value of integration
+    matrix[N, M] pred_deaths = rep_matrix(0,N,M); //predict for each day for all countries
     real<lower=0> phi;
     phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
 	//loop through all countries
@@ -77,11 +65,6 @@ transformed parameters {
 //infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03). These seed
 //infections are inferred in our Bayesian posterior distribution.
 model {
-  tau ~ exponential(0.03);
-	//loop through countries
-  for (m in 1:M){
-      y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic - why 1/tau?
-  }
   //phi ~ normal(0,5); //variance scaling for neg binomial
   phi_mu ~ normal(0, 5);
   phi_tau ~ cauchy(0, 5);
@@ -97,36 +80,4 @@ model {
        deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
     }
    }
-}
-
-//Out metrics - baseline, without R0 reduction
-generated quantities {
-    matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
-    matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
-    real convolution0;
-    matrix[N2, M] prediction0 = rep_matrix(0,N2,M);
-    matrix[N2, M] E_deaths0  = rep_matrix(0,N2,M);
-    for (m in 1:M){
-      prediction0[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days
-      for (i in (N0+1):N2) {
-        convolution0=0;
-        for(j in 1:(i-1)) {
-          convolution0 += prediction0[j, m]*SI[i-j]; // Correctd 22nd March
-        }
-        prediction0[i, m] = mu[m] * convolution0;
-      }
-
-      E_deaths0[1, m]= 1e-9;
-      for (i in 2:N2){
-        E_deaths0[i,m]= 0;
-        for(j in 1:(i-1)){
-          E_deaths0[i,m] += prediction0[j,m]*f[i-j,m];
-        }
-      }
-      for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-      }
-    }
-
 }
