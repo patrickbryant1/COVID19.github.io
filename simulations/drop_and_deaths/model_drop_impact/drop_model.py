@@ -32,15 +32,12 @@ def format_data(drop_df):
         '''Read in and format all data needed for the model
         '''
 
-
-        stan_data = {'M':len(countries), #number of countries
-                    'N0':6, #number of days for which to impute infections
-                    'N':[], #days of observed data for country m. each entry must be <= N2
-                    'N2':N2,
-                    'x':np.arange(1,N2+1),
-                    'cases':np.zeros((N2,len(countries)), dtype=int),
-                    'deaths':np.zeros((N2,len(countries)), dtype=int),
-                    'f':np.zeros((N2,len(countries))),
+        N=5 #number of weeks to model
+        stan_data = {'M':len(drop_df), #number of countries
+                    'N':N, #number of weeks to model
+                    'deaths_at_drop_end':np.zeros((N,len(countries)), dtype=int),
+                    'observed_deaths':np.zeros((N,len(countries)), dtype=int),
+                    'reg_deaths':np.zeros((N,len(countries)), dtype=int),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
                     'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
@@ -51,6 +48,9 @@ def format_data(drop_df):
                     'y':[] #index cases
                     }
 
+        for i in range(len(drop_df)):
+            row = drop_df.loc[i]
+            pdb.set_trace()
         return stan_data
 
 
