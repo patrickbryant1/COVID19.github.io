@@ -11,7 +11,7 @@ import numpy as np
 from ast import literal_eval
 from sklearn.linear_model import LinearRegression
 import pystan
-
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import pdb
@@ -22,7 +22,6 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Analyze simulations''')
 
 parser.add_argument('--drop_df', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
-parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--weeks_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -101,8 +100,6 @@ def visualize_results(stan_data, outdir):
     plt.close()
 
 
-
-
     #plot per week delay
     for i in range(1,6):
         #Extract modeling results
@@ -112,20 +109,19 @@ def visualize_results(stan_data, outdir):
         lower_bound25 = {'E_deaths':[]} #Estimated 25%
         higher_bound75 = {'E_deaths':[]} #Estimated 55 % - together 75 % CI
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
-        for j in range(1,len(stan_data)):
-                var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
-                means[var].append(var_ij['mean'].values[0])
-                lower_bound[var].append(var_ij['2.5%'].values[0])
-                higher_bound[var].append(var_ij['97.5%'].values[0])
-                lower_bound25[var].append(var_ij['25%'].values[0])
-                higher_bound75[var].append(var_ij['75%'].values[0])
+        var='E_deaths'
+        for j in range(1,stan_data['observed_deaths'].shape[1]+1):
+            var_ij = summary[summary['Unnamed: 0']==var+'['+str(i)+','+str(j)+']']
+            means[var].append(var_ij['mean'].values[0])
+            lower_bound[var].append(var_ij['2.5%'].values[0])
+            higher_bound[var].append(var_ij['97.5%'].values[0])
+            lower_bound25[var].append(var_ij['25%'].values[0])
+            higher_bound75[var].append(var_ij['75%'].values[0])
 
-        #Plot cases
-        #Per day
-        plot_shade_ci(days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
-        higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
-
+        plt.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = i+3)
+    plt.legend()    
+    plt.show()
+    pdb.set_trace()
     return None
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
@@ -150,7 +146,6 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 drop_df = pd.read_csv(args.drop_df[0])
-stan_model = args.stan_model[0]
 weeks_to_simulate = args.weeks_to_simulate[0]
 outdir = args.outdir[0]
 
