@@ -12,6 +12,7 @@ from ast import literal_eval
 from sklearn.linear_model import LinearRegression
 import pystan
 
+import matplotlib.pyplot as plt
 import pdb
 
 
@@ -38,9 +39,9 @@ def format_data(drop_df, weeks_to_simulate):
                     'reg_deaths':np.zeros((N,len(drop_df))),
                     'covariate1':np.array(drop_df['retail'])/100, #Divide to get fraction
                     'covariate2':np.array(drop_df['grocery and pharmacy'])/100,
-                    'covariate1':np.array(drop_df['transit'])/100,
-                    'covariate1':np.array(drop_df['work'])/100,
-                    'covariate1':np.array(drop_df['residential'])/100,
+                    'covariate3':np.array(drop_df['transit'])/100,
+                    'covariate4':np.array(drop_df['work'])/100,
+                    'covariate5':np.array(drop_df['residential'])/100,
                     }
 
         #Assign the observed deaths
@@ -53,7 +54,6 @@ def format_data(drop_df, weeks_to_simulate):
             reg = LinearRegression().fit(stan_data['deaths_at_drop_end'].reshape(-1, 1),stan_data['observed_deaths'][i,:].reshape(-1, 1))
             pred = reg.predict(stan_data['deaths_at_drop_end'].reshape(-1, 1))
             stan_data['reg_deaths'][i,:]=pred[:,0]
-
         return stan_data
 
 
