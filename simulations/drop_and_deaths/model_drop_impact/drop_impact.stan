@@ -1,9 +1,9 @@
 data {
   int <lower=1> M; // number of countries
   int <lower=1> N; // number of weeks to model
-  int deaths_at_drop_end[M]; // Deaths per million at drop end
-  int observed_deaths[N, M]; // Observed deaths per million N = 4,5,6,7 and 8 weeks later
-  int reg_deaths[N, M]; // Predicted deaths per million duu to simple linear regression N = 4,5,6,7 and 8 weeks later
+  real deaths_at_drop_end[M]; // Deaths per million at drop end
+  real observed_deaths[N, M]; // Observed deaths per million N = 4,5,6,7 and 8 weeks later
+  real reg_deaths[N, M]; // Predicted deaths per million duu to simple linear regression N = 4,5,6,7 and 8 weeks later
   real covariate1[M] ; //retail_and_recreation at drop end
   real covariate2[M]; //grocery_and_pharmacy at drop end
   real covariate3[M]; //transit_stations at drop end
@@ -29,8 +29,10 @@ transformed parameters {
 
 	//Step through all weeks
       for (i in 1:N2){
-          E_deaths[i,m] = reg_deaths[i,m]*i*mobility_impact[,m]; //Deaths per million i weeks later
-        }                                                        //Include i to capture delay impact
+        //The scaling of the mobility impact is now linear
+        //this may not be the case
+          E_deaths[i,m] = reg_deaths[i,m]*(i+3)*mobility_impact[,m]; //Deaths per million i weeks later
+        }                                                        //Include i (starts at 4 weeks dealy) to capture delay impact
       }
     }
 

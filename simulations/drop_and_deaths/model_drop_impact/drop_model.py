@@ -7,11 +7,9 @@ import sys
 import os
 import glob
 import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
-from scipy.stats import gamma
 import numpy as np
-import seaborn as sns
+from ast import literal_eval
+from sklearn.linear_model import LinearRegression
 import pystan
 
 import pdb
@@ -28,29 +26,34 @@ parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'P
 
 ###FUNCTIONS###
 
-def format_data(drop_df):
+def format_data(drop_df, weeks_to_simulate):
         '''Read in and format all data needed for the model
         '''
 
-        N=5 #number of weeks to model
+        N=weeks_to_simulate #number of weeks to model
         stan_data = {'M':len(drop_df), #number of countries
                     'N':N, #number of weeks to model
-                    'deaths_at_drop_end':np.zeros((N,len(countries)), dtype=int),
-                    'observed_deaths':np.zeros((N,len(countries)), dtype=int),
-                    'reg_deaths':np.zeros((N,len(countries)), dtype=int),
-                    'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'transit_stations_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'workplaces_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'residential_percent_change_from_baseline':np.zeros((N2,len(countries))),
-                    'EpidemicStart': [],
-                    'SI':serial_interval[0:N2],
-                    'y':[] #index cases
+                    'deaths_at_drop_end':np.log10(np.array(drop_df['drop_end_deaths'])),
+                    'observed_deaths':np.zeros((N,len(drop_df))),
+                    'reg_deaths':np.zeros((N,len(drop_df))),
+                    'covariate1':np.array(drop_df['retail'])/100, #Divide to get fraction
+                    'covariate2':np.array(drop_df['grocery and pharmacy'])/100,
+                    'covariate1':np.array(drop_df['transit'])/100,
+                    'covariate1':np.array(drop_df['work'])/100,
+                    'covariate1':np.array(drop_df['residential'])/100,
                     }
 
+        #Assign the observed deaths
         for i in range(len(drop_df)):
             row = drop_df.loc[i]
-            pdb.set_trace()
+            stan_data['observed_deaths'][:,i]=np.log10(literal_eval(row['Deaths per million']))
+
+        #Regress the deaths i = 4,5,6,7 and 8 weeks later
+        for i in range(N):
+            reg = LinearRegression().fit(stan_data['deaths_at_drop_end'].reshape(-1, 1),stan_data['observed_deaths'][i,:].reshape(-1, 1))
+            pred = reg.predict(stan_data['deaths_at_drop_end'].reshape(-1, 1))
+            stan_data['reg_deaths'][i,:]=pred[:,0]
+
         return stan_data
 
 
@@ -78,7 +81,7 @@ def simulate(stan_data, stan_model, outdir):
 args = parser.parse_args()
 drop_df = pd.read_csv(args.drop_df[0])
 stan_model = args.stan_model[0]
-weeks_to_simulate = args.days_to_simulate[0]
+weeks_to_simulate = args.weeks_to_simulate[0]
 outdir = args.outdir[0]
 
 #Read data
