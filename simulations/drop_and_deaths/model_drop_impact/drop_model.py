@@ -56,7 +56,7 @@ def format_data(drop_df, weeks_to_simulate):
             pred = reg.predict(stan_data['deaths_at_drop_end'].reshape(-1, 1))
             stan_data['reg_deaths'][i,:]=pred[:,0]
         #Calculate devation from regressed lines
-        stan_data['deviation']=stan_data['observed_deaths']-stan_data['reg_deaths']
+        #stan_data['deviation']=stan_data['observed_deaths']-stan_data['reg_deaths']
         return stan_data
 
 
