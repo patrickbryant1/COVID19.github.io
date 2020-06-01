@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from ast import literal_eval
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
 import pystan
 
 import matplotlib.pyplot as plt
@@ -54,8 +55,9 @@ def format_data(drop_df, weeks_to_simulate):
             reg = LinearRegression().fit(stan_data['deaths_at_drop_end'].reshape(-1, 1),stan_data['observed_deaths'][i,:].reshape(-1, 1))
             pred = reg.predict(stan_data['deaths_at_drop_end'].reshape(-1, 1))
             stan_data['reg_deaths'][i,:]=pred[:,0]
+        #Calculate devation from regressed lines
+        stan_data['deviation']=stan_data['observed_deaths']-stan_data['reg_deaths']
         return stan_data
-
 
 
 def simulate(stan_data, stan_model, outdir):
@@ -86,5 +88,12 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = format_data(drop_df, weeks_to_simulate)
+#Plot deviation to check clustering
+# for i in range(49):
+#     plt.scatter([i]*5,stan_data['deviation'][:,i])
+# plt.ylabel('Deviation')
+# plt.xlabel('Country')
+# plt.show()
+
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

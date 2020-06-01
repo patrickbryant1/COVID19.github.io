@@ -101,6 +101,7 @@ def visualize_results(stan_data, outdir):
 
 
     #plot per week delay
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
     for i in range(1,6):
         #Extract modeling results
         means = {'E_deaths':[]}
@@ -118,9 +119,14 @@ def visualize_results(stan_data, outdir):
             lower_bound25[var].append(var_ij['25%'].values[0])
             higher_bound75[var].append(var_ij['75%'].values[0])
 
-        plt.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = i+3)
-    plt.legend()    
-    plt.show()
+        ax.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = i+3)
+    fig.legend()
+    ax.set_xlim([-2,1.5])
+    ax.set_xlabel('Estimated deaths per million')
+    ax.set_ylabel('Deaths per million')
+    fig.tight_layout()
+    fig.savefig(outdir+'plots/estimated_deaths.png', format='png', dpi=300)
+    fig.tight_layout()
     pdb.set_trace()
     return None
 
