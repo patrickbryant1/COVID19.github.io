@@ -14,6 +14,7 @@ import pystan
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from scipy.stats import pearsonr
 import pdb
 
 
@@ -119,9 +120,11 @@ def visualize_results(stan_data, outdir):
             lower_bound25[var].append(var_ij['25%'].values[0])
             higher_bound75[var].append(var_ij['75%'].values[0])
 
-        ax.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = i+3)
+        #Correlation analysis
+        R,p = pearsonr(means['E_deaths'],stan_data['observed_deaths'][i-1,:])
+        ax.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = 'Week:'+str(i+3)+'|R'+str(np.round(R,2)))
     fig.legend()
-    ax.set_xlim([-2,1.5])
+    ax.set_xlim([-2.1,1.6])
     ax.set_xlabel('Estimated deaths per million')
     ax.set_ylabel('Deaths per million')
     fig.tight_layout()

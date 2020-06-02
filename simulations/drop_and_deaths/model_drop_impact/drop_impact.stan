@@ -30,7 +30,7 @@ transformed parameters {
         //Include i (starts at 4 weeks dealy) to capture delay impact
         //The scaling of the mobility impact is now linear
         //this may not be the case
-          E_deaths[i,m] = reg_deaths[i,m]*(i+3)*mobility_impact[m]; //Deaths per million i weeks later
+          E_deaths[i,m] = reg_deaths[i,m]*mobility_impact[m]; //Deaths per million i weeks later
         }
     }
 }
@@ -38,8 +38,8 @@ transformed parameters {
 
 //Deaths per million are inferred in our Bayesian posterior distribution.
 model {
-  phi ~ normal(0,1); //variance scaling for neg binomial
-  mobility_impact ~ normal(0, 1); // Mobility impact
+  phi ~ normal(0,0.5); //variance scaling for neg binomial
+  mobility_impact ~ normal(0, 0.5); // Mobility impact
   alpha ~ gamma(.5,1); //alpha distribution - mobility
 	//Loop through countries
   for(m in 1:M){
