@@ -300,24 +300,26 @@ def linear_reg(drop_df, outdir):
     Z = np.log10(Z)
 
     #Plot all week delays and their values
-    fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
     Y = np.zeros((len(y),5))
     for i in range(len(y)):
         Y[i,:] = y[i]
     logy=np.log10(Y)
     drop_end_deaths = Z[:,3]
+
+    week_colors = {0:'tab:blue',1:'mediumseagreen',2:'tab:cyan',3:'tab:purple',4:'orchid'}
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
     for week in range(5):
         R,p = pearsonr(drop_end_deaths,logy[:,week])
         #ax.scatter(drop_end_deaths,logy[:,week], label ='Week '+str(week+4)+'|R '+str(np.round(R,2)))
         reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
         pred = reg.predict(drop_end_deaths.reshape(-1, 1))
-        ax.plot(drop_end_deaths,pred[:,0],label ='Week '+str(week+4)+'|R '+str(np.round(R,2)))
+        ax.plot(drop_end_deaths,pred[:,0],label =str(week+4), color=week_colors[week])
         #ax.scatter(drop_end_deaths,logy[:,week], s=4)
     ax.set_ylabel('log Deaths per million x weeks after drop start')
     ax.set_xlabel('log Deaths per million at drop end')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    fig.legend()
+    fig.legend(loc='upper center')
     fig.tight_layout()
     fig.savefig(outdir+'deaths_per_million_x_weeks_later.png',  format='png')
     plt.close()
@@ -343,18 +345,48 @@ def linear_reg(drop_df, outdir):
         plt.close()
 
     #Plot deaths per million x weeks later vs mobility drop
+    cmap = plt.cm.rainbow
     for key in ['retail','grocery and pharmacy','transit','work','residential']:
-        fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
-        for week in range(5):
+        fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+        print(key)
+        for week in range(1):
+            norm = matplotlib.colors.Normalize(vmin=min(Z[:,3]), vmax=max(Z[:,3]))
             R,p = pearsonr(drop_df[key],logy[:,week])
-            ax.scatter(drop_df[key],logy[:,week],label ='Week '+str(week+4)+'|R '+str(np.round(R,2)), s=4)
-        ax.set_xlabel('Mobility change')
-        ax.set_ylabel('log Deaths per million')
-        fig.legend()
+            reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
+            pred = reg.predict(drop_end_deaths.reshape(-1, 1))
+            dev = np.power(10,pred[:,0])-np.power(10,logy[:,week])
+            #dev = dev/np.power(10,logy[:,week])
+            #dev = np.log10(dev)
+            ax.scatter(drop_df[key],dev, s=4, color=cmap(norm(Z[:,3])))
+            print(str(week)+','+str(np.round(R,2)))
+
+        ax.set_xlabel('Mobility change (%)')
+        ax.set_ylabel('Deviation from regression line')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # only needed for matplotlib < 3.1
+        fig.colorbar(sm)
+        ax.set_title(key)
         fig.tight_layout()
         fig.savefig(outdir+key+'_DPM.png',  format='png')
-    pdb.set_trace()
 
+    #Plot deaths per million x weeks later vs drop delay
+    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+    print('Drop duration')
+    for week in range(5):
+        R,p = pearsonr(drop_df['drop_duration'],logy[:,week])
+        ax.scatter(drop_df['drop_duration'],logy[:,week], s=4, color=week_colors[week])
+        print(str(week)+','+str(np.round(R,2)))
+    ax.set_xlabel('Drop duration (days)')
+    ax.set_ylabel('log Deaths per million')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_title('Drop duration')
+    fig.tight_layout()
+    fig.savefig(outdir+'drop_duration_DPM.png',  format='png')
+
+    pdb.set_trace()
 #####MAIN#####
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
