@@ -312,31 +312,48 @@ def linear_reg(drop_df, outdir):
         reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
         pred = reg.predict(drop_end_deaths.reshape(-1, 1))
         ax.plot(drop_end_deaths,pred[:,0],label ='Week '+str(week+4)+'|R '+str(np.round(R,2)))
+        #ax.scatter(drop_end_deaths,logy[:,week], s=4)
     ax.set_ylabel('log Deaths per million x weeks after drop start')
     ax.set_xlabel('log Deaths per million at drop end')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     fig.legend()
+    fig.tight_layout()
     fig.savefig(outdir+'deaths_per_million_x_weeks_later.png',  format='png')
-    plt.show()
     plt.close()
 
     #Plot deaths per million at drop end with marked countries
-    fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
     countries = drop_df['Country']
-    for i in range(len(logy)):
-        plt.scatter(Z[:,3][i],logy[i])
-        plt.text(Z[:,3][i],logy[i], countries[i])
-    ax.plot(drop_end_deaths, y_pred)
-    ax.set_ylabel('log Deaths per million')
-    ax.set_xlabel('log Deaths per million at drop end')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    R,p = pearsonr(Z[:,3],logy)
-    ax.set_title('Analyzing NPI timing'+'|PearsonR='+str(np.round(R,2)))
-    fig.savefig(outdir+'deaths_per_million_countries.png',  format='png')
-    plt.close()
+    for week in range(5):
+        fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
+        for i in range(49):
+            ax.scatter(Z[:,3][i],logy[i,week])
+            ax.text(Z[:,3][i],logy[i,week], countries[i])
+        reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
+        pred = reg.predict(drop_end_deaths.reshape(-1, 1))
+        ax.plot(drop_end_deaths,pred[:,0])
+        ax.set_xlabel('log Deaths per million at drop end')
+        ax.set_ylabel('log Deaths per million')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        R,p = pearsonr(drop_end_deaths,logy[:,week])
+        ax.set_title('Analyzing NPI timing'+'|PearsonR='+str(np.round(R,2)))
+        fig.tight_layout()
+        fig.savefig(outdir+str(week+4)+'_DPM_countries.png',  format='png')
+        plt.close()
 
+    #Plot deaths per million x weeks later vs mobility drop
+    for key in ['retail','grocery and pharmacy','transit','work','residential']:
+        fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
+        for week in range(5):
+            R,p = pearsonr(drop_df[key],logy[:,week])
+            ax.scatter(drop_df[key],logy[:,week],label ='Week '+str(week+4)+'|R '+str(np.round(R,2)), s=4)
+        ax.set_xlabel('Mobility change')
+        ax.set_ylabel('log Deaths per million')
+        fig.legend()
+        fig.tight_layout()
+        fig.savefig(outdir+key+'_DPM.png',  format='png')
+    pdb.set_trace()
 
 #####MAIN#####
 #Set font size

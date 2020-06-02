@@ -38,9 +38,9 @@ transformed parameters {
 
 //Deaths per million are inferred in our Bayesian posterior distribution.
 model {
-  phi ~ normal(0,0.5); //variance scaling for neg binomial
+  phi ~ normal(0,0.25); //variance scaling for neg binomial
   mobility_impact ~ normal(0, 0.5); // Mobility impact
-  alpha ~ gamma(.5,1); //alpha distribution - mobility
+  alpha ~ normal(0, 0.5); //alpha distribution - mobility
 	//Loop through countries
   for(m in 1:M){
 	//Loop through all weeks to estimate

@@ -12,7 +12,7 @@ from ast import literal_eval
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 import pystan
-
+import matplotlib
 import matplotlib.pyplot as plt
 import pdb
 
@@ -59,6 +59,27 @@ def format_data(drop_df, weeks_to_simulate):
         #stan_data['deviation']=stan_data['observed_deaths']-stan_data['reg_deaths']
         return stan_data
 
+def analyze_deviation(drop_df, stan_data, outdir):
+    '''Plot deviation to check clustering
+    '''
+    drop_df['av_mob_change'] = (np.absolute(drop_df['retail']/100)+ np.absolute(drop_df['grocery and pharmacy']/100)+ np.absolute(drop_df['transit']/100)+ np.absolute(drop_df['work']/100)+np.absolute(drop_df['residential']/100))/5
+    cmap = plt.cm.rainbow
+
+    for cov in ['retail', 'grocery and pharmacy', 'transit', 'work', 'residential','av_mob_change']:
+        fig, ax = plt.subplots()
+        norm = matplotlib.colors.Normalize(vmin=min(drop_df[cov]), vmax=max(drop_df[cov]))
+        ax.scatter(stan_data['deaths_at_drop_end'],stan_data['observed_deaths'][0,:],color=cmap(norm(drop_df[cov].values)))
+        ax.set_xlabel('drop_end_deaths')
+        ax.set_ylabel('Deaths per million')
+
+        ax.plot(stan_data['deaths_at_drop_end'],stan_data['reg_deaths'][0,:])
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # only needed for matplotlib < 3.1
+        fig.colorbar(sm)
+        ax.set_title(cov)
+        fig.tight_layout()
+        fig.savefig(outdir+'plots/'+cov+'.png', format='png', dpi=300)
+    pdb.set_trace()
 
 def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
@@ -88,12 +109,9 @@ outdir = args.outdir[0]
 
 #Read data
 stan_data = format_data(drop_df, weeks_to_simulate)
-#Plot deviation to check clustering
-# for i in range(49):
-#     plt.scatter([i]*5,stan_data['deviation'][:,i])
-# plt.ylabel('Deviation')
-# plt.xlabel('Country')
-# plt.show()
-
+#Analyze deviations from regressed line
+for i in range(5):
+    drop_df['deviation'+str(i)]=np.array(stan_data['observed_deaths'][i,:]-stan_data['reg_deaths'][i,:])
+analyze_deviation(drop_df, stan_data, outdir)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

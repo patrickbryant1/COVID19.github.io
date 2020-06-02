@@ -102,8 +102,8 @@ def visualize_results(stan_data, outdir):
 
 
     #plot per week delay
-    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
     for i in range(1,6):
+        fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
         #Extract modeling results
         means = {'E_deaths':[]}
         lower_bound = {'E_deaths':[]} #Estimated 2.5 %
@@ -121,17 +121,35 @@ def visualize_results(stan_data, outdir):
             higher_bound75[var].append(var_ij['75%'].values[0])
 
         #Correlation analysis
+        R_reg,p_reg = pearsonr(stan_data['observed_deaths'][i-1,:],stan_data['reg_deaths'][i-1,:])
         R,p = pearsonr(means['E_deaths'],stan_data['observed_deaths'][i-1,:])
-        ax.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], label = 'Week:'+str(i+3)+'|R'+str(np.round(R,2)))
-    fig.legend()
-    ax.set_xlim([-2.1,1.6])
-    ax.set_xlabel('Estimated deaths per million')
-    ax.set_ylabel('Deaths per million')
-    fig.tight_layout()
-    fig.savefig(outdir+'plots/estimated_deaths.png', format='png', dpi=300)
-    fig.tight_layout()
+
+        ax.scatter(means['E_deaths'],stan_data['observed_deaths'][i-1,:], s=4,label = 'Week:'+str(i+3)+'|R:'+str(np.round(R,2))+'|R_reg:'+str(np.round(R_reg,2)) )
+        fig.legend(loc='best')
+        ax.set_xlim([-2.1,1.6])
+        ax.set_xlabel('Estimated deaths per million')
+        ax.set_ylabel('Deaths per million')
+        fig.tight_layout()
+        fig.savefig(outdir+'plots/estimated_deaths'+str(i+3)+'.png', format='png', dpi=300)
+        #Look at deviations
+        analyze_deviation_predictions(np.array(means['E_deaths']),stan_data['observed_deaths'][i-1,:], stan_data['reg_deaths'][i-1,:], outdir+'plots/deviation'+str(i+3)+'.png')
     pdb.set_trace()
     return None
+
+def analyze_deviation_predictions(pred, true, regressed, outname):
+    '''Analyze the deviation from the true values
+    '''
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    reg_dev = regressed-true
+    pred_dev = regressed-pred
+    R,p = pearsonr(reg_dev, pred_dev)
+    ax.scatter(reg_dev, pred_dev,s=4)
+    ax.set_xlim([-1,1])
+    ax.set_xlabel('Regressed deviation (DPM)')
+    ax.set_ylabel('Predited deviation (DPM)')
+    ax.set_title('R:'+str(np.round(R,2)))
+    fig.tight_layout()
+    fig.savefig(outname, format='png', dpi=300)
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
     '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
@@ -152,7 +170,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 
 #####MAIN#####
 #Set font size
-matplotlib.rcParams.update({'font.size': 9})
+matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 drop_df = pd.read_csv(args.drop_df[0])
 weeks_to_simulate = args.weeks_to_simulate[0]
