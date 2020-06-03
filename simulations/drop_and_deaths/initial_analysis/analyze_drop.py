@@ -129,11 +129,13 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
             country_epidemic_data['cases_per_million']=sm_cases/country_pop
 
             #Get cases at drop start and end
-            country_drop_start = drop_dates[drop_dates['Country']==country]['drop_start'].values[0]
-            country_drop_end = drop_dates[drop_dates['Country']==country]['drop_end'].values[0]
-            dsi = country_epidemic_data[country_epidemic_data['date']==country_drop_start].index[0] #drop start index
-            dei = country_epidemic_data[country_epidemic_data['date']==country_drop_end].index[0] #drop end index
-
+            try:
+                country_drop_start = drop_dates[drop_dates['Country']==country]['drop_start'].values[0]
+                country_drop_end = drop_dates[drop_dates['Country']==country]['drop_end'].values[0]
+                dsi = country_epidemic_data[country_epidemic_data['date']==country_drop_start].index[0] #drop start index
+                dei = country_epidemic_data[country_epidemic_data['date']==country_drop_end].index[0] #drop end index
+            except:
+                pdb.set_trace()
             #Check that deaths per million at end are above 0
             if country_epidemic_data.loc[dei,'death_per_million'] <=0:
                 print(country, 'does not have above 0 deaths per million at drop end')
@@ -180,7 +182,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
             drop_duration.append(dei-dsi)
             #Get biggest drop - decide by plotting
-            #identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
+            identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir)
             fetched_countries.append(country)
 
 
@@ -204,10 +206,10 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #plot relationships
         #plot_death_vs_drop(drop_df, outdir)
         #Print countries in increaseing death % order
-        #drop_df = drop_df.sort_values(by='Deaths per million')
-        #countries= np.array(drop_df['Country'])
-        #for i in range(0,len(drop_df),9):
-        #    print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
+        drop_df = drop_df.sort_values(by='Deaths per million')
+        countries= np.array(drop_df['Country'])
+        for i in range(0,len(drop_df),9):
+            print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
         drop_df.to_csv('drop_df.csv')
         return drop_df
 
@@ -255,8 +257,8 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
     #ax2.bar(np.arange(len(cases)), cases, alpha = 0.3, color = 'g')
     ax2.set_ylabel('Deaths per million')
     ax1.set_xlim([msi, len(country_epidemic_data)]) #start of mobility til end of death %
-    ax1.set_ylim([-90,40])
-    ax1.set_yticks([-75,-50,-25,0,25])
+    ax1.set_ylim([-100,50])
+    ax1.set_yticks([-100,-75,-50,-25,0,25,50])
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
