@@ -255,8 +255,8 @@ def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, d
     #ax2.bar(np.arange(len(cases)), cases, alpha = 0.3, color = 'g')
     ax2.set_ylabel('Deaths per million')
     ax1.set_xlim([msi, len(country_epidemic_data)]) #start of mobility til end of death %
-    ax1.set_ylim([-85,30])
-    #ax2.set_ylim([0,15])
+    ax1.set_ylim([-90,40])
+    ax1.set_yticks([-75,-50,-25,0,25])
     fig.tight_layout()
     fig.savefig(outdir+'identify_drop/'+country+'_slide7.png',  format='png')
     plt.close()
@@ -287,6 +287,7 @@ def plot_death_vs_drop(drop_df, outdir):
 def linear_reg(drop_df, outdir):
     '''Pareform LR
     '''
+    drop_df['av_mob_change'] = (np.absolute(drop_df['retail'])+ np.absolute(drop_df['grocery and pharmacy'])+ np.absolute(drop_df['transit'])+ np.absolute(drop_df['work'])+np.absolute(drop_df['residential']))/5
     y = np.array(drop_df['Deaths per million'])
     X = [np.array(drop_df['drop_start_cases']), np.array(drop_df['drop_end_cases']),
         np.array(drop_df['drop_start_deaths']), np.array(drop_df['drop_end_deaths']),
@@ -307,61 +308,75 @@ def linear_reg(drop_df, outdir):
     drop_end_deaths = Z[:,3]
 
     week_colors = {0:'tab:blue',1:'mediumseagreen',2:'tab:cyan',3:'tab:purple',4:'orchid'}
-    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    fig1, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
+    fig2, ax2 = plt.subplots(figsize=(9/2.54, 9/2.54))
     for week in range(5):
         R,p = pearsonr(drop_end_deaths,logy[:,week])
         #ax.scatter(drop_end_deaths,logy[:,week], label ='Week '+str(week+4)+'|R '+str(np.round(R,2)))
         reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
         pred = reg.predict(drop_end_deaths.reshape(-1, 1))
-        ax.plot(drop_end_deaths,pred[:,0],label =str(week+4), color=week_colors[week])
-        #ax.scatter(drop_end_deaths,logy[:,week], s=4)
-    ax.set_ylabel('log Deaths per million x weeks after drop start')
-    ax.set_xlabel('log Deaths per million at drop end')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    fig.legend(loc='upper center')
-    fig.tight_layout()
-    fig.savefig(outdir+'deaths_per_million_x_weeks_later.png',  format='png')
+        ax1.plot(drop_end_deaths,pred[:,0],label='Week '+str(week+4), color=week_colors[week])
+        ax2.scatter(drop_end_deaths,logy[:,week], s=4, label='R '+str(np.round(R,2)), color=week_colors[week])
+    ax1.set_ylabel('log DPM')
+    ax1.set_xlabel('log DPM at full NPI impact')
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    fig1.legend(loc='upper center')
+    fig1.tight_layout()
+    fig1.savefig(outdir+'dpm_lines.png',  format='png')
+    ax2.set_ylabel('log DPM')
+    ax2.set_xlabel('log DPM at full NPI impact')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    fig2.legend(loc='upper center')
+    fig2.tight_layout()
+    fig2.savefig(outdir+'dpm_scatter.png',  format='png')
     plt.close()
 
     #Plot deaths per million at drop end with marked countries
     countries = drop_df['Country']
+    drop_countries = ['Sweden','Belgium','Italy','Poland', 'Czechia','Mexico']
     for week in range(5):
-        fig, ax = plt.subplots(figsize=(18/2.54, 18/2.54))
+        fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+        ax.scatter(Z[:,3],logy[:,week],color='grey')
         for i in range(49):
-            ax.scatter(Z[:,3][i],logy[i,week])
-            ax.text(Z[:,3][i],logy[i,week], countries[i])
+            if countries[i] in drop_countries:
+                ax.scatter(Z[:,3][i],logy[i,week],color='cornflowerblue')
+                ax.text(Z[:,3][i],logy[i,week], countries[i])
         reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
         pred = reg.predict(drop_end_deaths.reshape(-1, 1))
         ax.plot(drop_end_deaths,pred[:,0])
-        ax.set_xlabel('log Deaths per million at drop end')
-        ax.set_ylabel('log Deaths per million')
+        ax.set_xlabel('log DPM at full NPI impact')
+        ax.set_ylabel('log DPM')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         R,p = pearsonr(drop_end_deaths,logy[:,week])
-        ax.set_title('Analyzing NPI timing'+'|PearsonR='+str(np.round(R,2)))
+        ax.set_title('Week '+str(week+4)+'|R='+str(np.round(R,2)))
         fig.tight_layout()
         fig.savefig(outdir+str(week+4)+'_DPM_countries.png',  format='png')
         plt.close()
 
     #Plot deaths per million x weeks later vs mobility drop
     cmap = plt.cm.rainbow
-    for key in ['retail','grocery and pharmacy','transit','work','residential']:
+    for key in ['retail','grocery and pharmacy','transit','work','residential','av_mob_change']:
         fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
         print(key)
         for week in range(1):
-            norm = matplotlib.colors.Normalize(vmin=min(Z[:,3]), vmax=max(Z[:,3]))
+            norm = matplotlib.colors.Normalize(vmin=min(drop_end_deaths), vmax=max(drop_end_deaths))
             R,p = pearsonr(drop_df[key],logy[:,week])
             reg = LinearRegression().fit(drop_end_deaths.reshape(-1, 1),logy[:,week].reshape(-1, 1))
             pred = reg.predict(drop_end_deaths.reshape(-1, 1))
-            dev = np.power(10,pred[:,0])-np.power(10,logy[:,week])
+            dev = pred[:,0]-logy[:,week]
+            #dev = np.power(10,pred[:,0])-np.power(10,logy[:,week])
             #dev = dev/np.power(10,logy[:,week])
             #dev = np.log10(dev)
-            ax.scatter(drop_df[key],dev, s=4, color=cmap(norm(Z[:,3])))
+            #ax.scatter(drop_end_deaths,dev, s=4, color=cmap(drop_df[key]))
+            ax.scatter(drop_df[key],dev, s=4, color=cmap(drop_end_deaths))
             print(str(week)+','+str(np.round(R,2)))
 
-        ax.set_xlabel('Mobility change (%)')
-        ax.set_ylabel('Deviation from regression line')
+        ax.set_xlabel('Mobility at full NPI impact')
+        ax.set_ylabel('Deviation from line (log)')
+        #ax.set_xticks([-3,-2,-1,0,1])
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
