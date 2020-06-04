@@ -138,7 +138,7 @@ def construct_features(extracted_data):
     fetched_countries = extracted_data['countriesAndTerritories'].unique()
     num_countries = len(fetched_countries)
     all_index = np.arange(num_countries)
-    train_index = np.random.choice(all_index, int(num_countries*0.8))
+    train_index = np.random.choice(all_index, int(num_countries*0.9))
     valid_index = np.setdiff1d(all_index, train_index)
     #dpm_history = [] #Deaths per million 4 weeks before
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
@@ -151,6 +151,9 @@ def construct_features(extracted_data):
     y_train = [] #Labels
     y_valid = [] #Labels
 
+    csi_train = [0] #Country split index in data for train
+    csi_valid = [0] #Country split index in data for valid
+
     include_period = 28 #How many days to include data
     predict_lag = 28 #How many days ahead to predict
     for c in all_index:
@@ -158,11 +161,13 @@ def construct_features(extracted_data):
         country_data = extracted_data[extracted_data['countriesAndTerritories']==country]
         #Reset index
         country_data = country_data.reset_index()
+        country_points=0 #Number of data points for country
         for i in range(len(country_data)-predict_lag-include_period):
+            country_points+=1 #Increase points
             x = []
             #Include data for the include period
             #Deaths per million 4 weeks before
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            x.extend(np.log10(np.array(country_data.loc[i:i+include_period-1, 'death_per_million'])+0.000001))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
                 if np.isnan(curr_mob).any():
@@ -173,25 +178,56 @@ def construct_features(extracted_data):
                 X_train.append(np.array(x))
                 #Include data for the predict lag
                 #Deaths per million 4 weeks after today and on
-                y_train.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
+                y_train.append(np.log10(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])+0.001))
+
             if c in valid_index:
                 X_valid.append(np.array(x))
                 #Include data for the predict lag
                 #Deaths per million 4 weeks after today and on
-                y_valid.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
+                y_valid.append(np.log10(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])+0.001))
 
-    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid)
+        if c in train_index:
+            csi_train.append(country_points)
+        if c in valid_index:
+            csi_valid.append(country_points)
 
-def train(X_train,y_train, X_valid, y_valid):
+    print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
+    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid), csi_train, csi_valid
+
+def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid):
     '''Fit rf regressor
     '''
 
     regr = RandomForestRegressor(random_state=0)
+    print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
     print(pearsonr(pred,y_valid))
-    pdb.set_trace()
+    plt.scatter(pred,y_valid)
+    plt.xlabel('Predicted DPM')
+    plt.ylabel('True DPM')
+    plt.show()
+    #Visualize predictions by plotting
+    visualize_pred(X_valid,pred,y_valid, csi_valid)
 
+def visualize_pred(X_valid,pred,y_valid, csi_valid):
+    '''Plot the true and predicted epidemic curves
+    '''
+    csi_valid = np.cumsum(csi_valid)
+    for i in range(len(csi_valid)-1):
+        country_inp = X_valid[csi_valid[i]:csi_valid[i+1],0:28]
+        country_pred = pred[csi_valid[i]:csi_valid[i+1]]
+        country_true = y_valid[csi_valid[i]:csi_valid[i+1]]
+        #Plot
+        days = np.arange(len(country_inp)+28+len(country_pred))
+        dpm = np.zeros(len(days))
+        dpm[:len(country_inp)]=country_inp
+        plt.bar(days,dpm,color='b')
+        dpm = np.zeros(len(days))
+        dpm[en(country_inp)+28:]=country_pred
+        plt.bar(days,dpm,color='g')
+        plt.show()
+        pdb.set_trace()
 #####MAIN#####
 #Set random seed to ensure same random split every time
 np.random.seed(seed=42)
@@ -207,5 +243,5 @@ if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
 else:
     extracted_data = pd.read_csv('extracted_data.csv')
-X_train,y_train, X_valid, y_valid = construct_features(extracted_data)
-train(X_train,y_train, X_valid, y_valid)
+X_train,y_train, X_valid, y_valid, csi_train, csi_valid = construct_features(extracted_data)
+train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid)
