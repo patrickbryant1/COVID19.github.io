@@ -13,7 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import seaborn as sns
 from scipy.stats import pearsonr
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 import pdb
 
 
@@ -29,7 +29,7 @@ parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, he
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def format_data(epidemic_data, mobility_data, drop_starts, outdir):
+def format_data(epidemic_data, mobility_data, outdir):
         '''Read in and format all data needed for the analysis
         '''
 
@@ -41,8 +41,6 @@ def format_data(epidemic_data, mobility_data, drop_starts, outdir):
         mobility_data['date'] = pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Mobility key conversions
         key_conversions = {'United_States_of_America':'United States'}
-        #Convert drop start data to datetime
-        drop_starts['date'] = pd.to_datetime(drop_starts['date'], format='%Y/%m/%d')
 
         mobility_keys = {'retail_and_recreation_percent_change_from_baseline':[],
                            'grocery_and_pharmacy_percent_change_from_baseline':[],
@@ -64,9 +62,14 @@ def format_data(epidemic_data, mobility_data, drop_starts, outdir):
 
             #Check that at least 10 deaths per day has been reached
             country_deaths = np.array(country_epidemic_data['deaths'])
-            if max(country_deaths)<10:
-                print('Less than 10 deaths per day reached for', country)
+            death_sum=np.sum(country_deaths)
+            if death_sum < 100:
+                print('Less than 100 deaths for', country)
                 continue
+
+
+
+
             #Mobility data from Google
             if country in key_conversions.keys():
                 mob_key = key_conversions[country]
@@ -114,38 +117,51 @@ def format_data(epidemic_data, mobility_data, drop_starts, outdir):
             extracted_data = pd.concat([extracted_data, country_epidemic_data])
 
         extracted_data.to_csv('extracted_data.csv')
-        pdb.set_trace()
-        return extracted_data
+        print('Number of fetched countries:',len(extracted_data['countriesAndTerritories'].unique()))
 
-def construct_features(df):
+        return None
 
-
-    fetched_countries = []
-    dpm_history = [] #Deaths per million 4 weeks before
-    dpm_pred = [] #Deaths per million 4 weeks after today and on
-    fetched_mobility = {'retail_and_recreation_percent_change_from_baseline':[],
-                       'grocery_and_pharmacy_percent_change_from_baseline':[],
-                       'transit_stations_percent_change_from_baseline':[],
-                       'workplaces_percent_change_from_baseline':[],
-                       'residential_percent_change_from_baseline':[]}
-
-
-def linear_reg(drop_df, outdir):
-    '''Pareform LR
+def construct_features(extracted_data):
+    '''Construct features for ml model
     '''
-    drop_df['av_mob_change'] = (np.absolute(drop_df['retail'])+ np.absolute(drop_df['grocery and pharmacy'])+ np.absolute(drop_df['transit'])+ np.absolute(drop_df['work'])+np.absolute(drop_df['residential']))/5
-    y = np.array(drop_df['Deaths per million'])
-    X = [np.array(drop_df['drop_start_cases']), np.array(drop_df['drop_end_cases']),
-        np.array(drop_df['drop_start_deaths']), np.array(drop_df['drop_end_deaths']),
-       np.array(drop_df['drop_duration']), np.array(drop_df['retail']),
-       np.array(drop_df['grocery and pharmacy']), np.array(drop_df['transit']),
-       np.array(drop_df['work']),np.array(drop_df['residential'])]
-    X = np.array(X)
-    X=X.T
-    Z=np.abs(X)
-    Z=Z+0.000001
-    Z = np.log10(Z)
 
+    fetched_countries = extracted_data['countriesAndTerritories'].unique()
+    #dpm_history = [] #Deaths per million 4 weeks before
+    dpm_pred = [] #Deaths per million 4 weeks after today and on
+    fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
+                       'grocery_and_pharmacy_percent_change_from_baseline',
+                       'transit_stations_percent_change_from_baseline',
+                       'workplaces_percent_change_from_baseline',
+                       'residential_percent_change_from_baseline']
+    X = [] #Input features
+    include_period = 28 #How many days to include data
+    predict_lag = 28 #How many days ahead to predict
+    for country in fetched_countries:
+        country_data = extracted_data[extracted_data['countriesAndTerritories']==country]
+        #Reset index
+        country_data = country_data.reset_index()
+        for i in range(len(country_data)-predict_lag-include_period):
+            x = []
+            #Include data for the include period
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            for key in fetched_mobility:
+                curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
+
+                x.extend(np.array(country_data.loc[i:i+include_period-1, key]))
+            X.append(np.array(x))
+            #Include data for the predict lag
+            dpm_pred.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
+
+    return np.array(X), np.array(dpm_pred)
+
+def train(X,y):
+    '''Fit rf regressor
+    '''
+
+    regr = RandomForestRegressor(random_state=0)
+    pdb.set_trace()
+    regr.fit(X, y)
+    pdb.set_trace()
 
 #####MAIN#####
 #Set font size
@@ -154,6 +170,10 @@ args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
-extracted_data= format_data(epidemic_data, mobility_data, outdir)
-#drop_df=pd.read_csv('drop_df.csv')
-linear_reg(drop_df, outdir)
+try:
+    extracted_data = pd.read_csv('extracted_data.csv')
+except:
+    extracted_data= format_data(epidemic_data, mobility_data, outdir)
+X,y = construct_features(extracted_data)
+pdb.set_trace()
+train(X,y)
