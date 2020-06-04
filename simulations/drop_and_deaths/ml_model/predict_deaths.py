@@ -26,7 +26,6 @@ parser = argparse.ArgumentParser(description = '''Predic the number of deaths ah
                                                 e.g. MCMC simulations. ''')
 parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Google mobility data (csv).')
-parser.add_argument('--drop_starts', nargs=1, type= str, default=sys.stdin, help = 'Drop start dates (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -82,12 +81,15 @@ def format_data(epidemic_data, mobility_data, drop_starts, outdir):
                 continue
             #reset index
             country_mobility_data = country_mobility_data.reset_index()
+            #Get start and end dates
+            mobility_start = country_mobility_data['date'][0]
+            mobility_end = max(country_mobility_data['date'])
 
             #Smooth deaths
             sm_deaths = np.zeros(len(country_epidemic_data))
-            for i in range(7,len(country_epidemic_data)):
+            for i in range(7,len(country_epidemic_data)+1):
                 sm_deaths[i-1]=np.average(country_deaths[i-7:i])
-            sm_deaths[0:6] = sm_deaths[7]
+            sm_deaths[0:6] = sm_deaths[6]
             country_epidemic_data['smoothed_deaths']=sm_deaths
             #Get population in millions
             country_pop = country_epidemic_data['popData2018'].values[0]/1000000
@@ -98,16 +100,15 @@ def format_data(epidemic_data, mobility_data, drop_starts, outdir):
             for mob_key in mobility_keys:
                 data = np.array(country_mobility_data[mob_key])
                 y = np.zeros(len(country_mobility_data))
-                for i in range(7,len(data)):
-                    y[i]=np.average(data[i-7:i])
-                y[0:6] = y[7]
+                for i in range(7,len(data)+1):
+                    y[i-1]=np.average(data[i-7:i])
+                y[0:6] = y[6]
                 country_mobility_data[mob_key]=y
             #Merge epidemic data with mobility data
             country_epidemic_data = country_epidemic_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
 
-            #Get all data after the drop start
-            country_drop_start = drop_starts[drop_starts['Country']==country]['date'].values[0]
-            country_epidemic_data = country_epidemic_data[country_epidemic_data['date']>=country_drop_start]
+            #Get all data after the mobility start
+            country_epidemic_data = country_epidemic_data[country_epidemic_data['date']>=mobility_start]
 
             #Save data
             extracted_data = pd.concat([extracted_data, country_epidemic_data])
@@ -152,8 +153,7 @@ matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
-drop_starts = pd.read_csv(args.drop_starts[0])
 outdir = args.outdir[0]
-extracted_data= format_data(epidemic_data, mobility_data, drop_starts, outdir)
+extracted_data= format_data(epidemic_data, mobility_data, outdir)
 #drop_df=pd.read_csv('drop_df.csv')
 linear_reg(drop_df, outdir)

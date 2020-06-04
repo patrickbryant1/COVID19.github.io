@@ -54,7 +54,8 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
         #Save fetched countries, death per million and mobility data
         fetched_countries = []
-        death_per_million = [] #at assessment point
+        death_per_million = [] #at assessment points
+        end_death_per_million = [] #at last point
         drop_start_deaths = [] #deaths at drop start
         drop_end_deaths = [] #deaths at drop end
         cases_per_million = [] #cases at prediction date
@@ -108,9 +109,9 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
 
             #Smooth deaths
             sm_deaths = np.zeros(len(country_epidemic_data))
-            for i in range(7,len(country_epidemic_data)):
+            for i in range(7,len(country_epidemic_data)+1):
                 sm_deaths[i-1]=np.average(country_deaths[i-7:i])
-            sm_deaths[0:6] = sm_deaths[7]
+            sm_deaths[0:6] = sm_deaths[6]
             country_epidemic_data['smoothed_deaths']=sm_deaths
             #Get population in millions
             country_pop = country_epidemic_data['popData2018'].values[0]/1000000
@@ -123,9 +124,9 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                     #Smooth cases
             sm_cases = np.zeros(len(country_epidemic_data))
             cases = np.array(country_epidemic_data['cases'])
-            for i in range(7,len(country_epidemic_data)):
+            for i in range(7,len(country_epidemic_data)+1):
                 sm_cases[i-1]=np.average(cases[i-7:i])
-            sm_cases[0:6] = sm_cases[7]
+            sm_cases[0:6] = sm_cases[6]
             country_epidemic_data['cases_per_million']=sm_cases/country_pop
 
             #Get cases at drop start and end
@@ -147,15 +148,15 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 #construct a 1-week sliding average to smooth the mobility data
                 data = np.array(country_mobility_data[name])
                 y = np.zeros(len(country_mobility_data))
-                for i in range(7,len(data)):
-                    y[i]=np.average(data[i-7:i])
-                y[0:6] = y[7]
+                for i in range(7,len(data)+1):
+                    y[i-1]=np.average(data[i-7:i])
+                y[0:6] = y[6]
                 country_mobility_data[name]=y
                 fetched_mobility[name].append(y[country_drop_ei])
 
             #Merge epidemic data with mobility data
             country_epidemic_data = country_epidemic_data.merge(country_mobility_data, left_on = 'date', right_on ='date', how = 'left')
-
+            country_epidemic_data = country_epidemic_data.reset_index()
 
             #Save data
             #Save death per million x weeks after mobility drop
@@ -172,7 +173,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
                 death_delay =dsi+(7*week)
                 death_per_million[-1].append(country_epidemic_data.loc[death_delay,'death_per_million'])
                 cases_per_million[-1].append(country_epidemic_data.loc[death_delay,'cases_per_million'])
-
+            end_death_per_million.append(country_epidemic_data.loc[len(country_epidemic_data)-1,'death_per_million'])
             #Get start and en values
             days_after_drop.append(len(country_epidemic_data)-1-dsi)
             drop_start_cases.append(country_epidemic_data.loc[dsi,'cases_per_million']) #%cases at drop start
@@ -190,6 +191,7 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         drop_df = pd.DataFrame() #Save drop values
         drop_df['Country'] = fetched_countries
         drop_df['Deaths per million'] = death_per_million
+        drop_df['end_dpm']=end_death_per_million #At last available date
         drop_df['drop_start_deaths'] = drop_start_deaths#deaths per million  at drop start
         drop_df['drop_end_deaths'] = drop_end_deaths #deaths per million  at drop end
         drop_df['drop_start_cases'] = drop_start_cases#cases per million  at drop start
@@ -206,11 +208,12 @@ def construct_drop(epidemic_data, mobility_data, drop_dates, outdir):
         #plot relationships
         #plot_death_vs_drop(drop_df, outdir)
         #Print countries in increaseing death % order
-        drop_df = drop_df.sort_values(by='Deaths per million')
+        drop_df = drop_df.sort_values(by='end_dpm')
         countries= np.array(drop_df['Country'])
         for i in range(0,len(drop_df),9):
             print('montage '+'_slide7.png '.join(countries[i:i+9])+ '_slide7.png -tile 3x3 -geometry +2+2')
         drop_df.to_csv('drop_df.csv')
+        pdb.set_trace()
         return drop_df
 
 def identify_drop(country_epidemic_data, country, drop_dates, covariate_names, death_start, mobility_start, mobility_end, outdir):
