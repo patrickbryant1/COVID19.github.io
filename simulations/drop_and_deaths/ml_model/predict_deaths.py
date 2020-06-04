@@ -138,7 +138,7 @@ def construct_features(extracted_data):
     fetched_countries = extracted_data['countriesAndTerritories'].unique()
     num_countries = len(fetched_countries)
     all_index = np.arange(num_countries)
-    train_index = np.random.choice(all_index, int(num_countries*0.9))
+    train_index = np.random.choice(all_index, int(num_countries*0.8))
     valid_index = np.setdiff1d(all_index, train_index)
     #dpm_history = [] #Deaths per million 4 weeks before
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
@@ -202,11 +202,12 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid):
     print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
-    print(pearsonr(pred,y_valid))
+    R,p = pearsonr(pred,y_valid)
+    print('Validation R:', np.round(R,2))
     plt.scatter(pred,y_valid)
     plt.xlabel('Predicted DPM')
     plt.ylabel('True DPM')
-    plt.show()
+    plt.close()
     #Visualize predictions by plotting
     visualize_pred(X_valid,pred,y_valid, csi_valid)
 
@@ -215,17 +216,17 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid):
     '''
     csi_valid = np.cumsum(csi_valid)
     for i in range(len(csi_valid)-1):
-        country_inp = X_valid[csi_valid[i]:csi_valid[i+1],0:28]
+        country_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
         country_pred = pred[csi_valid[i]:csi_valid[i+1]]
         country_true = y_valid[csi_valid[i]:csi_valid[i+1]]
         #Plot
         days = np.arange(len(country_inp)+28+len(country_pred))
         dpm = np.zeros(len(days))
         dpm[:len(country_inp)]=country_inp
-        plt.bar(days,dpm,color='b')
+        plt.bar(days,np.power(10,dpm),color='b')
         dpm = np.zeros(len(days))
-        dpm[en(country_inp)+28:]=country_pred
-        plt.bar(days,dpm,color='g')
+        dpm[len(country_inp)+28:]=country_pred
+        plt.bar(daysnp.power(10,dpm),color='g')
         plt.show()
         pdb.set_trace()
 #####MAIN#####
