@@ -60,14 +60,18 @@ def format_data(epidemic_data, mobility_data, outdir):
             #Reset index
             country_epidemic_data = country_epidemic_data.reset_index()
 
-            #Check that at least 10 deaths per day has been reached
+
             country_deaths = np.array(country_epidemic_data['deaths'])
+            #Ensure no negative corrections are present. Set these to the values of the previous date
+            for i in range(len(country_deaths)):
+                if country_deaths[i]<0:
+                    country_deaths[i] = country_deaths[i-1]
+
+            #Check that at least 100 deaths in total have been observed
             death_sum=np.sum(country_deaths)
             if death_sum < 100:
                 print('Less than 100 deaths for', country)
                 continue
-
-
 
 
             #Mobility data from Google
@@ -104,6 +108,12 @@ def format_data(epidemic_data, mobility_data, outdir):
                 data = np.array(country_mobility_data[mob_key])
                 y = np.zeros(len(country_mobility_data))
                 for i in range(7,len(data)+1):
+                    #Check that there are no NaNs
+                    if np.isnan(data[i-7:i]).any():
+                        #If there are NaNs, loop through and replace with value from prev date
+                        for i_nan in range(i-7,i):
+                            if np.isnan(data[i_nan]):
+                                data[i_nan]=data[i_nan-1]
                     y[i-1]=np.average(data[i-7:i])
                 y[0:6] = y[6]
                 country_mobility_data[mob_key]=y
@@ -119,61 +129,83 @@ def format_data(epidemic_data, mobility_data, outdir):
         extracted_data.to_csv('extracted_data.csv')
         print('Number of fetched countries:',len(extracted_data['countriesAndTerritories'].unique()))
 
-        return None
+        return extracted_data
 
 def construct_features(extracted_data):
     '''Construct features for ml model
     '''
 
     fetched_countries = extracted_data['countriesAndTerritories'].unique()
+    num_countries = len(fetched_countries)
+    all_index = np.arange(num_countries)
+    train_index = np.random.choice(all_index, int(num_countries*0.8))
+    valid_index = np.setdiff1d(all_index, train_index)
     #dpm_history = [] #Deaths per million 4 weeks before
-    dpm_pred = [] #Deaths per million 4 weeks after today and on
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
                        'grocery_and_pharmacy_percent_change_from_baseline',
                        'transit_stations_percent_change_from_baseline',
                        'workplaces_percent_change_from_baseline',
                        'residential_percent_change_from_baseline']
-    X = [] #Input features
+    X_train = [] #Input features
+    X_valid = [] #Input features
+    y_train = [] #Labels
+    y_valid = [] #Labels
+
     include_period = 28 #How many days to include data
     predict_lag = 28 #How many days ahead to predict
-    for country in fetched_countries:
+    for c in all_index:
+        country = fetched_countries[c]
         country_data = extracted_data[extracted_data['countriesAndTerritories']==country]
         #Reset index
         country_data = country_data.reset_index()
         for i in range(len(country_data)-predict_lag-include_period):
             x = []
             #Include data for the include period
+            #Deaths per million 4 weeks before
             x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
-
+                if np.isnan(curr_mob).any():
+                    pdb.set_trace()
                 x.extend(np.array(country_data.loc[i:i+include_period-1, key]))
-            X.append(np.array(x))
-            #Include data for the predict lag
-            dpm_pred.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
 
-    return np.array(X), np.array(dpm_pred)
+            if c in train_index:
+                X_train.append(np.array(x))
+                #Include data for the predict lag
+                #Deaths per million 4 weeks after today and on
+                y_train.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
+            if c in valid_index:
+                X_valid.append(np.array(x))
+                #Include data for the predict lag
+                #Deaths per million 4 weeks after today and on
+                y_valid.append(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])
 
-def train(X,y):
+    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid)
+
+def train(X_train,y_train, X_valid, y_valid):
     '''Fit rf regressor
     '''
 
     regr = RandomForestRegressor(random_state=0)
-    pdb.set_trace()
-    regr.fit(X, y)
+    regr.fit(X_train,y_train)
+    pred = regr.predict(X_valid)
+    print(pearsonr(pred,y_valid))
     pdb.set_trace()
 
 #####MAIN#####
+#Set random seed to ensure same random split every time
+np.random.seed(seed=42)
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
-try:
-    extracted_data = pd.read_csv('extracted_data.csv')
-except:
+
+extract = False
+if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
-X,y = construct_features(extracted_data)
-pdb.set_trace()
-train(X,y)
+else:
+    extracted_data = pd.read_csv('extracted_data.csv')
+X_train,y_train, X_valid, y_valid = construct_features(extracted_data)
+train(X_train,y_train, X_valid, y_valid)
