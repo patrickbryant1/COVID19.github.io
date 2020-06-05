@@ -167,7 +167,7 @@ def construct_features(extracted_data):
             x = []
             #Include data for the include period
             #Deaths per million 4 weeks before
-            x.extend(np.log10(np.array(country_data.loc[i:i+include_period-1, 'death_per_million'])+0.000001))
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
                 if np.isnan(curr_mob).any():
@@ -178,13 +178,13 @@ def construct_features(extracted_data):
                 X_train.append(np.array(x))
                 #Include data for the predict lag
                 #Deaths per million 4 weeks after today and on
-                y_train.append(np.log10(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])+0.001))
+                y_train.append(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million']))
 
             if c in valid_index:
                 X_valid.append(np.array(x))
                 #Include data for the predict lag
                 #Deaths per million 4 weeks after today and on
-                y_valid.append(np.log10(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million'])+0.001))
+                y_valid.append(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million']))
 
         if c in train_index:
             csi_train.append(country_points)
@@ -214,19 +214,64 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid):
 def visualize_pred(X_valid,pred,y_valid, csi_valid):
     '''Plot the true and predicted epidemic curves
     '''
+    ip=28 #include period
+    pl=28 #predict lag
     csi_valid = np.cumsum(csi_valid)
     for i in range(len(csi_valid)-1):
+        #Create figure
+        fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
+        ax2 = ax1.twinx()
+        #Get data
         country_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
+        country_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,1:ip]])
+        #Retail
+        retail_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip]
+        retail_inp = np.concatenate([retail_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
+        #Grocery
+        grocery_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*2]
+        grocery_inp = np.concatenate([grocery_inp,X_valid[csi_valid[i+1]-1,ip*2+1:ip*3]])
+        #Transit
+        transit_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*3]
+        transit_inp = np.concatenate([transit_inp,X_valid[csi_valid[i+1]-1,ip*3+1:ip*4]])
+        #Work
+        work_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*4]
+        work_inp = np.concatenate([work_inp,X_valid[csi_valid[i+1]-1,ip*4+1:ip*5]])
+        #Residential
+        res_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*5]
+        res_inp = np.concatenate([res_inp,X_valid[csi_valid[i+1]-1,ip*5+1:ip*6]])
+        #Predicted and true
         country_pred = pred[csi_valid[i]:csi_valid[i+1]]
         country_true = y_valid[csi_valid[i]:csi_valid[i+1]]
         #Plot
-        days = np.arange(len(country_inp)+28+len(country_pred))
-        dpm = np.zeros(len(days))
-        dpm[:len(country_inp)]=country_inp
-        plt.bar(days,np.power(10,dpm),color='b')
-        dpm = np.zeros(len(days))
-        dpm[len(country_inp)+28:]=country_pred
-        plt.bar(daysnp.power(10,dpm),color='g')
+        #Input data
+        #DPM
+        days = np.arange(len(country_inp)+28)
+        dpm_x = np.zeros(len(days))
+        dpm_x[:len(country_inp)]=country_inp
+        ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Input')
+        #Mobility input
+        days = np.arange(len(country_inp))
+        mob = np.zeros(len(days))
+        mob[:len(country_inp)]=retail_inp
+        ax1.plot(days,mob,color='tab:red')
+        mob[:len(country_inp)]=grocery_inp
+        ax1.plot(days,mob,color='tab:purple')
+        mob[:len(country_inp)]=transit_inp
+        ax1.plot(days,mob,color='tab:pink')
+        mob[:len(country_inp)]=work_inp
+        ax1.plot(days,mob,color='tab:olive')
+        mob[:len(country_inp)]=res_inp
+        ax1.plot(days,mob,color='tab:cyan')
+        #True
+        days = np.arange(len(country_inp)+28)
+        dpm_true = np.zeros(len(days))
+        dpm_true[-len(country_true):]=country_true
+        ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
+        #Pred
+        dpm_pred = np.zeros(len(days))
+        dpm_pred[-len(country_pred):]=country_pred
+        ax2.bar(days, dpm_pred, color='r', alpha = 0.3, label='Pred')
+        fig.legend()
         plt.show()
         pdb.set_trace()
 #####MAIN#####
