@@ -138,7 +138,7 @@ def construct_features(extracted_data):
     fetched_countries = extracted_data['countriesAndTerritories'].unique()
     num_countries = len(fetched_countries)
     all_index = np.arange(num_countries)
-    train_index = np.random.choice(all_index, int(num_countries*0.8))
+    train_index = np.random.choice(all_index, int(num_countries*0.9))
     valid_index = np.setdiff1d(all_index, train_index)
     #dpm_history = [] #Deaths per million 4 weeks before
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
@@ -154,6 +154,8 @@ def construct_features(extracted_data):
     csi_train = [0] #Country split index in data for train
     csi_valid = [0] #Country split index in data for valid
 
+    train_countries = []
+    valid_countries = []
     include_period = 28 #How many days to include data
     predict_lag = 28 #How many days ahead to predict
     for c in all_index:
@@ -188,17 +190,19 @@ def construct_features(extracted_data):
 
         if c in train_index:
             csi_train.append(country_points)
+            train_countries.append(country)
         if c in valid_index:
             csi_valid.append(country_points)
+            valid_countries.append(country)
 
     print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
-    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid), csi_train, csi_valid
+    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid), csi_train, csi_valid, train_countries, valid_countries
 
-def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid):
+def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outdir):
     '''Fit rf regressor
     '''
 
-    regr = RandomForestRegressor(random_state=0)
+    regr = RandomForestRegressor(random_state=0,n_estimators=200)
     print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
@@ -209,9 +213,9 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid):
     plt.ylabel('True DPM')
     plt.close()
     #Visualize predictions by plotting
-    visualize_pred(X_valid,pred,y_valid, csi_valid)
+    visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir)
 
-def visualize_pred(X_valid,pred,y_valid, csi_valid):
+def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
     '''Plot the true and predicted epidemic curves
     '''
     ip=28 #include period
@@ -245,7 +249,7 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid):
         #Plot
         #Input data
         #DPM
-        days = np.arange(len(country_inp)+28)
+        days = np.arange(len(country_true)+ip+pl)
         dpm_x = np.zeros(len(days))
         dpm_x[:len(country_inp)]=country_inp
         ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Input')
@@ -269,14 +273,17 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid):
         ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
         #Pred
         dpm_pred = np.zeros(len(days))
-        dpm_pred[-len(country_pred):]=country_pred
+        dpm_pred[-len(country_true):]=country_pred
         ax2.bar(days, dpm_pred, color='r', alpha = 0.3, label='Pred')
+        ax1.set_title(countries[i])
         fig.legend()
-        plt.show()
-        pdb.set_trace()
+        fig.tight_layout()
+        fig.savefig(outdir+countries[i]+'_pred.png',  format='png')
+        plt.close()
+
 #####MAIN#####
 #Set random seed to ensure same random split every time
-np.random.seed(seed=42)
+np.random.seed(seed=0)
 #Set font size
 matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
@@ -289,5 +296,5 @@ if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
 else:
     extracted_data = pd.read_csv('extracted_data.csv')
-X_train,y_train, X_valid, y_valid, csi_train, csi_valid = construct_features(extracted_data)
-train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid)
+X_train,y_train, X_valid, y_valid, csi_train, csi_valid, train_countries, valid_countries = construct_features(extracted_data)
+train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,valid_countries,outdir)
