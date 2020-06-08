@@ -14,6 +14,7 @@ import numpy as np
 import seaborn as sns
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 import pdb
 
 
@@ -156,8 +157,8 @@ def construct_features(extracted_data):
 
     train_countries = []
     valid_countries = []
-    include_period = 28 #How many days to include data
-    predict_lag = 28 #How many days ahead to predict
+    include_period = 21 #How many days to include data
+    predict_lag = 21 #How many days ahead to predict
     for c in all_index:
         country = fetched_countries[c]
         country_data = extracted_data[extracted_data['countriesAndTerritories']==country]
@@ -176,17 +177,19 @@ def construct_features(extracted_data):
                     pdb.set_trace()
                 x.extend(np.array(country_data.loc[i:i+include_period-1, key]))
 
+            #Include data for the predict lag
+            #Change in deaths per million predict_lag days after today and on
+            if country_data.loc[i+include_period-1, 'death_per_million'] == 0:
+                dpm_change = 1
+            else:
+                dpm_change = country_data.loc[i+include_period+predict_lag-1, 'death_per_million']/country_data.loc[i+include_period-1, 'death_per_million']
+            #Append to train or valid data
             if c in train_index:
                 X_train.append(np.array(x))
-                #Include data for the predict lag
-                #Deaths per million 4 weeks after today and on
-                y_train.append(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million']))
-
+                y_train.append(dpm_change)
             if c in valid_index:
                 X_valid.append(np.array(x))
-                #Include data for the predict lag
-                #Deaths per million 4 weeks after today and on
-                y_valid.append(np.array(country_data.loc[i+include_period+predict_lag-1, 'death_per_million']))
+                y_valid.append(dpm_change)
 
         if c in train_index:
             csi_train.append(country_points)
@@ -202,15 +205,18 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outd
     '''Fit rf regressor
     '''
 
-    regr = RandomForestRegressor(random_state=0,n_estimators=200)
+    regr = RandomForestRegressor(random_state=0,n_estimators=10)
     print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
     R,p = pearsonr(pred,y_valid)
     print('Validation R:', np.round(R,2))
-    plt.scatter(pred,y_valid)
-    plt.xlabel('Predicted DPM')
-    plt.ylabel('True DPM')
+    print('Error:', np.average(np.absolute(pred-y_valid)))
+    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    ax.scatter(pred,y_valid)
+    ax.set_xlabel('Predicted DPM')
+    ax.set_ylabel('True DPM')
+    fig.savefig(outdir+'true_vs_pred.png',  format='png')
     plt.close()
     #Visualize predictions by plotting
     visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir)
@@ -218,8 +224,8 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outd
 def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
     '''Plot the true and predicted epidemic curves
     '''
-    ip=28 #include period
-    pl=28 #predict lag
+    ip=21 #include period
+    pl=21 #predict lag
     csi_valid = np.cumsum(csi_valid)
     for i in range(len(csi_valid)-1):
         #Create figure
