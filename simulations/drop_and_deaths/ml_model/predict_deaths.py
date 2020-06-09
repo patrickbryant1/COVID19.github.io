@@ -108,9 +108,9 @@ def format_data(epidemic_data, mobility_data, outdir):
             country_epidemic_data['smoothed_cases']=sm_cases
 
             #Get population in millions
-            #country_pop = country_epidemic_data['popData2018'].values[0]/1000000
+            country_pop = country_epidemic_data['popData2018'].values[0]/1000000
             #Calculate deaths per million and add to df
-            #country_epidemic_data['death_per_million'] =sm_deaths/country_pop
+            country_epidemic_data['death_per_million'] =sm_deaths/country_pop
 
             #Construct a 1-week sliding average to smooth the mobility data
             for mob_key in mobility_keys:
@@ -178,10 +178,10 @@ def construct_features(extracted_data):
             cum_measures = [] #Cumulative data - to capture the full history
             #Include data for the include period
             #Deaths and cases
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'smoothed_deaths']))
-            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'smoothed_deaths']))
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'smoothed_cases']))
-            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'smoothed_cases']))
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'death_per_million']))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
                 if np.isnan(curr_mob).any():
@@ -199,7 +199,7 @@ def construct_features(extracted_data):
             x.append(i+include_period)
             #Include data for the predict lag
             for p in range(predict_lag):
-                dpm_change = country_data.loc[i+include_period+p, 'smoothed_deaths']
+                dpm_change = country_data.loc[i+include_period+p, 'death_per_million']
                 #Append to train or valid data
                 if c in train_index:
                     X_train.append(np.array(x))
@@ -213,10 +213,10 @@ def construct_features(extracted_data):
             continue
 
         if c in train_index:
-            csi_train.append(country_points)
+            csi_train.append(country_points*predict_lag)
             train_countries.append(country)
         if c in valid_index:
-            csi_valid.append(country_points)
+            csi_valid.append(country_points*predict_lag)
             valid_countries.append(country)
 
     print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
@@ -327,7 +327,7 @@ epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
 
-extract = False
+extract = True
 if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
 else:
