@@ -68,12 +68,12 @@ def format_data(epidemic_data, mobility_data, outdir):
                 if country_deaths[i]<0:
                     country_deaths[i] = country_deaths[i-1]
 
-            #Check that at least 100 deaths in total have been observed
-            death_sum=np.sum(country_deaths)
-            if death_sum < 100:
-                print('Less than 100 deaths for', country)
-                continue
 
+            country_cases = np.array(country_epidemic_data['cases'])
+            #Ensure no negative corrections are present. Set these to the values of the previous date
+            for i in range(len(country_cases)):
+                if country_cases[i]<0:
+                    country_cases[i] = country_cases[i-1]
 
             #Mobility data from Google
             if country in key_conversions.keys():
@@ -99,10 +99,18 @@ def format_data(epidemic_data, mobility_data, outdir):
                 sm_deaths[i-1]=np.average(country_deaths[i-7:i])
             sm_deaths[0:6] = sm_deaths[6]
             country_epidemic_data['smoothed_deaths']=sm_deaths
+
+            #Smooth cases
+            sm_cases = np.zeros(len(country_epidemic_data))
+            for i in range(7,len(country_epidemic_data)+1):
+                sm_cases[i-1]=np.average(country_cases[i-7:i])
+            sm_cases[0:6] = sm_cases[6]
+            country_epidemic_data['smoothed_cases']=sm_cases
+
             #Get population in millions
-            country_pop = country_epidemic_data['popData2018'].values[0]/1000000
+            #country_pop = country_epidemic_data['popData2018'].values[0]/1000000
             #Calculate deaths per million and add to df
-            country_epidemic_data['death_per_million'] =sm_deaths/country_pop
+            #country_epidemic_data['death_per_million'] =sm_deaths/country_pop
 
             #Construct a 1-week sliding average to smooth the mobility data
             for mob_key in mobility_keys:
@@ -126,7 +134,6 @@ def format_data(epidemic_data, mobility_data, outdir):
 
             #Save data
             extracted_data = pd.concat([extracted_data, country_epidemic_data])
-
         extracted_data.to_csv('extracted_data.csv')
         print('Number of fetched countries:',len(extracted_data['countriesAndTerritories'].unique()))
 
@@ -168,21 +175,29 @@ def construct_features(extracted_data):
         for i in range(len(country_data)-predict_lag-include_period):
             country_points+=1 #Increase points
             x = []
+            cum_measures = [] #Cumulative data - to capture the full history
             #Include data for the include period
-            #Deaths per million 4 weeks before
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            #Deaths and cases
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'smoothed_deaths']))
+            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'smoothed_deaths']))
+            x.extend(np.array(country_data.loc[i:i+include_period-1, 'smoothed_cases']))
+            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'smoothed_cases']))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
                 if np.isnan(curr_mob).any():
-                    pdb.set_trace()
+                    continue
+
                 x.extend(np.array(country_data.loc[i:i+include_period-1, key]))
+                cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, key]))
+
+            if len(cum_measures)<7:
+                print(country)
+                continue
+            else:
+                x.extend(cum_measures)
 
             #Include data for the predict lag
-            #Change in deaths per million predict_lag days after today and on
-            if country_data.loc[i+include_period-1, 'death_per_million'] == 0:
-                dpm_change = 1
-            else:
-                dpm_change = country_data.loc[i+include_period+predict_lag-1, 'death_per_million']/country_data.loc[i+include_period-1, 'death_per_million']
+            dpm_change = country_data.loc[i+include_period+predict_lag-1, 'smoothed_deaths']
             #Append to train or valid data
             if c in train_index:
                 X_train.append(np.array(x))
@@ -213,9 +228,9 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outd
     print('Validation R:', np.round(R,2))
     print('Error:', np.average(np.absolute(pred-y_valid)))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-    ax.scatter(pred,y_valid)
-    ax.set_xlabel('Predicted DPM')
-    ax.set_ylabel('True DPM')
+    ax.scatter(pred,y_valid,s=3)
+    ax.set_xlabel('Predicted deaths')
+    ax.set_ylabel('True deaths')
     fig.savefig(outdir+'true_vs_pred.png',  format='png')
     plt.close()
     #Visualize predictions by plotting
@@ -275,11 +290,11 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
         #True
         days = np.arange(len(country_inp)+28)
         dpm_true = np.zeros(len(days))
-        dpm_true[-len(country_true):]=country_true
+        dpm_true[-len(country_true):-6]=country_true
         ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
         #Pred
         dpm_pred = np.zeros(len(days))
-        dpm_pred[-len(country_true):]=country_pred
+        dpm_pred[-len(country_true):-6]=country_pred
         ax2.bar(days, dpm_pred, color='r', alpha = 0.3, label='Pred')
         ax1.set_title(countries[i])
         fig.legend()
