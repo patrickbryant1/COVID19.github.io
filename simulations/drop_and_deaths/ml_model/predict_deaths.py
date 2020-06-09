@@ -146,21 +146,16 @@ def construct_features(extracted_data):
     fetched_countries = extracted_data['countriesAndTerritories'].unique()
     num_countries = len(fetched_countries)
     all_index = np.arange(num_countries)
-    train_index = np.random.choice(all_index, int(num_countries*0.9))
-    valid_index = np.setdiff1d(all_index, train_index)
     #dpm_history = [] #Deaths per million 4 weeks before
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
                        'grocery_and_pharmacy_percent_change_from_baseline',
                        'transit_stations_percent_change_from_baseline',
                        'workplaces_percent_change_from_baseline',
                        'residential_percent_change_from_baseline']
-    X_train = [] #Input features
-    X_valid = [] #Input features
-    y_train = [] #Labels
-    y_valid = [] #Labels
+    X = [] #Input features
+    y = [] #Labels
 
-    csi_train = [0] #Country split index in data for train
-    csi_valid = [0] #Country split index in data for valid
+    csi = [0] #Country split index in data for train
 
     train_countries = []
     valid_countries = []
@@ -212,16 +207,11 @@ def construct_features(extracted_data):
             print('Not enough data for', country)
             continue
 
-        if c in train_index:
-            csi_train.append(country_points*predict_lag)
-            train_countries.append(country)
-        if c in valid_index:
-            csi_valid.append(country_points*predict_lag)
-            valid_countries.append(country)
+        csi.append(country_points*predict_lag)
 
     print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
     pdb.set_trace()
-    return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid), csi_train, csi_valid, train_countries, valid_countries
+    return np.array(X), np.array(y), csi
 
 def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outdir):
     '''Fit rf regressor
@@ -332,5 +322,12 @@ if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
 else:
     extracted_data = pd.read_csv('extracted_data.csv')
-X_train,y_train, X_valid, y_valid, csi_train, csi_valid, train_countries, valid_countries = construct_features(extracted_data)
+
+X, y, csi = construct_features(extracted_data)
+#Construct 5-fold CV
+all_index = np.arange(num_countries)
+train_index = np.random.choice(all_index, int(num_countries*0.8))
+valid_index = np.setdiff1d(all_index, train_index)
+fetched_countries = extracted_data['countriesAndTerritories'].unique()
+
 train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,valid_countries,outdir)
