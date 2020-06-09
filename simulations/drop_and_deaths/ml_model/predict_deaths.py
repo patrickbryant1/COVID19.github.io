@@ -195,16 +195,22 @@ def construct_features(extracted_data):
                 continue
             else:
                 x.extend(cum_measures)
-
+            #Add the number of epidemic days
+            x.append(i+include_period)
             #Include data for the predict lag
-            dpm_change = country_data.loc[i+include_period+predict_lag-1, 'smoothed_deaths']
-            #Append to train or valid data
-            if c in train_index:
-                X_train.append(np.array(x))
-                y_train.append(dpm_change)
-            if c in valid_index:
-                X_valid.append(np.array(x))
-                y_valid.append(dpm_change)
+            for p in range(predict_lag):
+                dpm_change = country_data.loc[i+include_period+p, 'smoothed_deaths']
+                #Append to train or valid data
+                if c in train_index:
+                    X_train.append(np.array(x))
+                    y_train.append(dpm_change)
+                if c in valid_index:
+                    X_valid.append(np.array(x))
+                    y_valid.append(dpm_change)
+        #If no points fetched
+        if country_points<1:
+            print('Not enough data for', country)
+            continue
 
         if c in train_index:
             csi_train.append(country_points)
@@ -214,13 +220,14 @@ def construct_features(extracted_data):
             valid_countries.append(country)
 
     print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
+    pdb.set_trace()
     return np.array(X_train), np.array(y_train), np.array(X_valid), np.array(y_valid), csi_train, csi_valid, train_countries, valid_countries
 
 def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outdir):
     '''Fit rf regressor
     '''
 
-    regr = RandomForestRegressor(random_state=0,n_estimators=10)
+    regr = RandomForestRegressor(random_state=0,n_estimators=100)
     print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
@@ -231,8 +238,10 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outd
     ax.scatter(pred,y_valid,s=3)
     ax.set_xlabel('Predicted deaths')
     ax.set_ylabel('True deaths')
+    fig.tight_layout()
     fig.savefig(outdir+'true_vs_pred.png',  format='png')
     plt.close()
+    pdb.set_trace()
     #Visualize predictions by plotting
     visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir)
 
@@ -248,10 +257,10 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
         ax2 = ax1.twinx()
         #Death input
         country_death_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
-        country_death_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,1:ip]])
+        country_death_inp = np.concatenate([country_death_inp,X_valid[csi_valid[i+1]-1,1:ip]])
         #Case input
         country_case_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip]
-        country_case_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
+        country_case_inp = np.concatenate([country_case_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
         #Retail
         retail_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*2]
         retail_inp = np.concatenate([retail_inp,X_valid[csi_valid[i+1]-1,ip*2+1:ip*3]])
@@ -275,7 +284,7 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
         #Deaths
         days = np.arange(len(country_true)+ip+pl)
         dpm_x = np.zeros(len(days))
-        dpm_x[:len(country_inp)]=country_death_inp
+        dpm_x[:len(country_death_inp)]=country_death_inp
         ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Death input')
         #Mobility input
         days = np.arange(len(country_death_inp))
@@ -293,7 +302,10 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
         #True
         days = np.arange(len(country_death_inp)+pl)
         dpm_true = np.zeros(len(days))
-        dpm_true[-len(country_true):]=country_true
+        try:
+            dpm_true[-len(country_true):]=country_true
+        except:
+            pdb.set_trace()
         ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
         #Pred
         dpm_pred = np.zeros(len(days))
