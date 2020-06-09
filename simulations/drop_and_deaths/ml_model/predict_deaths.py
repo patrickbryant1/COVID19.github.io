@@ -246,55 +246,58 @@ def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
         #Create figure
         fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
         ax2 = ax1.twinx()
-        #Get data
-        country_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
-        country_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,1:ip]])
+        #Death input
+        country_death_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
+        country_death_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,1:ip]])
+        #Case input
+        country_case_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip]
+        country_case_inp = np.concatenate([country_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
         #Retail
-        retail_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip]
-        retail_inp = np.concatenate([retail_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
+        retail_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*2]
+        retail_inp = np.concatenate([retail_inp,X_valid[csi_valid[i+1]-1,ip*2+1:ip*3]])
         #Grocery
-        grocery_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*2]
-        grocery_inp = np.concatenate([grocery_inp,X_valid[csi_valid[i+1]-1,ip*2+1:ip*3]])
+        grocery_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*3]
+        grocery_inp = np.concatenate([grocery_inp,X_valid[csi_valid[i+1]-1,ip*3+1:ip*4]])
         #Transit
-        transit_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*3]
-        transit_inp = np.concatenate([transit_inp,X_valid[csi_valid[i+1]-1,ip*3+1:ip*4]])
+        transit_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*4]
+        transit_inp = np.concatenate([transit_inp,X_valid[csi_valid[i+1]-1,ip*4+1:ip*5]])
         #Work
-        work_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*4]
-        work_inp = np.concatenate([work_inp,X_valid[csi_valid[i+1]-1,ip*4+1:ip*5]])
+        work_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*5]
+        work_inp = np.concatenate([work_inp,X_valid[csi_valid[i+1]-1,ip*5+1:ip*6]])
         #Residential
-        res_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*5]
-        res_inp = np.concatenate([res_inp,X_valid[csi_valid[i+1]-1,ip*5+1:ip*6]])
+        res_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*6]
+        res_inp = np.concatenate([res_inp,X_valid[csi_valid[i+1]-1,ip*6+1:ip*7]])
         #Predicted and true
         country_pred = pred[csi_valid[i]:csi_valid[i+1]]
         country_true = y_valid[csi_valid[i]:csi_valid[i+1]]
         #Plot
         #Input data
-        #DPM
+        #Deaths
         days = np.arange(len(country_true)+ip+pl)
         dpm_x = np.zeros(len(days))
-        dpm_x[:len(country_inp)]=country_inp
-        ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Input')
+        dpm_x[:len(country_inp)]=country_death_inp
+        ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Death input')
         #Mobility input
-        days = np.arange(len(country_inp))
+        days = np.arange(len(country_death_inp))
         mob = np.zeros(len(days))
-        mob[:len(country_inp)]=retail_inp
+        mob[:len(country_death_inp)]=retail_inp
         ax1.plot(days,mob,color='tab:red')
-        mob[:len(country_inp)]=grocery_inp
+        mob[:len(country_death_inp)]=grocery_inp
         ax1.plot(days,mob,color='tab:purple')
-        mob[:len(country_inp)]=transit_inp
+        mob[:len(country_death_inp)]=transit_inp
         ax1.plot(days,mob,color='tab:pink')
-        mob[:len(country_inp)]=work_inp
+        mob[:len(country_death_inp)]=work_inp
         ax1.plot(days,mob,color='tab:olive')
-        mob[:len(country_inp)]=res_inp
+        mob[:len(country_death_inp)]=res_inp
         ax1.plot(days,mob,color='tab:cyan')
         #True
-        days = np.arange(len(country_inp)+28)
+        days = np.arange(len(country_death_inp)+pl)
         dpm_true = np.zeros(len(days))
-        dpm_true[-len(country_true):-6]=country_true
+        dpm_true[-len(country_true):]=country_true
         ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
         #Pred
         dpm_pred = np.zeros(len(days))
-        dpm_pred[-len(country_true):-6]=country_pred
+        dpm_pred[-len(country_true):]=country_pred
         ax2.bar(days, dpm_pred, color='r', alpha = 0.3, label='Pred')
         ax1.set_title(countries[i])
         fig.legend()
