@@ -179,9 +179,9 @@ def construct_features(extracted_data,ip,pl):
             cum_measures = [] #Cumulative data - to capture the full history
             #Include data for the include period
             #Deaths and cases
-            x.extend(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
+            x.append(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
             cum_measures.append(np.sum(country_data.loc[:i+include_period-1, 'death_per_million']))
-            x.extend(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
+            x.append(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
             cum_measures.append(np.sum(country_data.loc[:i+include_period-1, 'death_per_million']))
             for key in fetched_mobility:
                 curr_mob = np.array(country_data.loc[:i+include_period-1, key])
@@ -189,7 +189,7 @@ def construct_features(extracted_data,ip,pl):
                     found_nan = True
                     break
 
-                x.extend(np.array(country_data.loc[:i+include_period-1, key]))
+                x.append(np.array(country_data.loc[:i+include_period-1, key]))
                 cum_measures.append(np.sum(country_data.loc[:i+include_period-1, key]))
 
             #Check that all data could be computed
@@ -203,7 +203,7 @@ def construct_features(extracted_data,ip,pl):
             #Include data for the predict lag
             dpm_change = np.array(country_data.loc[i+include_period:i+include_period+predict_lag-1, 'death_per_million'])
             #Append to data
-            X.append(np.array(x))
+            X.append(np.array(x).T)
             y.append(dpm_change)
 
 
