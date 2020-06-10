@@ -262,19 +262,18 @@ def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outd
     print('Fitting model')
     regr.fit(X_train,y_train)
     pred = regr.predict(X_valid)
-    R,p = pearsonr(pred,y_valid)
+    R,p = pearsonr(pred[:,-1],y_valid[:,-1]) #The last day is the furthest ahead prediction
     print('Validation R:', np.round(R,2))
-    print('Error:', np.average(np.absolute(pred-y_valid)))
+    print('Error:', np.average(np.absolute(pred[:,-1]-y_valid[:,-1])))
     fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-    ax.scatter(pred,y_valid,s=3)
-    ax.set_xlabel('Predicted deaths')
-    ax.set_ylabel('True deaths')
+    ax.scatter(pred[:,-1],y_valid[:,-1],s=3)
+    ax.set_xlabel('Predicted deaths 3 weeks later')
+    ax.set_ylabel('True deaths 3 weeks later')
     fig.tight_layout()
     fig.savefig(outdir+'true_vs_pred.png',  format='png')
     plt.close()
-    pdb.set_trace()
     #Visualize predictions by plotting
-    visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir)
+    visualize_pred(X_valid,pred[:,-1],y_valid[:,-1], csi_valid,countries,outdir)
 
 def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,outdir):
     '''Plot the true and predicted epidemic curves
@@ -389,5 +388,4 @@ for split in range(1,6):
     y_valid_split = np.array(y_valid[split])
     csi_valid_split = csi_valid[split]
     valid_countries_split = valid_countries[split]
-    pdb.set_trace()
-    train(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,valid_countries_split,outdir)
+    train(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,valid_countries_split,outdir+'split'+str(split)+'/')
