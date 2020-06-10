@@ -15,6 +15,7 @@ import seaborn as sns
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import KFold
 import pdb
 
 
@@ -143,8 +144,8 @@ def construct_features(extracted_data):
     '''Construct features for ml model
     '''
 
-    fetched_countries = extracted_data['countriesAndTerritories'].unique()
-    num_countries = len(fetched_countries)
+    countries = extracted_data['countriesAndTerritories'].unique()
+    num_countries = len(countries)
     all_index = np.arange(num_countries)
     #dpm_history = [] #Deaths per million 4 weeks before
     fetched_mobility = ['retail_and_recreation_percent_change_from_baseline',
@@ -156,18 +157,22 @@ def construct_features(extracted_data):
     y = [] #Labels
 
     csi = [0] #Country split index in data for train
-
+    fetched_countries = [] #The fetched countries
     train_countries = []
     valid_countries = []
     include_period = 21 #How many days to include data
     predict_lag = 21 #How many days ahead to predict
     for c in all_index:
-        country = fetched_countries[c]
+        country = countries[c]
         country_data = extracted_data[extracted_data['countriesAndTerritories']==country]
         #Reset index
         country_data = country_data.reset_index()
         country_points=0 #Number of data points for country
-        for i in range(len(country_data)-predict_lag-include_period):
+        if (len(country_data)-predict_lag-include_period)<1:
+            print('Not enough data for', country)
+            continue
+        #Go through all days
+        for i in range(len(country_data)-predict_lag-include_period+1):
             country_points+=1 #Increase points
             x = []
             cum_measures = [] #Cumulative data - to capture the full history
@@ -193,25 +198,61 @@ def construct_features(extracted_data):
             #Add the number of epidemic days
             x.append(i+include_period)
             #Include data for the predict lag
-            for p in range(predict_lag):
-                dpm_change = country_data.loc[i+include_period+p, 'death_per_million']
-                #Append to train or valid data
-                if c in train_index:
-                    X_train.append(np.array(x))
-                    y_train.append(dpm_change)
-                if c in valid_index:
-                    X_valid.append(np.array(x))
-                    y_valid.append(dpm_change)
-        #If no points fetched
-        if country_points<1:
-            print('Not enough data for', country)
-            continue
+            dpm_change = np.array(country_data.loc[i+include_period:i+include_period+predict_lag-1, 'death_per_million'])
+            #Append to  data
+            X.append(np.array(x))
+            y.append(dpm_change)
 
-        csi.append(country_points*predict_lag)
 
-    print(len(y_train), 'training points and ',len(y_valid), ' validation points.')
-    pdb.set_trace()
-    return np.array(X), np.array(y), csi
+        #Save country points and fetched countries
+        csi.append(country_points)
+        fetched_countries.append(country)
+    print(len(y), 'data points')
+    return np.array(X), np.array(y), np.array(csi), np.array(fetched_countries)
+
+def CV_split(X,y,csi,fetched_countries):
+    '''Split data to non-overlapping country splits
+    '''
+    num_countries = len(fetched_countries)
+    all_index = np.arange(num_countries)
+    csi = np.cumsum(csi) #Where the country splits are in the data
+    #Save data
+    X_train = {1:[],2:[],3:[],4:[],5:[]}
+    y_train = {1:[],2:[],3:[],4:[],5:[]}
+    csi_train = {1:[0],2:[0],3:[0],4:[0],5:[0]}
+    train_countries = {1:[],2:[],3:[],4:[],5:[]}
+    X_valid = {1:[],2:[],3:[],4:[],5:[]}
+    y_valid = {1:[],2:[],3:[],4:[],5:[]}
+    csi_valid = {1:[0],2:[0],3:[0],4:[0],5:[0]}
+    valid_countries = {1:[],2:[],3:[],4:[],5:[]}
+    #Split
+    kf = KFold(n_splits=5,random_state=42, shuffle=True)
+    split = 1
+    for train_index, valid_index in kf.split(all_index):
+        #Fetch all train points
+        for ti in train_index:
+            c1=csi[ti]
+            c2=csi[ti+1]
+            X_train[split].extend(X[c1:c2,:])
+            y_train[split].extend(y[c1:c2,:])
+            #Country splits in data
+            csi_train[split].append(len(y_train))
+            #Country names
+            train_countries[split].append(fetched_countries[ti])
+        #Fetch all valid points
+        for vi in valid_index:
+            c1=csi[vi]
+            c2=csi[vi+1]
+            X_valid[split].extend(X[c1:c2,:])
+            y_valid[split].extend(y[c1:c2,:])
+            #Country splits in data
+            csi_valid[split].append(len(y_valid))
+            #Country names
+            valid_countries[split].append(fetched_countries[vi])
+        #Increase split
+        split+=1
+
+    return X_train, y_train, csi_train, train_countries, X_valid, y_valid, csi_valid, valid_countries
 
 def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,outdir):
     '''Fit rf regressor
@@ -316,18 +357,37 @@ args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 outdir = args.outdir[0]
-
-extract = True
+#Extract data and smooth
+extract = False
 if extract == True:
     extracted_data= format_data(epidemic_data, mobility_data, outdir)
 else:
     extracted_data = pd.read_csv('extracted_data.csv')
+#Construct features
+get_features = False
+if get_features == True:
+    X, y, csi, fetched_countries = construct_features(extracted_data)
+    np.save('X.npy',X)
+    np.save('y.npy',y)
+    np.save('csi.npy',csi)
+    np.save('fetched_countries.npy',fetched_countries)
+else:
+    X = np.load('X.npy',allow_pickle = True)
+    y = np.load('y.npy',allow_pickle = True)
+    csi = np.load('csi.npy',allow_pickle = True)
+    fetched_countries = np.load('fetched_countries.npy',allow_pickle = True)
 
-X, y, csi = construct_features(extracted_data)
 #Construct 5-fold CV
-all_index = np.arange(num_countries)
-train_index = np.random.choice(all_index, int(num_countries*0.8))
-valid_index = np.setdiff1d(all_index, train_index)
-fetched_countries = extracted_data['countriesAndTerritories'].unique()
-
-train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,valid_countries,outdir)
+X_train, y_train, csi_train, train_countries, X_valid, y_valid, csi_valid, valid_countries = CV_split(X,y,csi,fetched_countries)
+for split in range(1,6):
+    #Train
+    X_train_split = np.array(X_train[split])
+    y_train_split = np.array(y_train[split])
+    csi_train_split = csi_train[split]
+    train_countries_split = train_countries[split]
+    X_valid_split = np.array(X_valid[split])
+    y_valid_split = np.array(y_valid[split])
+    csi_valid_split = csi_valid[split]
+    valid_countries_split = valid_countries[split]
+    pdb.set_trace()
+    train(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,valid_countries_split,outdir)
