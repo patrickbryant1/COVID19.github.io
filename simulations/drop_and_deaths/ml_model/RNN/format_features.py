@@ -21,7 +21,7 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Predic the number of deaths ahead of time using a RF regressor.
+parser = argparse.ArgumentParser(description = '''Format data.
                                                 A nonlinear model is necessary due to the irregularity of the
                                                 mobility effect. Historical data is used to take the previous
                                                 epidemic development into account, which is not possible with
@@ -173,33 +173,36 @@ def construct_features(extracted_data,ip,pl):
             continue
         #Go through all days
         for i in range(len(country_data)-predict_lag-include_period+1):
+            found_nan =False
             country_points+=1 #Increase points
             x = []
             cum_measures = [] #Cumulative data - to capture the full history
             #Include data for the include period
             #Deaths and cases
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
-            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'death_per_million']))
-            x.extend(np.array(country_data.loc[i:i+include_period-1, 'death_per_million']))
-            cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, 'death_per_million']))
+            x.extend(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
+            cum_measures.append(np.sum(country_data.loc[:i+include_period-1, 'death_per_million']))
+            x.extend(np.array(country_data.loc[:i+include_period-1, 'death_per_million']))
+            cum_measures.append(np.sum(country_data.loc[:i+include_period-1, 'death_per_million']))
             for key in fetched_mobility:
-                curr_mob = np.array(country_data.loc[i:i+include_period-1, key])
+                curr_mob = np.array(country_data.loc[:i+include_period-1, key])
                 if np.isnan(curr_mob).any():
-                    continue
+                    found_nan = True
+                    break
 
-                x.extend(np.array(country_data.loc[i:i+include_period-1, key]))
-                cum_measures.append(np.sum(country_data.loc[i:i+include_period-1, key]))
+                x.extend(np.array(country_data.loc[:i+include_period-1, key]))
+                cum_measures.append(np.sum(country_data.loc[:i+include_period-1, key]))
 
-            if len(cum_measures)<7:
-                print(country)
+            #Check that all data could be computed
+            if found_nan ==True:
+                print(country, ' contains NaNs')
                 continue
-            else:
-                x.extend(cum_measures)
+
+                #x.extend(cum_measures)
             #Add the number of epidemic days
-            x.append(i+include_period)
+            #x.append(i+include_period)
             #Include data for the predict lag
             dpm_change = np.array(country_data.loc[i+include_period:i+include_period+predict_lag-1, 'death_per_million'])
-            #Append to  data
+            #Append to data
             X.append(np.array(x))
             y.append(dpm_change)
 
@@ -210,148 +213,11 @@ def construct_features(extracted_data,ip,pl):
     print(len(y), 'data points')
     return np.array(X), np.array(y), np.array(csi), np.array(fetched_countries)
 
-def CV_split(X,y,csi,fetched_countries):
-    '''Split data to non-overlapping country splits
-    '''
-    num_countries = len(fetched_countries)
-    all_index = np.arange(num_countries)
-    csi = np.cumsum(csi) #Where the country splits are in the data
-    #Save data
-    X_train = {1:[],2:[],3:[],4:[],5:[]}
-    y_train = {1:[],2:[],3:[],4:[],5:[]}
-    csi_train = {1:[0],2:[0],3:[0],4:[0],5:[0]}
-    train_countries = {1:[],2:[],3:[],4:[],5:[]}
-    X_valid = {1:[],2:[],3:[],4:[],5:[]}
-    y_valid = {1:[],2:[],3:[],4:[],5:[]}
-    csi_valid = {1:[0],2:[0],3:[0],4:[0],5:[0]}
-    valid_countries = {1:[],2:[],3:[],4:[],5:[]}
-    #Split
-    kf = KFold(n_splits=5,random_state=42, shuffle=True)
-    split = 1
-    for train_index, valid_index in kf.split(all_index):
-        #Fetch all train points
-        for ti in train_index:
-            c1=csi[ti]
-            c2=csi[ti+1]
-            X_train[split].extend(X[c1:c2,:])
-            y_train[split].extend(y[c1:c2,:])
-            #Country splits in data
-            csi_train[split].append(len(y_train[split]))
-            #Country names
-            train_countries[split].append(fetched_countries[ti])
-        #Fetch all valid points
-        for vi in valid_index:
-            c1=csi[vi]
-            c2=csi[vi+1]
-            X_valid[split].extend(X[c1:c2,:])
-            y_valid[split].extend(y[c1:c2,:])
-            #Country splits in data
-            csi_valid[split].append(len(y_valid[split]))
-            #Country names
-            valid_countries[split].append(fetched_countries[vi])
-        #Increase split
-        split+=1
-
-    return X_train, y_train, csi_train, train_countries, X_valid, y_valid, csi_valid, valid_countries
-
-def train(X_train,y_train, X_valid, y_valid, csi_train, csi_valid,countries,ip,pl,outdir):
-    '''Fit rf regressor
-    '''
-
-    regr = RandomForestRegressor(random_state=0,n_estimators=100)
-    print('Fitting model')
-    regr.fit(X_train,y_train)
-    pred = regr.predict(X_valid)
-    R,p = pearsonr(pred[:,-1],y_valid[:,-1]) #The last day is the furthest ahead prediction
-    print('Validation R:', np.round(R,2))
-    print('Error:', np.average(np.absolute(pred[:,-1]-y_valid[:,-1])))
-    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-    ax.scatter(pred[:,-1],y_valid[:,-1],s=3, label =  np.round(R,2))
-    ax.set_xlabel('Predicted deaths 3 weeks later')
-    ax.set_ylabel('True deaths 3 weeks later')
-    fig.legend()
-    fig.tight_layout()
-    fig.savefig(outdir+'true_vs_pred.png',  format='png')
-    plt.close()
-    #Visualize predictions by plotting
-    visualize_pred(X_valid,pred[:,-1],y_valid[:,-1], csi_valid,countries,ip,pl,outdir)
-
-def visualize_pred(X_valid,pred,y_valid, csi_valid,countries,ip,pl,outdir):
-    '''Plot the true and predicted epidemic curves
-    '''
-
-
-    for i in range(len(csi_valid)-1):
-        #Create figure
-        fig, ax1 = plt.subplots(figsize=(9/2.54, 9/2.54))
-        ax2 = ax1.twinx()
-        #Death input
-        country_death_inp = X_valid[csi_valid[i]:csi_valid[i+1],0]
-        country_death_inp = np.concatenate([country_death_inp,X_valid[csi_valid[i+1]-1,1:ip]])
-        #Case input
-        country_case_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip]
-        country_case_inp = np.concatenate([country_case_inp,X_valid[csi_valid[i+1]-1,ip+1:ip*2]])
-        #Retail
-        retail_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*2]
-        retail_inp = np.concatenate([retail_inp,X_valid[csi_valid[i+1]-1,ip*2+1:ip*3]])
-        #Grocery
-        grocery_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*3]
-        grocery_inp = np.concatenate([grocery_inp,X_valid[csi_valid[i+1]-1,ip*3+1:ip*4]])
-        #Transit
-        transit_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*4]
-        transit_inp = np.concatenate([transit_inp,X_valid[csi_valid[i+1]-1,ip*4+1:ip*5]])
-        #Work
-        work_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*5]
-        work_inp = np.concatenate([work_inp,X_valid[csi_valid[i+1]-1,ip*5+1:ip*6]])
-        #Residential
-        res_inp = X_valid[csi_valid[i]:csi_valid[i+1],ip*6]
-        res_inp = np.concatenate([res_inp,X_valid[csi_valid[i+1]-1,ip*6+1:ip*7]])
-        #Predicted and true
-        country_pred = pred[csi_valid[i]:csi_valid[i+1]]
-        country_true = y_valid[csi_valid[i]:csi_valid[i+1]]
-        #Plot
-        #Input data
-        #Deaths
-        days = np.arange(len(country_true)+ip+pl)
-        dpm_x = np.zeros(len(days))
-        dpm_x[:len(country_death_inp)]=country_death_inp
-        ax2.bar(days,dpm_x,color='b',alpha=0.3, label='Death input')
-        #Mobility input
-        days = np.arange(len(country_death_inp))
-        mob = np.zeros(len(days))
-        mob[:len(country_death_inp)]=retail_inp
-        ax1.plot(days,mob,color='tab:red')
-        mob[:len(country_death_inp)]=grocery_inp
-        ax1.plot(days,mob,color='tab:purple')
-        mob[:len(country_death_inp)]=transit_inp
-        ax1.plot(days,mob,color='tab:pink')
-        mob[:len(country_death_inp)]=work_inp
-        ax1.plot(days,mob,color='tab:olive')
-        mob[:len(country_death_inp)]=res_inp
-        ax1.plot(days,mob,color='tab:cyan')
-        #True
-        days = np.arange(len(country_death_inp)+pl)
-        dpm_true = np.zeros(len(days))
-        try:
-            dpm_true[-len(country_true):]=country_true
-        except:
-            pdb.set_trace()
-        ax2.plot(days, dpm_true, color='g', alpha = 0.3, label='True')
-        #Pred
-        dpm_pred = np.zeros(len(days))
-        dpm_pred[-len(country_true):]=country_pred
-        ax2.bar(days, dpm_pred, color='r', alpha = 0.3, label='Pred')
-        ax1.set_title(countries[i])
-        fig.legend()
-        fig.tight_layout()
-        fig.savefig(outdir+countries[i]+'_pred.png',  format='png')
-        plt.close()
 
 #####MAIN#####
 #Set random seed to ensure same random split every time
 np.random.seed(seed=0)
 #Set font size
-matplotlib.rcParams.update({'font.size': 9})
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
@@ -365,32 +231,11 @@ else:
 #Use only Europe
 extracted_data=extracted_data[extracted_data['continentExp']=='Europe']
 #Construct features
-ip=28 #include period
+ip=21 #include period, the minimum period to include data
 pl=21 #predict lag
-get_features = True
-if get_features == True:
-    X, y, csi, fetched_countries = construct_features(extracted_data,ip,pl)
-    np.save('X.npy',X)
-    np.save('y.npy',y)
-    np.save('csi.npy',csi)
-    np.save('fetched_countries.npy',fetched_countries)
-else:
-    X = np.load('X.npy',allow_pickle = True)
-    y = np.load('y.npy',allow_pickle = True)
-    csi = np.load('csi.npy',allow_pickle = True)
-    fetched_countries = np.load('fetched_countries.npy',allow_pickle = True)
+X, y, csi, fetched_countries = construct_features(extracted_data,ip,pl)
 
-#Construct 5-fold CV
-X_train, y_train, csi_train, train_countries, X_valid, y_valid, csi_valid, valid_countries = CV_split(X,y,csi,fetched_countries)
-for split in range(1,6):
-    #Train
-    X_train_split = np.array(X_train[split])
-    y_train_split = np.array(y_train[split])
-    csi_train_split = csi_train[split]
-    train_countries_split = train_countries[split]
-    X_valid_split = np.array(X_valid[split])
-    y_valid_split = np.array(y_valid[split])
-    csi_valid_split = csi_valid[split]
-    valid_countries_split = valid_countries[split]
-    print(len(y_train_split),'training points and', len(y_valid_split),' validation points.')
-    train(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,valid_countries_split,ip,pl,outdir+'split'+str(split)+'/')
+np.save('X.npy',X)
+np.save('y.npy',y)
+np.save('csi.npy',csi)
+np.save('fetched_countries.npy',fetched_countries)
