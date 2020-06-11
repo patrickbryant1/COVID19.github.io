@@ -25,7 +25,6 @@ parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help =
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
-parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -57,7 +56,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, N2, end_date):
+def read_and_format_data(us_deaths, mobility_data, N2):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -124,7 +123,8 @@ def read_and_format_data(us_deaths, mobility_data, N2, end_date):
         #Multiplying s and h yields fraction dead of fraction survived
         f = s*h #This will be fed to the Stan Model
 
-
+        #Save all extracted data
+        complete_df = pd.DataFrame()
         #Get data by state
         for c in range(len(subregions)):
             #Assign fraction dead
@@ -167,9 +167,11 @@ def read_and_format_data(us_deaths, mobility_data, N2, end_date):
             #Reset index
             regional_epidemic_data = regional_epidemic_data.reset_index()
             #Print region and number of days
-            print(region, len(regional_epidemic_data))
+            print(region, len(regional_epidemic_data), min(regional_epidemic_data['date']),max(regional_epidemic_data['date']))
 
-
+            #Get dates for plotting
+            if region == 'New York':
+                plot_dates = np.array(regional_epidemic_data['date'], dtype='datetime64[D]')
 	        #Add number of days per country
             N = len(regional_epidemic_data)
             stan_data['N'].append(N)
@@ -194,38 +196,63 @@ def read_and_format_data(us_deaths, mobility_data, N2, end_date):
             #Covariates (mobility data from Google) - assign the same shape as others (N2)
             #Construct a 1-week sliding average to smooth the mobility data
             for name in covariate_names:
-                data = np.array(region_cov_data[name])
-                y = np.zeros(len(region_cov_data))
-                for i in range(7,len(data)+1):
+                mob_i = np.array(regional_epidemic_data[name])
+                y = np.zeros(len(regional_epidemic_data))
+                for i in range(7,len(mob_i)+1):
                     #Check that there are no NaNs
-                    if np.isnan(data[i-7:i]).any():
+                    if np.isnan(mob_i[i-7:i]).any():
                         #If there are NaNs, loop through and replace with value from prev date
                         for i_nan in range(i-7,i):
-                            if np.isnan(data[i_nan]):
-                                data[i_nan]=data[i_nan-1]
-                    y[i-1]=np.average(data[i-7:i])
-                y[0:6] = y[6]
-                region_cov_data[name]=y
-                plt.plot(range(len(region_cov_data)),region_cov_data['grocery_and_pharmacy_percent_change_from_baseline'])
+                            if np.isnan(mob_i[i_nan]):
+                                mob_i[i_nan]=mob_i[i_nan-1]
+                    y[i-1]=np.average(mob_i[i-7:i])#Assign average
+                y[0:6] = y[6]#Assign first week
+                regional_epidemic_data[name]=y
 
-            #Merge epidemic data with mobility data
-            country_epidemic_data = country_epidemic_data.merge(country_cov_data, left_on = 'date', right_on ='date', how = 'left')
+
             #Add covariate data
             for name in covariate_names:
                 cov_i = np.zeros(N2)
-                cov_i[:N] = np.array(country_epidemic_data[name])
+                cov_i[:N] = np.array(regional_epidemic_data[name])
                 #Add covariate info to forecast
                 cov_i[N:N2]=cov_i[N-1]
                 stan_data[name][:,c] = cov_i
 
+            #Append data to final df
+            regional_epidemic_data['region']=region
+            complete_df = complete_df.append(regional_epidemic_data, ignore_index=True)
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
 
-        return stan_data
+        return stan_data,complete_df
 
+def visualize_mobility(stan_data, complete_df, outdir):
+    '''Visualize the mobility change per state
+    '''
 
+    titles =  {1:'retail and recreation',2:'grocery and pharmacy', 3:'transit stations',4:'workplace',5:'residential'}
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+                'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
+                'transit_stations_percent_change_from_baseline':'tab:pink',
+                'workplaces_percent_change_from_baseline':'tab:olive',
+                'residential_percent_change_from_baseline':'tab:cyan'}
+    states = complete_df['region'].unique()
+    i=1
+    for key in mob_keys:
+        fig, ax = plt.subplots(figsize=(12/2.54,12/2.54))
+        cov_data = stan_data['covariate'+str(i)]
+        for state in states:
+            state_data = complete_df[complete_df['region']==state]
+            ax.plot(state_data['date'],state_data[key],color=mob_keys[key])
+
+        ax.set_title(titles[i])
+
+        plt.xticks(rotation='vertical')
+        fig.tight_layout()
+        fig.savefig(outdir+str(i)+'.png', format = 'png')
+        i+=1
 
 def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
@@ -252,10 +279,12 @@ us_deaths = pd.read_csv(args.us_deaths[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
-end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 #Read data
-stan_data = read_and_format_data(us_deaths, mobility_data, days_to_simulate, end_date)
-pdb.set_trace()
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
+#Save complete df
+complete_df.to_csv('complete_df.csv')
+#visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
+pdb.set_trace()
 out = simulate(stan_data, stan_model, outdir)
