@@ -232,7 +232,7 @@ def visualize_mobility(stan_data, complete_df, outdir):
     '''Visualize the mobility change per state
     '''
 
-    titles =  {1:'retail and recreation',2:'grocery and pharmacy', 3:'transit stations',4:'workplace',5:'residential'}
+    titles =  {1:'retail and recreation',2:'grocery and pharmacy', 3:'transit stations',4:'workplace',5:'residential',6:'parks'}
     mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
                 'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
                 'transit_stations_percent_change_from_baseline':'tab:pink',
@@ -284,6 +284,6 @@ outdir = args.outdir[0]
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
-#visualize_mobility(stan_data, complete_df, outdir)
+visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
-out = simulate(stan_data, stan_model, outdir)
+#out = simulate(stan_data, stan_model, outdir)
