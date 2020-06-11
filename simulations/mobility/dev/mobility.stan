@@ -98,34 +98,3 @@ model {
    }
 }
 
-//Out metrics - baseline, without R0 reduction
-generated quantities {
-    matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
-    matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
-    real convolution0;
-    matrix[N2, M] prediction0 = rep_matrix(0,N2,M);
-    matrix[N2, M] E_deaths0  = rep_matrix(0,N2,M);
-    for (m in 1:M){
-      prediction0[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days
-      for (i in (N0+1):N2) {
-        convolution0=0;
-        for(j in 1:(i-1)) {
-          convolution0 += prediction0[j, m]*SI[i-j]; // Correctd 22nd March
-        }
-        prediction0[i, m] = mu[m] * convolution0;
-      }
-
-      E_deaths0[1, m]= 1e-9;
-      for (i in 2:N2){
-        E_deaths0[i,m]= 0;
-        for(j in 1:(i-1)){
-          E_deaths0[i,m] += prediction0[j,m]*f[i-j,m];
-        }
-      }
-      for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-      }
-    }
-
-}
