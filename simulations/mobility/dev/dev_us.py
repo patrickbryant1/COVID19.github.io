@@ -286,5 +286,4 @@ stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_s
 complete_df.to_csv('complete_df.csv')
 #visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
-pdb.set_trace()
 out = simulate(stan_data, stan_model, outdir)
