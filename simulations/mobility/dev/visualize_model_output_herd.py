@@ -34,7 +34,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200505.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200603.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
@@ -68,7 +68,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
                 #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
 
-                #Get all dates with at least 10 deaths
+                #Get all dates where at least 10 cumulative deaths have been reached
                 cum_deaths = country_epidemic_data['deaths'].cumsum()
                 death_index = cum_deaths[cum_deaths>=10].index[0]
                 di30 = death_index-30
@@ -92,14 +92,21 @@ def read_and_format_data(datadir, countries, days_to_simulate, covariate_names, 
                 stan_data['dates_by_country'][:N,c] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
                 #Save deaths
                 deaths = np.array(country_epidemic_data['deaths'])
-                #deaths_7 = np.zeros(N)
-                #deaths_7[0:7] = np.sum(deaths[0:7])/7
-                #for i in range(7,N):
-                #    deaths_7[i] = np.sum(deaths[i-6:i+1])/7
-                stan_data['deaths_by_country'][:N,c] = deaths
+                #Smooth deaths
+                sm_deaths = np.zeros(N)
+                for i in range(7,len(country_epidemic_data)+1):
+                    sm_deaths[i-1]=np.average(deaths[i-7:i])
+                sm_deaths[0:6] = sm_deaths[6]
+                stan_data['deaths_by_country'][:N,c] = sm_deaths
 
                 #Save cases
-                stan_data['cases_by_country'][:N,c] = country_epidemic_data['cases']
+                cases = np.array(country_epidemic_data['cases'])
+                #Smooth cases
+                sm_cases = np.zeros(N)
+                for i in range(7,len(country_epidemic_data)+1):
+                    sm_cases[i-1]=np.average(cases[i-7:i])
+                sm_cases[0:6] = sm_cases[6]
+                stan_data['cases_by_country'][:N,c] = sm_cases
 
                 #Covariates - assign the same shape as others (days_to_simulate)
                 #Mobility data from Google
@@ -278,13 +285,13 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-05-27')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-06-18')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
 
 
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    forecast = end+21
+    forecast = end+14
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
     #Plot observed dates

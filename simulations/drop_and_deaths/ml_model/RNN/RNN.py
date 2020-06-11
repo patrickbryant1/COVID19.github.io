@@ -17,8 +17,10 @@ from sklearn.model_selection import KFold
 #NN
 import tensorflow as tf
 import tensorflow.keras as keras
+from tensorflow.keras import backend as K
+from tensorflow.keras import optimizers
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import LSTM, Dense, Activation
+from tensorflow.keras.layers import LSTM, Dense, Activation, GRU, Flatten
 from tensorflow.keras.callbacks import TensorBoard
 import pdb
 
@@ -84,35 +86,60 @@ def CV_split(X,y,csi,fetched_countries,x_lens):
     return X_train, y_train, csi_train, train_countries, train_lens, X_valid, y_valid, csi_valid, valid_countries, valid_lens
 
 
-def train_generator(X_train,y_train,batch_size,train_lens):
+def generator(X_split,y_split,batch_size,split_lens):
     while True:
-        random_numbers = np.random.choice(len(y_train),size=(batch_size,),replace=False) #without replacemen
+        random_numbers = np.random.choice(len(y_split),size=(batch_size,),replace=False) #without replacemen
         x_batch = []
-        y_batch = y_train[random_numbers]
-        padlen = max(train_lens[random_numbers])
+        y_batch = y_split[random_numbers]
+        padlen = 100#max(split_lens[random_numbers])
         for rn in random_numbers:
             zeros = np.zeros((padlen,7))
-            zeros[:len(X_train[rn]),:] = X_train[rn]
+            zeros[:len(X_split[rn]),:] = X_split[rn]
             x_batch.append(zeros)
         yield np.array(x_batch), y_batch
 
-def train_RNN(X_train,y_train, X_valid, y_valid_, csi_train, csi_valid, train_lens, valid_lens, valid_countries,ip,pl,outdir):
+def train_RNN(X_train,y_train, X_valid, y_valid, csi_train, csi_valid, train_lens, valid_lens, valid_countries,ip,pl,tensorboard,outdir):
     '''Fit RNN
     '''
-    batch_size=4
-    num_epochs=1
+    #Tensorboard for logging and visualization
+
+
+    batch_size=128
+    num_epochs=200
     num_timesteps=None
     num_features=7
     model = Sequential()
-    model.add(LSTM(units=128, dropout=0.5, batch_input_shape=(batch_size, num_timesteps, num_features)))
+    #model.add(LSTM(units=pl, dropout=0.5, batch_input_shape=(batch_size, num_timesteps, num_features)))
+    model.add(Flatten())
+    model.add(Dense(pl,input_shape=(batch_size*100*num_features,)))#Number of days to predict
     model.add(Dense(pl))#Number of days to predict
+    #Custom loss
+    def correlation_coefficient_loss(y_true, y_pred):
+        x = y_true
+        y = y_pred
+        mx = K.mean(x)
+        my = K.mean(y)
+        xm, ym = x-mx, y-my
+        r_num = K.sum(tf.multiply(xm,ym))
+        r_den = K.sqrt(tf.multiply(K.sum(K.square(xm)), K.sum(K.square(ym))))
+        r = r_num / r_den
 
+        r = K.maximum(K.minimum(r, 1.0), -1.0)
+        return 1 - K.square(r)
+
+    lrate=0.01
+    opt = optimizers.Adam(clipnorm=1., lr = lrate)
     #Compile
-    model.compile(loss="mean_absolute_percentage_error", optimizer='adam', metrics=['accuracy'])
+    model.compile(loss=correlation_coefficient_loss, optimizer=opt)
     #Write summary of model
-    model.summary()
+    #model.summary()
     #Fit model
-    model.fit_generator(train_generator(X_train,y_train,batch_size,train_lens), steps_per_epoch=30, epochs=10, verbose=1)
+    model.fit_generator(generator(X_train,y_train,batch_size,train_lens),
+    steps_per_epoch=int(len(y_train)/batch_size), epochs=num_epochs, verbose=1,
+    validation_steps=3,
+    validation_data=generator(X_valid,y_valid,batch_size,valid_lens),
+    callbacks=[tensorboard]
+    )
 
 
 
@@ -127,13 +154,12 @@ X = np.load('X.npy',allow_pickle = True)
 x_lens = []
 for i in range(len(X)):
     x_lens.append(len(X[i]))
+
 y = np.load('y.npy',allow_pickle = True)
 csi = np.load('csi.npy',allow_pickle = True)
 fetched_countries = np.load('fetched_countries.npy',allow_pickle = True)
 
-#Tensorboard for logging and visualization
-log_name = 'log'
-tensorboard = TensorBoard(log_dir=outdir+log_name)
+
 
 #Construct 5-fold CV
 X_train, y_train, csi_train, train_countries, train_lens, X_valid, y_valid, csi_valid, valid_countries, valid_lens = CV_split(X,y,csi,fetched_countries,x_lens)
@@ -152,4 +178,6 @@ for split in range(1,6):
     valid_countries_split = valid_countries[split]
     valid_lens_split = np.array(valid_lens[split])
     print(len(y_train_split),'training points and', len(y_valid_split),' validation points.')
-    train_RNN(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,train_lens_split, valid_lens_split, valid_countries_split,ip,pl,outdir+'split'+str(split)+'/')
+    log_name = 'log'+str(split)
+    tensorboard = TensorBoard(log_dir=outdir+log_name)
+    train_RNN(X_train_split,y_train_split, X_valid_split, y_valid_split, csi_train_split, csi_valid_split,train_lens_split, valid_lens_split, valid_countries_split,ip,pl,tensorboard,outdir+'split'+str(split)+'/')
