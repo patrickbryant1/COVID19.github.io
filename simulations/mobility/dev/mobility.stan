@@ -4,7 +4,6 @@ data {
   int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
-  int cases[N2,M]; // reported cases, not used in model - estimated through SI
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
   matrix[N2, M] f; // h * s - change in fraction dead each day
   matrix[N2, M] covariate1; //retail_and_recreation
