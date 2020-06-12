@@ -105,6 +105,7 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
     #Get serial interval distribution
     SI = serial_interval_distribution(days_to_simulate)
 
+    diff_df = pd.DataFrame()
     #Loop through states
     for i in range(1,len(states)+1):
 
@@ -146,10 +147,29 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
         higher_cases, higher_deaths = model_continued_lockdown(higher_bound['prediction'],higher_bound['Rt'], exi,days, f, SI)
         lower25_cases,lower25_deaths = model_continued_lockdown(lower_bound25['prediction'],lower_bound25['Rt'], exi,days, f, SI)
         higher75_cases, higher75_deaths = model_continued_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI)
-        pdb.set_trace()
+        #Add to df
+        state_lockdown = pd.DataFrame()
+        state_lockdown['mean_cases']=mean_cases
+        state_lockdown['mean_deaths']=mean_deaths
+        state_lockdown['lower_cases']=lower_cases
+        state_lockdown['lower_deaths']=lower_deaths
+        state_lockdown['higher_cases']=higher_cases
+        state_lockdown['higher_deaths']=higher_deaths
+        state_lockdown['lower25_cases']=lower25_cases
+        state_lockdown['lower25_deaths']=lower25_deaths
+        state_lockdown['higher75_cases']=higher75_cases
+        state_lockdown['higher75_deaths']=higher75_deaths
+        state_lockdown['state'] = state
+        state_lockdown['extreme_index']=exi
+        diff_df = diff_df.append(state_lockdown, ignore_index=True)
 
 
-def model_continued_lockdown(means, cases,R, exi,days, f, SI):
+    #Save df
+    diff_df.to_csv('lockdown_df.csv')
+    pdb.set_trace()
+    return None
+    
+def model_continued_lockdown(cases,R, exi,days, f, SI):
     '''Calculate what would have happened if the lockdown was continued
     '''
 
