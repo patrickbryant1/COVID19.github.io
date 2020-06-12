@@ -304,7 +304,6 @@ outdir = args.outdir[0]
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate,use_full)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
-visualize_mobility(stan_data, complete_df, outdir)
-pdb.set_trace()
+#visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
