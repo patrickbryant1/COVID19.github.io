@@ -76,7 +76,7 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
-                    'deaths':np.zeros((N2,len(subregions))),
+                    'deaths':np.zeros((N2,len(subregions)),dtype='int8'),
                     'f':np.zeros((N2,len(subregions))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(subregions))),
@@ -244,7 +244,6 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-        pdb.set_trace()
         return stan_data,complete_df
 
 def visualize_mobility(stan_data, complete_df, outdir):
