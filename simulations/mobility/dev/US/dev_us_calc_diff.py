@@ -175,7 +175,7 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
 
     #Save df
     diff_df.to_csv('lockdown_df.csv')
-    pdb.set_trace()
+    print('Saved lockdown dataframe')
     return None
 
 def model_continued_lockdown(cases,R, exi,days, f, SI):
@@ -195,7 +195,7 @@ def model_continued_lockdown(cases,R, exi,days, f, SI):
 
 	#Step through all days til end of forecast
     for i in range(exi,days):
-        for j in range(exi,i-1):
+        for j in range(0,i-1):
           pred_deaths[i] += pred_cases[j]*f[i-j] #Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
 
     return pred_cases, pred_deaths
