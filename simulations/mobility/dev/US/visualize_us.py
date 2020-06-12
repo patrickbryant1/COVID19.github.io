@@ -24,12 +24,13 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 
 parser.add_argument('--indir', nargs=1, type= str, default=sys.stdin, help = 'Path to directory with results.')
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with all state data used for modelling.')
+parser.add_argument('--lockdown_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with continued lockdown results.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 
 
-def visualize_results(complete_df, indir, short_dates, outdir):
+def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
     '''Visualize results
     '''
 
@@ -38,9 +39,6 @@ def visualize_results(complete_df, indir, short_dates, outdir):
     #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
     #and the R-hat statistic (Rhat).
     summary = pd.read_csv(indir+'summary.csv')
-    #cases = np.load(outdir+'prediction.npy', allow_pickle=True)
-    #deaths = np.load(outdir+'E_deaths.npy', allow_pickle=True)
-    #Rt =  np.load(outdir+'Rt.npy', allow_pickle=True)
     alphas = np.load(indir+'alpha.npy', allow_pickle=True)
     phi = np.load(indir+'phi.npy', allow_pickle=True)
     #Plot rhat
@@ -91,7 +89,8 @@ def visualize_results(complete_df, indir, short_dates, outdir):
         state_data = complete_df[complete_df['region']==state]
         observed_deaths = state_data['deaths']
         days = len(state_data)#Number of days for state i
-
+        #Lockdown data
+        state_lockdown = lockdown_df[lockdown_df['state']==state]
         #Extract modeling results
         means = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))}
         lower_bound = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))} #Estimated 2.5 %
@@ -110,17 +109,17 @@ def visualize_results(complete_df, indir, short_dates, outdir):
 
         #Plot cases
         #Per day
-        plot_shade_ci(days, state_data, '', means['prediction'],lower_bound['prediction'],
+        plot_shade_ci(days, state_data,state_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
         outdir+'plots/'+state+'_cases.png', short_dates)
 
         #Plot Deaths
         #Per day
-        plot_shade_ci(days,state_data,'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
+        plot_shade_ci(days,state_data,state_lockdown,'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
         outdir+'plots/'+state+'_deaths.png', short_dates)
         #Plot R
-        plot_shade_ci(days,state_data,'',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
+        plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
     #     #Print for montage
@@ -145,7 +144,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
     plt.close()
 
-def plot_shade_ci(days, state_data, param, means, lower_bound, higher_bound, lower_bound25, higher_bound75, ylabel, outname, short_dates):
+def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, higher_bound, lower_bound25, higher_bound75, ylabel, outname, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = state_data['date']
@@ -156,13 +155,20 @@ def plot_shade_ci(days, state_data, param, means, lower_bound, higher_bound, low
     fig, ax1 = plt.subplots(figsize=(6/2.54, 4.5/2.54))
 
     #Plot observed dates
-    if param:
+    if param=='deaths':
         ax1.bar(x,np.round(state_data[param],0), alpha = 0.5)
     #Plot simulation
     ax1.plot(x,means, alpha=0.5, linewidth = 2.0, color = 'b')
     ax1.fill_between(x, lower_bound, higher_bound, color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x, lower_bound25, higher_bound75, color='cornflowerblue', alpha=0.6)
 
+    #Plot continued lockdown
+    exi = int(state_lockdown['extreme_index'].values[0])
+    ax1.plot(x[exi:],state_lockdown.loc[exi:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'g')
+    ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
+    ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
+
+    #Mobility
     mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
                 'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
                 'transit_stations_percent_change_from_baseline':'tab:pink',
@@ -205,6 +211,7 @@ matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
+lockdown_df = pd.read_csv(args.lockdown_df[0])
 short_dates = pd.read_csv(args.short_dates[0])
 
 #Make sure the np dates are in the correct format
@@ -212,4 +219,4 @@ short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d
 outdir = args.outdir[0]
 
 #Visualize
-visualize_results(complete_df, indir, short_dates, outdir)
+visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
