@@ -25,6 +25,7 @@ parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help =
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--use_full', nargs=1, type= bool, default=sys.stdin, help = 'Whether to use the mobility values from the full lockdown.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -280,6 +281,7 @@ us_deaths = pd.read_csv(args.us_deaths[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
+use_full = args.use_full[0]
 outdir = args.outdir[0]
 #Read data
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)

@@ -153,12 +153,11 @@ def plot_shade_ci(days, state_data, param, means, lower_bound, higher_bound, low
     x = np.arange(len(dates))#x-vals
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    fig, ax1 = plt.subplots(figsize=(8/2.54, 5/2.54))
+    fig, ax1 = plt.subplots(figsize=(6/2.54, 4.5/2.54))
 
     #Plot observed dates
     if param:
-        ax1.bar(x,state_data[param], alpha = 0.5)
-
+        ax1.bar(x,np.round(state_data[param],0), alpha = 0.5)
     #Plot simulation
     ax1.plot(x,means, alpha=0.5, linewidth = 2.0, color = 'b')
     ax1.fill_between(x, lower_bound, higher_bound, color='cornflowerblue', alpha=0.4)
@@ -177,25 +176,31 @@ def plot_shade_ci(days, state_data, param, means, lower_bound, higher_bound, low
     #Plot formatting
     #ax1
     ax1.set_ylabel(ylabel)
-    #ax1.set_ylim([0,max(higher_bound)])
     ax1.set_title(state_data['region'].unique()[0])
-    xticks=np.arange(len(x)-1,0,-7)
+    xticks=np.arange(len(x)-1,0,-14)
     ax1.set_xticks(xticks)
     try:
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     except:
         pdb.set_trace()
+    if ylabel=='Rt':
+        ax1.set_ylim([0,max(higher_bound)+0.5])
+        ax1.hlines(1,0,max(xticks),linestyles='dashed',linewidth=1)
     #ax2
     ax2.set_ylim([-80,40])
+    #Hide
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
     #fig
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
+
     plt.close()
 
 
 #####MAIN#####
 #Set font size
-matplotlib.rcParams.update({'font.size': 9})
+matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
