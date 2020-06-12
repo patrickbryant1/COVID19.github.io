@@ -75,7 +75,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
-                    'deaths':np.zeros((N2,len(subregions)), dtype=int),
+                    'deaths':np.zeros((N2,len(subregions))),
                     'f':np.zeros((N2,len(subregions))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(subregions))),
@@ -192,7 +192,8 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                 sm_deaths[i-1]=np.average(deaths[i-7:i])
             sm_deaths[0:6] = sm_deaths[6]
             stan_data['deaths'][:,c]=sm_deaths
-
+            #Add to df
+            regional_epidemic_data['deaths'] = sm_deaths[:len(regional_epidemic_data)]
             #Covariates (mobility data from Google) - assign the same shape as others (N2)
             #Construct a 1-week sliding average to smooth the mobility data
             for name in covariate_names:
@@ -284,6 +285,6 @@ outdir = args.outdir[0]
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
-visualize_mobility(stan_data, complete_df, outdir)
+#visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
-#out = simulate(stan_data, stan_model, outdir)
+out = simulate(stan_data, stan_model, outdir)

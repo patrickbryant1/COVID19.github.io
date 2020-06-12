@@ -82,8 +82,8 @@ def visualize_results(complete_df, indir, short_dates, outdir):
 
     #Plot per state
     states = complete_df['region'].unique()
-    montage_file = open(outdir+'/plots/montage.sh','w')
-    montage_file.write('montage ')
+    # montage_file = open(outdir+'/plots/montage.sh','w')
+    # montage_file.write('montage ')
     for i in range(1,len(states)+1):
 
         state= states[i-1]
@@ -123,12 +123,12 @@ def visualize_results(complete_df, indir, short_dates, outdir):
         plot_shade_ci(days,state_data,'',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
-        #Print for montage
-        montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
-
-        if i%9==0:
-            montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png\nmontage ')
-    montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png')
+    #     #Print for montage
+    #     montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
+    #
+    #     if i%9==0:
+    #         montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png\nmontage ')
+    # montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png')
     return None
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
