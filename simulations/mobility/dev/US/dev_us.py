@@ -75,7 +75,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
-                    'deaths':np.zeros((N2,len(subregions)),dtype='int8'),
+                    'deaths':np.zeros((N2,len(subregions)), dtype=int),
                     'f':np.zeros((N2,len(subregions))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(subregions))),
@@ -161,9 +161,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
             death_index = cum_deaths[cum_deaths>=10].index[0]
             di30 = death_index-30
             #Add epidemic start to stan data
-            #From here on the deaths will be estimated
             stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
-
             #Get part of country_epidemic_data 30 days before day with at least 10 deaths
             regional_epidemic_data = regional_epidemic_data.loc[di30:]
             #Reset index
@@ -171,6 +169,9 @@ def read_and_format_data(us_deaths, mobility_data, N2):
             #Print region and number of days
             print(region, len(regional_epidemic_data), min(regional_epidemic_data['date']),max(regional_epidemic_data['date']))
 
+            #Get dates for plotting
+            if region == 'New York':
+                plot_dates = np.array(regional_epidemic_data['date'], dtype='datetime64[D]')
 	        #Add number of days per country
             N = len(regional_epidemic_data)
             stan_data['N'].append(N)
@@ -184,25 +185,14 @@ def read_and_format_data(us_deaths, mobility_data, N2):
             #Number of deaths
             deaths = np.array(regional_epidemic_data['deaths'])
             sm_deaths = np.zeros(N2)
-            #sm_deaths -=1 #Assign -1 for all forcast days
+            sm_deaths -=1 #Assign -1 for all forcast days
             #Smooth deaths
             #Do a 7day sliding window to get more even death predictions
             for i in range(7,len(regional_epidemic_data)+1):
                 sm_deaths[i-1]=np.average(deaths[i-7:i])
             sm_deaths[0:6] = sm_deaths[6]
-
-            #Handle death adjustments
-            if min(sm_deaths)<0:
-                for i in range(len(sm_deaths)):
-                    if sm_deaths[i]<0:
-                        sm_deaths[i]=sm_deaths[i-1]
-
-
-            sm_deaths[len(regional_epidemic_data):]=-1
             stan_data['deaths'][:,c]=sm_deaths
 
-            #Add to df
-            regional_epidemic_data['deaths'] = sm_deaths[:len(regional_epidemic_data)]
             #Covariates (mobility data from Google) - assign the same shape as others (N2)
             #Construct a 1-week sliding average to smooth the mobility data
             for name in covariate_names:
@@ -235,6 +225,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
+
         return stan_data,complete_df
 
 def visualize_mobility(stan_data, complete_df, outdir):
@@ -260,7 +251,7 @@ def visualize_mobility(stan_data, complete_df, outdir):
 
         plt.xticks(rotation='vertical')
         fig.tight_layout()
-        fig.savefig(outdir+str(i)+'_extreme.png', format = 'png')
+        fig.savefig(outdir+str(i)+'.png', format = 'png')
         i+=1
 
 def simulate(stan_data, stan_model, outdir):
@@ -269,7 +260,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20}) #init_r = .1
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])

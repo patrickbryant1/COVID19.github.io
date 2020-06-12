@@ -287,7 +287,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20}) #init_r = .1
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])

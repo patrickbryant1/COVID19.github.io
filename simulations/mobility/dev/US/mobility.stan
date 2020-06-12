@@ -1,6 +1,6 @@
 data {
-  int<lower=1> M; // number of countries
-  int<lower=1> N0; // number of days for which to impute infections
+  int <lower=1> M; // number of countries
+  int <lower=1> N0; // number of days for which to impute infections
   int<lower=1> N[M]; // days of observed data for country m. each entry must be <= N2
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
@@ -24,7 +24,7 @@ parameters {
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
-  //variance scaling for neg binomial: var = mu^2/phi
+  //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
   real<lower=0> phi_mu;
   real<lower=0> phi_tau;
   real<lower=0> phi_eta;
@@ -81,7 +81,7 @@ model {
   for (m in 1:M){
       y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic - why 1/tau?
   }
-  //variance scaling for neg binomial
+  //phi ~ normal(0,5); //variance scaling for neg binomial
   phi_mu ~ normal(0, 5);
   phi_tau ~ cauchy(0, 5);
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
@@ -92,9 +92,8 @@ model {
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
     for(i in EpidemicStart[m]:N[m]){
-       print(phi);
+       //print(phi);
        deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
     }
    }
 }
-
