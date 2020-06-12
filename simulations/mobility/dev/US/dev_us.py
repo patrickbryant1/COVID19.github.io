@@ -25,7 +25,6 @@ parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help =
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
-parser.add_argument('--use_full', nargs=1, type= bool, default=sys.stdin, help = 'Whether to use the mobility values from the full lockdown.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -57,7 +56,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, N2, use_full):
+def read_and_format_data(us_deaths, mobility_data, N2):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -162,7 +161,9 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
             death_index = cum_deaths[cum_deaths>=10].index[0]
             di30 = death_index-30
             #Add epidemic start to stan data
+            #From here on the deaths will be estimated
             stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
+
             #Get part of country_epidemic_data 30 days before day with at least 10 deaths
             regional_epidemic_data = regional_epidemic_data.loc[di30:]
             #Reset index
@@ -170,9 +171,6 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
             #Print region and number of days
             print(region, len(regional_epidemic_data), min(regional_epidemic_data['date']),max(regional_epidemic_data['date']))
 
-            #Get dates for plotting
-            if region == 'New York':
-                plot_dates = np.array(regional_epidemic_data['date'], dtype='datetime64[D]')
 	        #Add number of days per country
             N = len(regional_epidemic_data)
             stan_data['N'].append(N)
@@ -186,13 +184,23 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
             #Number of deaths
             deaths = np.array(regional_epidemic_data['deaths'])
             sm_deaths = np.zeros(N2)
-            sm_deaths -=1 #Assign -1 for all forcast days
+            #sm_deaths -=1 #Assign -1 for all forcast days
             #Smooth deaths
             #Do a 7day sliding window to get more even death predictions
             for i in range(7,len(regional_epidemic_data)+1):
                 sm_deaths[i-1]=np.average(deaths[i-7:i])
             sm_deaths[0:6] = sm_deaths[6]
+
+            #Handle death adjustments
+            if min(sm_deaths)<0:
+                for i in range(len(sm_deaths)):
+                    if sm_deaths[i]<0:
+                        sm_deaths[i]=sm_deaths[i-1]
+
+
+            sm_deaths[len(regional_epidemic_data):]=-1
             stan_data['deaths'][:,c]=sm_deaths
+
             #Add to df
             regional_epidemic_data['deaths'] = sm_deaths[:len(regional_epidemic_data)]
             #Covariates (mobility data from Google) - assign the same shape as others (N2)
@@ -212,31 +220,14 @@ def read_and_format_data(us_deaths, mobility_data, N2, use_full):
                 regional_epidemic_data[name]=y
 
 
-            extreme_indices = [] #Save the indices for the most extreme mobility changes
             #Add covariate data
             for name in covariate_names:
                 cov_i = np.zeros(N2)
                 cov_i[:N] = np.array(regional_epidemic_data[name])
-                if use_full == True:
-                    if name == 'residential_percent_change_from_baseline':
-                        extreme_val = max(cov_i[:N])
-                    else:
-                        extreme_val = min(cov_i[:N])
-                    #Get index
-                    extreme_index = np.where(cov_i[:N]==extreme_val)[0][0]#Get index for extreme val
-                    #Set all subsequent days to extreme val
-                    cov_i[extreme_index:] = cov_i[extreme_index]
-                    #Also in df
-                    regional_epidemic_data[name] = cov_i[:N]
-                    extreme_indices.append(extreme_index)
-
-
                 #Add covariate info to forecast
                 cov_i[N:N2]=cov_i[N-1]
                 stan_data[name][:,c] = cov_i
 
-            #Change deaths (-1 to estimate them after the latest extreme value has been reached)
-            stan_data['deaths'][max(extreme_indices):,c]=-1
             #Append data to final df
             regional_epidemic_data['region']=region
             complete_df = complete_df.append(regional_epidemic_data, ignore_index=True)
@@ -278,7 +269,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20}) #init_r = .1
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
@@ -297,10 +288,9 @@ us_deaths = pd.read_csv(args.us_deaths[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
-use_full = args.use_full[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate,use_full)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #visualize_mobility(stan_data, complete_df, outdir)

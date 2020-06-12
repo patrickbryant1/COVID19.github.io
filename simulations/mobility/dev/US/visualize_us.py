@@ -188,6 +188,7 @@ def plot_shade_ci(days, state_data, param, means, lower_bound, higher_bound, low
         ax1.hlines(1,0,max(xticks),linestyles='dashed',linewidth=1)
     #ax2
     ax2.set_ylim([-80,40])
+    ax2.set_yticks([-50,-25,0,25])
     #Hide
     ax1.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)
