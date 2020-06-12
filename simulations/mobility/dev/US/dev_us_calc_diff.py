@@ -141,14 +141,35 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
                     higher_bound75[var][j-1]=var_ij['75%'].values[0]
 
         #Use the latest extreme index to fetch R
-        calculate_continued_lockdown(means, lower_bound, higher_bound, lower_bound25, higher_bound75, exi, f, SI)
+        mean_cases, mean_deaths = model_continued_lockdown(means['prediction'],means['Rt'], exi,days, f, SI)
+        lower_cases,lower_deaths = model_continued_lockdown(lower_bound['prediction'],lower_bound['Rt'], exi,days, f, SI)
+        higher_cases, higher_deaths = model_continued_lockdown(higher_bound['prediction'],higher_bound['Rt'], exi,days, f, SI)
+        lower25_cases,lower25_deaths = model_continued_lockdown(lower_bound25['prediction'],lower_bound25['Rt'], exi,days, f, SI)
+        higher75_cases, higher75_deaths = model_continued_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI)
+        pdb.set_trace()
 
 
-
-def calculate_continued_lockdown(means, lower_bound, higher_bound, lower_bound25, higher_bound75, exi, f, SI):
+def model_continued_lockdown(means, cases,R, exi,days, f, SI):
     '''Calculate what would have happened if the lockdown was continued
     '''
-    pdb.set_trace()
+
+    pred_cases = np.zeros(days)
+    pred_cases[:exi]=cases[:exi]
+    pred_deaths = np.zeros(days)
+    for i in range(exi,days):
+        convolution=0 #reset
+    	#loop through all days up to current
+        for j in range(0,i-1):
+            #Cases today due to cumulative probability, sum(cases*rel.change due to SI)
+            convolution += pred_cases[j]*SI[i-j]
+        pred_cases[i] = R[exi] * convolution #Scale with average spread per case
+
+	#Step through all days til end of forecast
+    for i in range(exi,days):
+        for j in range(exi,i-1):
+          pred_deaths[i] += pred_cases[j]*f[i-j] #Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
+
+    return pred_cases, pred_deaths
 #####MAIN#####
 args = parser.parse_args()
 complete_df = pd.read_csv(args.complete_df[0])
