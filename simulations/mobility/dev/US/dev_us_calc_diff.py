@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
-import pystan
 
 import pdb
 
@@ -23,10 +22,72 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Path to all input data.')
 parser.add_argument('--modelling_results', nargs=1, type= str, default=sys.stdin, help = 'Path to stan model results.')
+parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def calculate_diff(complete_df,modelling_results):
+def conv_gamma_params(mean,std):
+        '''Returns converted shape and scale params
+        shape (α) = 1/std^2
+        scale (β) = mean/shape
+        '''
+        shape = 1/(std*std)
+        scale = mean/shape
+
+        return shape,scale
+
+def infection_to_death():
+        '''Simulate the time from infection to death: Infection --> Onset --> Death'''
+        #Infection to death: sum of ito and otd
+        itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
+        itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
+        return itd
+
+def serial_interval_distribution(N2):
+        '''Models the the time between when a person gets infected and when
+        they subsequently infect another other people
+        '''
+        serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
+        serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
+
+        return serial.pdf(np.arange(1,N2+1))
+
+def get_death_f(N2):
+    '''Calculate death fraction
+    '''
+    #Fatality rate - fixed
+    cfr = 0.01
+    #Infection to death
+    itd = infection_to_death()
+    #Get hazard rates for all days in country data
+    #This can be done only once now that the cfr is constant
+    h = np.zeros(N2) #N2 = N+forecast
+    f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+    for i in range(1,len(h)):
+        #for each day t, the death prob is the area btw [t-0.5, t+0.5]
+        #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
+        #This will be the percent increase compared to the previous end interval
+        h[i] = (cfr*(f[i*2+1]-f[i*2-1]))/(1-cfr*f[i*2-1])
+
+    #The number of deaths today is the sum of the past infections weighted by their probability of death,
+    #where the probability of death depends on the number of days since infection.
+    s = np.zeros(N2)
+    s[0] = 1
+    for i in range(1,len(s)):
+        #h is the percent increase in death
+        #s is thus the relative survival fraction
+        #The cumulative survival fraction will be the previous
+        #times the survival probability
+        #These will be used to track how large a fraction is left after each day
+        #In the end all of this will amount to the adjusted death fraction
+        s[i] = s[i-1]*(1-h[i-1]) #Survival fraction
+
+    #Multiplying s and h yields fraction dead of fraction survived
+    f = s*h #This will be fed to the Stan Model
+
+    return f
+
+def calculate_diff(complete_df,modelling_results,days_to_simulate):
     '''Calculate the scenario that would have been obtained if lockdown had not ended
     Get the R estimate at the extreme points in mobility.
     '''
@@ -38,6 +99,12 @@ def calculate_diff(complete_df,modelling_results):
    'residential_percent_change_from_baseline']
 
     states = complete_df['region'].unique()
+
+    #Get death fraction
+    f = get_death_f(days_to_simulate)
+    #Get serial interval distribution
+    SI = serial_interval_distribution(days_to_simulate)
+
     #Loop through states
     for i in range(1,len(states)+1):
 
@@ -74,15 +141,18 @@ def calculate_diff(complete_df,modelling_results):
                     higher_bound75[var][j-1]=var_ij['75%'].values[0]
 
         #Use the latest extreme index to fetch R
+        calculate_continued_lockdown(means, lower_bound, higher_bound, lower_bound25, higher_bound75, exi, f, SI)
 
-        pdb.set_trace()
 
-def calculate_continued_lockdown(means, lower_bound, higher_bound, lower_bound25, higher_bound75, exi):
+
+def calculate_continued_lockdown(means, lower_bound, higher_bound, lower_bound25, higher_bound75, exi, f, SI):
     '''Calculate what would have happened if the lockdown was continued
     '''
+    pdb.set_trace()
 #####MAIN#####
 args = parser.parse_args()
 complete_df = pd.read_csv(args.complete_df[0])
 modelling_results = pd.read_csv(args.modelling_results[0])
+days_to_simulate = args.days_to_simulate[0]
 outdir = args.outdir[0]
-calculate_diff(complete_df,modelling_results)
+calculate_diff(complete_df,modelling_results,days_to_simulate)
