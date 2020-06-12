@@ -91,6 +91,7 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
         days = len(state_data)#Number of days for state i
         #Lockdown data
         state_lockdown = lockdown_df[lockdown_df['state']==state]
+        state_lockdown = state_lockdown.reset_index()
         #Extract modeling results
         means = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))}
         lower_bound = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))} #Estimated 2.5 %
@@ -149,7 +150,7 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     '''
     dates = state_data['date']
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
-    x = np.arange(len(dates))#x-vals
+    x = np.arange(days)#x-vals
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
     fig, ax1 = plt.subplots(figsize=(6/2.54, 4.5/2.54))
@@ -164,7 +165,10 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
 
     #Plot continued lockdown
     exi = int(state_lockdown['extreme_index'].values[0])
-    ax1.plot(x[exi:],state_lockdown.loc[exi:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'g')
+    try:
+        ax1.plot(x[exi:],state_lockdown.loc[exi:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'g')
+    except:
+        pdb.set_trace()
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
 

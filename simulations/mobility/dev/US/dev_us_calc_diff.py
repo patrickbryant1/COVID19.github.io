@@ -149,18 +149,27 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
         higher75_cases, higher75_deaths = model_continued_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI)
         #Add to df
         state_lockdown = pd.DataFrame()
+        #Means
         state_lockdown['mean_cases']=mean_cases
         state_lockdown['mean_deaths']=mean_deaths
+        state_lockdown['mean_Rt']=means['Rt'][exi]
+        #95 %
         state_lockdown['lower_cases']=lower_cases
         state_lockdown['lower_deaths']=lower_deaths
+        state_lockdown['lower_Rt']=lower_bound['Rt'][exi]
         state_lockdown['higher_cases']=higher_cases
         state_lockdown['higher_deaths']=higher_deaths
+        state_lockdown['higher_Rt']=higher_bound['Rt'][exi]
+        #50%
         state_lockdown['lower25_cases']=lower25_cases
         state_lockdown['lower25_deaths']=lower25_deaths
+        state_lockdown['lower25_Rt']=lower_bound25['Rt'][exi]
         state_lockdown['higher75_cases']=higher75_cases
         state_lockdown['higher75_deaths']=higher75_deaths
+        state_lockdown['higher75_Rt']=higher_bound75['Rt'][exi]
         state_lockdown['state'] = state
         state_lockdown['extreme_index']=exi
+
         diff_df = diff_df.append(state_lockdown, ignore_index=True)
 
 
@@ -168,7 +177,7 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
     diff_df.to_csv('lockdown_df.csv')
     pdb.set_trace()
     return None
-    
+
 def model_continued_lockdown(cases,R, exi,days, f, SI):
     '''Calculate what would have happened if the lockdown was continued
     '''
