@@ -57,7 +57,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, N2):
+def read_and_format_data(us_deaths, mobility_data, N2, use_full):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -212,14 +212,31 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                 regional_epidemic_data[name]=y
 
 
+            extreme_indices = [] #Save the indices for the most extreme mobility changes
             #Add covariate data
             for name in covariate_names:
                 cov_i = np.zeros(N2)
                 cov_i[:N] = np.array(regional_epidemic_data[name])
+                if use_full == True:
+                    if name == 'residential_percent_change_from_baseline':
+                        extreme_val = max(cov_i[:N])
+                    else:
+                        extreme_val = min(cov_i[:N])
+                    #Get index
+                    extreme_index = np.where(cov_i[:N]==extreme_val)[0][0]#Get index for extreme val
+                    #Set all subsequent days to extreme val
+                    cov_i[extreme_index:] = cov_i[extreme_index]
+                    #Also in df
+                    regional_epidemic_data[name] = cov_i[:N]
+                    extreme_indices.append(extreme_index)
+
+
                 #Add covariate info to forecast
                 cov_i[N:N2]=cov_i[N-1]
                 stan_data[name][:,c] = cov_i
 
+            #Change deaths (-1 to estimate them after the latest extreme value has been reached)
+            stan_data['deaths'][max(extreme_indices):,c]=-1
             #Append data to final df
             regional_epidemic_data['region']=region
             complete_df = complete_df.append(regional_epidemic_data, ignore_index=True)
@@ -227,7 +244,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-
+        pdb.set_trace()
         return stan_data,complete_df
 
 def visualize_mobility(stan_data, complete_df, outdir):
@@ -253,7 +270,7 @@ def visualize_mobility(stan_data, complete_df, outdir):
 
         plt.xticks(rotation='vertical')
         fig.tight_layout()
-        fig.savefig(outdir+str(i)+'.png', format = 'png')
+        fig.savefig(outdir+str(i)+'_extreme.png', format = 'png')
         i+=1
 
 def simulate(stan_data, stan_model, outdir):
@@ -284,9 +301,10 @@ days_to_simulate = args.days_to_simulate[0]
 use_full = args.use_full[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate,use_full)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
-#visualize_mobility(stan_data, complete_df, outdir)
+visualize_mobility(stan_data, complete_df, outdir)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
