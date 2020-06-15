@@ -8,3 +8,9 @@ montage 'New Jersey_cases.png' 'New Jersey_deaths.png' 'New Jersey_Rt.png' 'New 
 montage Oklahoma_cases.png Oklahoma_deaths.png Oklahoma_Rt.png Oregon_cases.png Oregon_deaths.png Oregon_Rt.png Pennsylvania_cases.png Pennsylvania_deaths.png Pennsylvania_Rt.png 'Rhode Island_cases.png' 'Rhode Island_deaths.png' 'Rhode Island_Rt.png' 'South Carolina_cases.png' 'South Carolina_deaths.png' 'South Carolina_Rt.png' 'South Dakota_cases.png' 'South Dakota_deaths.png' 'South Dakota_Rt.png'  -tile 3x6 -geometry +2+2 $OUTDIR/all_states7.png
 montage Tennessee_cases.png Tennessee_deaths.png Tennessee_Rt.png Texas_cases.png Texas_deaths.png Texas_Rt.png Utah_cases.png Utah_deaths.png Utah_Rt.png Vermont_cases.png Vermont_deaths.png Vermont_Rt.png Virginia_cases.png Virginia_deaths.png Virginia_Rt.png Washington_cases.png Washington_deaths.png Washington_Rt.png -tile 3x6 -geometry +2+2 $OUTDIR/all_states8.png
 montage 'West Virginia_cases.png' 'West Virginia_deaths.png' 'West Virginia_Rt.png' Wisconsin_cases.png Wisconsin_deaths.png Wisconsin_Rt.png Wyoming_cases.png Wyoming_deaths.png Wyoming_Rt.png  -tile 3x6 -geometry +2+2 $OUTDIR/all_states9.png
+
+#Montage for paper
+#Figure 2
+montage 'New York_cases.png' 'New York_deaths.png' 'New York_Rt.png' 'Louisiana_cases.png' 'Louisiana_deaths.png' 'Louisiana_Rt.png' Michigan_cases.png Michigan_deaths.png Michigan_Rt.png 'North Carolina_cases.png' 'North Carolina_deaths.png' 'North Carolina_Rt.png' -tile 3x4 -geometry +2+2 Figure2.png
+montage mobility_markers.png sim_markers.png -tile 2x1 -geometry +2+2 markers.png
+montage markers.png Figure2.png -tile 1x2 -geometry +2+2 Figure2.png

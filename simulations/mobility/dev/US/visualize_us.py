@@ -123,6 +123,8 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
         plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
+        #Print deaths at end point vs deaths at end point if continued lockdown
+        print(state+','+str(np.round(np.array(state_data['deaths'])[-1],0))+','+str(np.round(means['E_deaths'][-1],0))+','+str(np.round(np.array(state_lockdown['mean_deaths'])[-1],0)))
     #     #Print for montage
     #     montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
     #
@@ -208,6 +210,33 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
 
     plt.close()
 
+def plot_markers():
+    '''Plot the marker explanations
+    '''
+    #Mobility
+    covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
+    fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+    i=5
+    for cov in covariate_colors:
+        ax.plot([1,1.8],[i]*2, color = covariate_colors[cov], linewidth=4)
+        ax.text(2.001,i,cov)
+        i-=1
+    ax.set_xlim([0.999,4])
+    ax.axis('off')
+    fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
+
+    #Simulation and forecast
+    fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
+    ax.plot([1,1.8],[1.55]*2, color ='b', linewidth=8, alpha = 0.5)
+    ax.text(2.001,1.543,'Observed deaths')
+    ax.plot([1,1.8],[1.5]*2, color = 'b', linewidth=8)
+    ax.text(2.001,1.493,'Lockdown Relief')
+    ax.plot([1,1.8],[1.45]*2, color ='g', linewidth=8)
+    ax.text(2.001,1.443,'Continued Lockdown')
+    ax.set_xlim([0.999,3.02])
+    ax.set_ylim([1.42,1.57])
+    ax.axis('off')
+    fig.savefig(outdir+'plots/sim_markers.png', format = 'png')
 
 #####MAIN#####
 #Set font size
@@ -221,6 +250,7 @@ short_dates = pd.read_csv(args.short_dates[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
-
+plot_markers()
+pdb.set_trace()
 #Visualize
 visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
