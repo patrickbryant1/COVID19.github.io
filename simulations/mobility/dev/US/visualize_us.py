@@ -250,7 +250,7 @@ short_dates = pd.read_csv(args.short_dates[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
+#Plot the markers
 plot_markers()
-pdb.set_trace()
 #Visualize
 visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
