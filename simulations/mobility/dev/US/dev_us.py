@@ -82,6 +82,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                     'transit_stations_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'workplaces_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'residential_percent_change_from_baseline':np.zeros((N2,len(subregions))),
+                    'parks_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'EpidemicStart': [],
                     'SI':serial_interval[0:N2]
                     }
@@ -93,7 +94,8 @@ def read_and_format_data(us_deaths, mobility_data, N2):
        'grocery_and_pharmacy_percent_change_from_baseline',
        'transit_stations_percent_change_from_baseline',
        'workplaces_percent_change_from_baseline',
-       'residential_percent_change_from_baseline']
+       'residential_percent_change_from_baseline',
+       'parks_percent_change_from_baseline']
         #Fatality rate - fixed
         cfr = 0.01
 
@@ -229,31 +231,6 @@ def read_and_format_data(us_deaths, mobility_data, N2):
 
         return stan_data,complete_df
 
-def visualize_mobility(stan_data, complete_df, outdir):
-    '''Visualize the mobility change per state
-    '''
-
-    titles =  {1:'retail and recreation',2:'grocery and pharmacy', 3:'transit stations',4:'workplace',5:'residential',6:'parks'}
-    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
-                'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
-                'transit_stations_percent_change_from_baseline':'tab:pink',
-                'workplaces_percent_change_from_baseline':'tab:olive',
-                'residential_percent_change_from_baseline':'tab:cyan'}
-    states = complete_df['region'].unique()
-    i=1
-    for key in mob_keys:
-        fig, ax = plt.subplots(figsize=(12/2.54,12/2.54))
-        cov_data = stan_data['covariate'+str(i)]
-        for state in states:
-            state_data = complete_df[complete_df['region']==state]
-            ax.plot(state_data['date'],state_data[key],color=mob_keys[key])
-
-        ax.set_title(titles[i])
-
-        plt.xticks(rotation='vertical')
-        fig.tight_layout()
-        fig.savefig(outdir+str(i)+'.png', format = 'png')
-        i+=1
 
 def simulate(stan_data, stan_model, outdir):
         '''Simulate using stan: Efficient MCMC exploration according to Bayesian posterior distribution
@@ -285,6 +262,5 @@ outdir = args.outdir[0]
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
-#visualize_mobility(stan_data, complete_df, outdir)
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

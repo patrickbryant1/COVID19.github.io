@@ -170,6 +170,8 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
         state_lockdown['state'] = state
         state_lockdown['extreme_index']=exi
 
+        #Add the parks
+        
         diff_df = diff_df.append(state_lockdown, ignore_index=True)
 
 

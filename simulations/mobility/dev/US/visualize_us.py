@@ -13,6 +13,7 @@ from matplotlib.patches import Rectangle
 from scipy.stats import gamma
 import numpy as np
 import seaborn as sns
+import datetime
 
 
 import pdb
@@ -238,19 +239,74 @@ def plot_markers():
     ax.axis('off')
     fig.savefig(outdir+'plots/sim_markers.png', format = 'png')
 
+def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
+    '''Visualize the mobility change per state
+    '''
+
+    titles =  {1:'Retail and recreation',2:'Grocery and pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+                'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
+                'transit_stations_percent_change_from_baseline':'tab:pink',
+                'workplaces_percent_change_from_baseline':'tab:olive',
+                'residential_percent_change_from_baseline':'tab:cyan',
+                'parks_percent_change_from_baseline':'tab:green'}
+    states = complete_df['region'].unique()
+
+    for plot_lockdown in [True, False]:
+        i=1
+        for key in mob_keys:
+            fig, ax = plt.subplots(figsize=(7/2.54,7/2.54))
+            for state in states:
+                state_data = complete_df[complete_df['region']==state]
+                #Reset index
+                state_data = state_data.reset_index()
+                if plot_lockdown == True:
+                    #Plot continued lockdown
+                    exi = int(lockdown_df[lockdown_df['state']==state]['extreme_index'].values[0])
+                    lock_val = state_data.loc[exi,key]
+                    state_data.loc[exi:,key]=lock_val
+                ax.plot(state_data['date'],state_data[key],color=mob_keys[key])
+            #Formatting
+            ax.set_ylabel('Mobility change')
+            ax.set_title(titles[i])
+            #Dates
+            start = min(complete_df['date'])
+            end = max(complete_df['date'])
+            dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
+            selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
+            #xticks=np.arange(0,len(dates),14)
+            #ax.set_xticklabels(selected_short_dates,rotation='vertical')
+            plt.xticks(rotation='vertical')
+            #Hide
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            fig.tight_layout()
+            if plot_lockdown == True:
+                fig.savefig(outdir+str(i)+'_extreme.png', format = 'png')
+            else:
+                fig.savefig(outdir+str(i)+'.png', format = 'png')
+            i+=1
+
+
 #####MAIN#####
 #Set font size
 matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
+#Convert to datetime
+complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
 lockdown_df = pd.read_csv(args.lockdown_df[0])
 short_dates = pd.read_csv(args.short_dates[0])
 
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
+#Visualize the mobility data
+visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
 #Plot the markers
 plot_markers()
+
+pdb.set_trace()
 #Visualize
 visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
