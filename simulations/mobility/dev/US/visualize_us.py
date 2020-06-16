@@ -83,6 +83,7 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
     states = complete_df['region'].unique()
     # montage_file = open(outdir+'/plots/montage.sh','w')
     # montage_file.write('montage ')
+    metrics = pd.DataFrame(np.zeros((len(states),9)), columns=['state','observed deaths','mean deaths', 'lower deaths', 'higher deaths', 'mean cont. deaths', 'lower cont. deaths', 'higher cont. deaths', 'previous peak mean deaths'])
     for i in range(1,len(states)+1):
 
         state= states[i-1]
@@ -124,15 +125,25 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
         plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
         higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
-        #Print deaths at end point vs deaths at end point if continued lockdown
-        print(state+','+str(np.round(np.array(state_data['deaths'])[-1],0))+','+str(np.round(means['E_deaths'][-1],0))+','+str(np.round(np.array(state_lockdown['mean_deaths'])[-1],0)))
+        #Save deaths at end point vs deaths at end point if continued lockdown
+        metrics.loc[i-1,'state']=state
+        metrics.loc[i-1,'observed deaths']=np.round(np.array(state_data['deaths'])[-1],0)
+        metrics.loc[i-1,'mean deaths']=np.round(means['E_deaths'][-1],0)
+        metrics.loc[i-1,'lower deaths']=np.round(lower_bound['E_deaths'][-1],0)
+        metrics.loc[i-1,'higher deaths']=np.round(higher_bound['E_deaths'][-1],0)
+        metrics.loc[i-1,'mean cont. deaths']=np.round(np.array(state_lockdown['mean_deaths'])[-1],0)
+        metrics.loc[i-1,'lower cont. deaths']=np.round(np.array(state_lockdown['lower_deaths'])[-1],0)
+        metrics.loc[i-1,'higher cont. deaths']=np.round(np.array(state_lockdown['higher_deaths'])[-1],0)
+        metrics.loc[i-1,'previous peak mean deaths']=np.round(max(means['E_deaths'][:-30]),0)
+
     #     #Print for montage
     #     montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
     #
     #     if i%9==0:
     #         montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png\nmontage ')
     # montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png')
-    return None
+
+    return metrics
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
     '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
@@ -287,6 +298,24 @@ def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
                 fig.savefig(outdir+str(i)+'.png', format = 'png')
             i+=1
 
+def print_CI(metrics):
+    '''Print table of mean and 95 % CIs for % of previous peak at end for
+    NPI continuation vs reality
+    '''
+    print('State;Modeled deaths with NPI lifting;Fraction of previous peak with NPI lifting;Modeled deaths with continued NPIs;Fraction of previous peak with continued NPIs')
+    for i in range(len(metrics)):
+        row_i = metrics.loc[i]
+        #Opening
+        php_open_mean = str(np.round(100*row_i['mean deaths']/row_i['previous peak mean deaths'],1))
+        php_open_lower = str(np.round(100*row_i['lower deaths']/row_i['previous peak mean deaths'],1))
+        php_open_higher = str(np.round(100*row_i['higher deaths']/row_i['previous peak mean deaths'],1))
+        #Continued lockdown
+        php_cl_mean = str(np.round(100*row_i['mean cont. deaths']/row_i['previous peak mean deaths'],1))
+        php_cl_lower = str(np.round(100*row_i['lower cont. deaths']/row_i['previous peak mean deaths'],1))
+        php_cl_higher = str(np.round(100*row_i['higher cont. deaths']/row_i['previous peak mean deaths'],1))
+
+        print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' ['+php_cl_lower+','+php_cl_higher+']')
+
 
 #####MAIN#####
 #Set font size
@@ -303,10 +332,10 @@ short_dates = pd.read_csv(args.short_dates[0])
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 #Visualize the mobility data
-visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
+#visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
 #Plot the markers
-plot_markers()
-
-pdb.set_trace()
+#plot_markers()
 #Visualize
-visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+print_CI(metrics)
+pdb.set_trace()
