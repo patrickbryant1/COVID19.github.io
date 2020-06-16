@@ -337,5 +337,5 @@ outdir = args.outdir[0]
 #plot_markers()
 #Visualize
 metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+#Print metrics as table with CIs
 print_CI(metrics)
-pdb.set_trace()
