@@ -334,10 +334,10 @@ short_dates = pd.read_csv(args.short_dates[0])
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 #Visualize the mobility data
-visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
+#visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
 #Plot the markers
 #plot_markers()
 #Visualize
-#metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
 #print_CI(metrics)

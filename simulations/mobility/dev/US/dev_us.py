@@ -195,7 +195,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
             sm_deaths[0:6] = sm_deaths[6]
             stan_data['deaths'][:,c]=sm_deaths
             #Add to df
-            regional_epidemic_data['deaths']=sm_deaths[:len(regional_epidemic_data)]
+            #regional_epidemic_data['deaths']=sm_deaths[:len(regional_epidemic_data)]
             #Covariates (mobility data from Google) - assign the same shape as others (N2)
             #Construct a 1-week sliding average to smooth the mobility data
             for name in covariate_names:
