@@ -284,10 +284,12 @@ def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
             start = min(complete_df['date'])
             end = max(complete_df['date'])
             dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
+            xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,111]
+            dates = dates[xticks]
             selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
-            #xticks=np.arange(0,len(dates),14)
-            #ax.set_xticklabels(selected_short_dates,rotation='vertical')
-            plt.xticks(rotation='vertical')
+            ax.set_xticks(dates)
+            ax.set_xticklabels(selected_short_dates,rotation='vertical')
+            #plt.xticks(rotation='vertical')
             #Hide
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
@@ -332,10 +334,10 @@ short_dates = pd.read_csv(args.short_dates[0])
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 #Visualize the mobility data
-#visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
+visualize_mobility(complete_df, lockdown_df, short_dates, outdir)
 #Plot the markers
 #plot_markers()
 #Visualize
-metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+#metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
-print_CI(metrics)
+#print_CI(metrics)
