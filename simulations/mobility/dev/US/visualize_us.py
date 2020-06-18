@@ -26,12 +26,13 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 parser.add_argument('--indir', nargs=1, type= str, default=sys.stdin, help = 'Path to directory with results.')
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with all state data used for modelling.')
 parser.add_argument('--lockdown_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with continued lockdown results.')
+parser.add_argument('--epiestim_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with epiestim results.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 
 
-def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
+def visualize_results(complete_df, lockdown_df, epiestim_df, indir, short_dates, outdir):
     '''Visualize results
     '''
 
@@ -83,6 +84,10 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
     states = complete_df['region'].unique()
     # montage_file = open(outdir+'/plots/montage.sh','w')
     # montage_file.write('montage ')
+    #all death curves together
+    figclose, axclose = plt.subplots(figsize=(12/2.54, 12/2.54))
+    figopen, axopen = plt.subplots(figsize=(12/2.54, 12/2.54))
+    #metrics
     metrics = pd.DataFrame(np.zeros((len(states),9)), columns=['state','observed deaths','mean deaths', 'lower deaths', 'higher deaths', 'mean cont. deaths', 'lower cont. deaths', 'higher cont. deaths', 'previous peak mean deaths'])
     for i in range(1,len(states)+1):
 
@@ -112,18 +117,18 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
 
         #Plot cases
         #Per day
-        plot_shade_ci(days, state_data,state_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
-        higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+state+'_cases.png', short_dates)
-
-        #Plot Deaths
-        #Per day
-        plot_shade_ci(days,state_data,state_lockdown,'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
-        lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+state+'_deaths.png', short_dates)
-        #Plot R
-        plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
+        # plot_shade_ci(days, state_data,state_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
+        # higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
+        # outdir+'plots/'+state+'_cases.png', short_dates)
+        #
+        # #Plot Deaths
+        # #Per day
+        # plot_shade_ci(days,state_data,state_lockdown,'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
+        # lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
+        # outdir+'plots/'+state+'_deaths.png', short_dates)
+        # #Plot R
+        # plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
+        # higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
         #Save deaths at end point vs deaths at end point if continued lockdown
         metrics.loc[i-1,'state']=state
@@ -136,7 +141,8 @@ def visualize_results(complete_df, lockdown_df, indir, short_dates, outdir):
         metrics.loc[i-1,'higher cont. deaths']=np.round(np.array(state_lockdown['higher_deaths'])[-1],0)
         metrics.loc[i-1,'previous peak mean deaths']=np.round(max(means['E_deaths'][:-30]),0)
 
-    #     #Print for montage
+
+            #     #Print for montage
     #     montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
     #
     #     if i%9==0:
@@ -219,8 +225,8 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     #fig
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
-
-    plt.close()
+    #Close plot
+    plt.close(fig)
 
 def plot_markers():
     '''Plot the marker explanations
@@ -318,6 +324,72 @@ def print_CI(metrics):
 
         print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' ['+php_cl_lower+','+php_cl_higher+']')
 
+def epiestim_vs_stan(complete_df, epiestim_df):
+    '''Analyze the relationship btw mobility change and R change
+    '''
+    matplotlib.rcParams.update({'font.size': 6})
+    #Plot per state
+    states = complete_df['region'].unique()
+
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+                'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
+                'transit_stations_percent_change_from_baseline':'tab:pink',
+                'workplaces_percent_change_from_baseline':'tab:olive',
+                'residential_percent_change_from_baseline':'tab:cyan'}
+    xlims = {'retail_and_recreation_percent_change_from_baseline':[-60,-30],
+                'grocery_and_pharmacy_percent_change_from_baseline':[-30,10],
+                'transit_stations_percent_change_from_baseline':[-70,-30],
+                'workplaces_percent_change_from_baseline':[-60,-30],
+                'residential_percent_change_from_baseline':[10,20]}
+    titles =  {1:'Retail and recreation',2:'Grocery and pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
+    i=1
+    for key in mob_keys:
+        figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        figopen, axopen = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        for state in states:
+            state_data = complete_df[complete_df['region']==state]
+            state_data =state_data.reset_index()
+            #Compare with the epiestim df
+            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            #Join on date
+            state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
+            state_data = state_data[state_data['R0_7days']<6]
+            close_data = state_data[state_data['date']<'2020-04-10']
+            open_data = state_data[state_data['date']>'2020-04-10']
+            #Plot death curve normalized with the first peak
+            if state == 'District of Columbia':
+                continue
+            if len(close_data)>1 and len(open_data)>1:
+                if key =='residential_percent_change_from_baseline':
+                    axclose.plot([min(close_data[key]),max(close_data[key])],[max(close_data['R0_7days']),min(close_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
+                    axopen.plot([min(open_data[key]),max(open_data[key])],[max(open_data['R0_7days']),min(open_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
+                else:
+                    axclose.plot([min(close_data[key]),max(close_data[key])],[min(close_data['R0_7days']),max(close_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
+                    axopen.plot([min(open_data[key]),max(open_data[key])],[min(open_data['R0_7days']),max(open_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
+
+        plt.xticks(rotation='vertical')
+        axclose.set_xlabel('Mobility change')
+        axclose.set_ylabel('EpiEstim R')
+        axclose.set_title(titles[i])
+        #Hide
+        axclose.spines['top'].set_visible(False)
+        axclose.spines['right'].set_visible(False)
+        if key != 'residential_percent_change_from_baseline':
+            axclose.invert_xaxis() #Invert axis
+        figclose.tight_layout()
+        figclose.savefig(outdir+key+'_all_close_curves.png', format = 'png')
+
+        axopen.set_xlabel('Mobility change')
+        axopen.set_ylabel('EpiEstim R')
+        axopen.set_title(titles[i])
+        #Hide
+        axopen.spines['top'].set_visible(False)
+        axopen.spines['right'].set_visible(False)
+        if key == 'residential_percent_change_from_baseline':
+            axopen.invert_xaxis() #Invert axis
+        figopen.tight_layout()
+        figopen.savefig(outdir+key+'_all_open_curves.png', format = 'png')
+        i+=1
 
 #####MAIN#####
 #Set font size
@@ -325,8 +397,10 @@ matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
+epiestim_df = pd.read_csv(args.epiestim_df[0])
 #Convert to datetime
 complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
+epiestim_df['date']=pd.to_datetime(epiestim_df['date'], format='%Y/%m/%d')
 lockdown_df = pd.read_csv(args.lockdown_df[0])
 short_dates = pd.read_csv(args.short_dates[0])
 
@@ -338,6 +412,8 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+#metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
 #print_CI(metrics)
+#Analyze mobility and R relstionhip
+epiestim_vs_stan(complete_df, epiestim_df)
