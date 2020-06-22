@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from scipy.stats import gamma
+from scipy.stats import gamma, pearsonr
 import numpy as np
 import seaborn as sns
 import datetime
@@ -207,7 +207,7 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     #ax1
     ax1.set_ylabel(ylabel)
     ax1.set_title(state_data['region'].unique()[0])
-    xticks=np.arange(len(x)-1,0,-14)
+    xticks=np.arange(len(x)-1,0,-1)
     ax1.set_xticks(xticks)
     try:
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
@@ -324,7 +324,7 @@ def print_CI(metrics):
 
         print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' ['+php_cl_lower+','+php_cl_higher+']')
 
-def epiestim_vs_stan(complete_df, epiestim_df):
+def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
     '''Analyze the relationship btw mobility change and R change
     '''
     matplotlib.rcParams.update({'font.size': 6})
@@ -342,35 +342,68 @@ def epiestim_vs_stan(complete_df, epiestim_df):
                 'workplaces_percent_change_from_baseline':[-60,-30],
                 'residential_percent_change_from_baseline':[10,20]}
     titles =  {1:'Retail and recreation',2:'Grocery and pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
-    i=1
+    i=0
     for key in mob_keys:
-        figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
-        figopen, axopen = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        close_x = []
+        open_x = []
+        close_y = []
+        open_y = []
+
+        figR, axR = plt.subplots(figsize=(12/2.54, 12/2.54))
         for state in states:
             state_data = complete_df[complete_df['region']==state]
-            state_data =state_data.reset_index()
             #Compare with the epiestim df
             epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
+
             state_data = state_data[state_data['R0_7days']<6]
-            close_data = state_data[state_data['date']<'2020-04-10']
-            open_data = state_data[state_data['date']>'2020-04-10']
+            state_data = state_data[state_data['date']<'2020-06-06']
+            close_data = state_data[state_data['date']<'2020-04-25']
+            open_data = state_data[state_data['date']>'2020-04-25']
+            #Plot R from EpiEstim
+            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
             #Plot death curve normalized with the first peak
             if state == 'District of Columbia':
                 continue
-            if len(close_data)>1 and len(open_data)>1:
-                if key =='residential_percent_change_from_baseline':
-                    axclose.plot([min(close_data[key]),max(close_data[key])],[max(close_data['R0_7days']),min(close_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
-                    axopen.plot([min(open_data[key]),max(open_data[key])],[max(open_data['R0_7days']),min(open_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
-                else:
-                    axclose.plot([min(close_data[key]),max(close_data[key])],[min(close_data['R0_7days']),max(close_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
-                    axopen.plot([min(open_data[key]),max(open_data[key])],[min(open_data['R0_7days']),max(open_data['R0_7days'])], alpha=0.4, linewidth = 1.0, color = mob_keys[key])
 
-        plt.xticks(rotation='vertical')
+
+            close_x.extend(np.array(close_data[key]))
+            close_y.extend(np.array(close_data['R0_7days']))
+
+            open_x.extend(np.array(open_data[key]))
+            open_y.extend(np.array(open_data['R0_7days']))
+
+
+        #Plot formatting
+        #EpiEstim R
+        #Dates
+        start = min(complete_df['date'])
+        end = max(complete_df['date'])
+        dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
+        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112]
+        dates = dates[xticks]
+        selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
+        axR.set_xticks(dates)
+        axR.set_xticklabels(selected_short_dates,rotation='vertical')
+        axR.set_ylabel('EpiEstim R')
+        #Hide
+        axR.spines['top'].set_visible(False)
+        axR.spines['right'].set_visible(False)
+        figR.tight_layout()
+        figR.savefig(outdir+'epiR.png', format = 'png')
+        i+=1
+
+
+
+        #Close
+        figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        close_R=np.round(np.corrcoef(close_x,close_y)[0,1],2)
+        sns.kdeplot(close_x,close_y, cmap='Blues')
         axclose.set_xlabel('Mobility change')
         axclose.set_ylabel('EpiEstim R')
-        axclose.set_title(titles[i])
+        axclose.set_title(titles[i]+'\nR='+str(np.average(close_R)))
+        axclose.set_yticks([1,2,3,4,5])
         #Hide
         axclose.spines['top'].set_visible(False)
         axclose.spines['right'].set_visible(False)
@@ -379,9 +412,14 @@ def epiestim_vs_stan(complete_df, epiestim_df):
         figclose.tight_layout()
         figclose.savefig(outdir+key+'_all_close_curves.png', format = 'png')
 
+        #Open
+        figopen, axopen = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        sns.kdeplot(open_x,open_y, cmap='Blues')
         axopen.set_xlabel('Mobility change')
         axopen.set_ylabel('EpiEstim R')
-        axopen.set_title(titles[i])
+        open_R=np.round(np.corrcoef(open_x,open_y)[0,1],2)
+        axopen.set_title(titles[i]+'\nR='+str(np.average(open_R)))
+        axopen.set_ylim([0.5,1.5])
         #Hide
         axopen.spines['top'].set_visible(False)
         axopen.spines['right'].set_visible(False)
@@ -389,7 +427,8 @@ def epiestim_vs_stan(complete_df, epiestim_df):
             axopen.invert_xaxis() #Invert axis
         figopen.tight_layout()
         figopen.savefig(outdir+key+'_all_open_curves.png', format = 'png')
-        i+=1
+
+
 
 #####MAIN#####
 #Set font size
@@ -416,4 +455,4 @@ outdir = args.outdir[0]
 #Print metrics as table with CIs
 #print_CI(metrics)
 #Analyze mobility and R relstionhip
-epiestim_vs_stan(complete_df, epiestim_df)
+epiestim_vs_mob(complete_df, epiestim_df, short_dates)
