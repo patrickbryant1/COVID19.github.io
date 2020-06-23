@@ -4,7 +4,7 @@
 CASES=../../../data/US/us_cases.csv
 MOBILITY_DATA=../../../data/Global_Mobility_Report.csv
 OUTDIR=./
-./epiestim_format.py --us_cases $CASES --mobility_data $MOBILITY_DATA --outdir $OUTDIR
+#./epiestim_format.py --us_cases $CASES --mobility_data $MOBILITY_DATA --outdir $OUTDIR
 
 
 #Estimate R using EpiEstim

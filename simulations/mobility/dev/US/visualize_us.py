@@ -27,6 +27,7 @@ parser.add_argument('--indir', nargs=1, type= str, default=sys.stdin, help = 'Pa
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with all state data used for modelling.')
 parser.add_argument('--lockdown_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with continued lockdown results.')
 parser.add_argument('--epiestim_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with epiestim results.')
+parser.add_argument('--case_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with cases per day.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -324,7 +325,7 @@ def print_CI(metrics):
 
         print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' ['+php_cl_lower+','+php_cl_higher+']')
 
-def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
+def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
     '''Analyze the relationship btw mobility change and R change
     '''
     matplotlib.rcParams.update({'font.size': 6})
@@ -351,28 +352,31 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
 
         figR, axR = plt.subplots(figsize=(12/2.54, 12/2.54))
         for state in states:
+            if state == 'District of Columbia':
+                continue
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            epiestim_state = epiestim_df[epiestim_df['state']==state)]
+            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            #Cases per state
+            case_state = case_df[case_df['region']==state]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
+            state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['Mean(R)']<6]
+            state_data = state_data[state_data['R0_7days']<6]
             state_data = state_data[state_data['date']<'2020-06-06']
             close_data = state_data[state_data['date']<'2020-04-25']
             open_data = state_data[state_data['date']>='2020-04-25']
+
             #Plot R from EpiEstim
-            axR.plot(state_data['date'], state_data['Mean(R)'], color = 'b', alpha = 0.5)
-            #Plot death curve normalized with the first peak
-            if state == 'District of Columbia':
-                continue
+            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
 
-
+            #Get close and open data
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['Mean(R)']))
+            close_y.extend(np.array(close_data['R0_7days']))
 
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['Mean(R)']))
+            open_y.extend(np.array(open_data['R0_7days']))
 
 
         #Plot formatting
@@ -420,8 +424,8 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
         axopen.set_ylabel('EpiEstim R')
         open_R=np.round(np.corrcoef(open_x,open_y)[0,1],2)
         axopen.set_title(titles[i]+'\nR='+str(np.average(open_R)))
-        axopen.set_ylim([0,2])
-        axopen.set_yticks([1,2])
+        axopen.set_ylim([0.5,1.5])
+        axopen.set_yticks([1])
         #Hide
         axopen.spines['top'].set_visible(False)
         axopen.spines['right'].set_visible(False)
@@ -439,9 +443,11 @@ args = parser.parse_args()
 indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
 epiestim_df = pd.read_csv(args.epiestim_df[0])
+case_df = pd.read_csv(args.case_df[0])
 #Convert to datetime
 complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
 epiestim_df['date']=pd.to_datetime(epiestim_df['date'], format='%Y/%m/%d')
+case_df['date']=pd.to_datetime(case_df['date'], format='%Y/%m/%d')
 lockdown_df = pd.read_csv(args.lockdown_df[0])
 short_dates = pd.read_csv(args.short_dates[0])
 
@@ -457,4 +463,4 @@ outdir = args.outdir[0]
 #Print metrics as table with CIs
 #print_CI(metrics)
 #Analyze mobility and R relstionhip
-epiestim_vs_mob(complete_df, epiestim_df, short_dates)
+epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
