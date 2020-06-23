@@ -350,21 +350,23 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         close_y = []
         open_y = []
 
-        figR, axR = plt.subplots(figsize=(12/2.54, 12/2.54))
+        figR_close, axR_close = plt.subplots(figsize=(12/2.54, 12/2.54))
+        figR_open, axR_open = plt.subplots(figsize=(12/2.54, 12/2.54))
         for state in states:
             if state == 'District of Columbia':
                 continue
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            #epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            epiestim_state = epiestim_df[epiestim_df['state']==state]
             #Cases per state
             case_state = case_df[case_df['region']==state]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
             state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['R0_7days']<6]
-            state_data = state_data[state_data['date']<'2020-06-06']
+            state_data = state_data[state_data['Mean(R)']<6]
+            #state_data = state_data[state_data['date']<'2020-06-06']
             #Get cases last week and normalize with total
             cases_last_week = np.zeros(len(state_data))
             for j in range(7,len(state_data)):
@@ -378,35 +380,43 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
             open_data = state_data[state_data['date']>='2020-04-25']
 
             #Plot R from EpiEstim
-            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
-
+            axR_close.plot(close_data['date'], close_data['Mean(R)'], color = 'b', alpha = 0.5)
+            axR_open.plot(open_data['date'], open_data['Mean(R)'], color = 'b', alpha = 0.5)
 
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['R0_7days']))
+            close_y.extend(np.array(close_data['Mean(R)']))
             #close_y.extend(np.array(close_data['cases'])/max(state_data['cases']))
             #close_y.extend(np.array(close_data['cases_last_week']))
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['R0_7days']))
+            open_y.extend(np.array(open_data['Mean(R)']))
             #open_y.extend(np.array(open_data['cases'])/max(state_data['cases']))
             #open_y.extend(np.array(open_data['cases_last_week']))
         #Plot formatting
         #EpiEstim R
         #Dates
-        start = min(complete_df['date'])
-        end = max(complete_df['date'])
-        dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
-        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112]
-        dates = dates[xticks]
-        selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
-        axR.set_xticks(dates)
-        axR.set_xticklabels(selected_short_dates,rotation='vertical')
-        axR.set_ylabel('EpiEstim R')
+        #start = min(complete_df['date'])
+        #end = max(complete_df['date'])
+        #dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
+        #xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112]
+        #dates = dates[xticks]
+        #selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
+        #axR.set_xticks(dates)
+        #axR.set_xticklabels(selected_short_dates,rotation='vertical')
+        axR_close.set_ylabel('EpiEstim R')
         #Hide
-        axR.spines['top'].set_visible(False)
-        axR.spines['right'].set_visible(False)
-        figR.tight_layout()
-        figR.savefig(outdir+'epiR.png', format = 'png')
+        axR_close.spines['top'].set_visible(False)
+        axR_close.spines['right'].set_visible(False)
+        figR_close.tight_layout()
+        figR_close.savefig(outdir+'epiR_close.png', format = 'png')
+
+        axR_open.set_ylabel('EpiEstim R')
+        #Hide
+        axR_open.spines['top'].set_visible(False)
+        axR_open.spines['right'].set_visible(False)
+        plt.xticks(rotation='vertical')
+        figR_open.tight_layout()
+        figR_open.savefig(outdir+'epiR_open.png', format = 'png')
         i+=1
 
 
