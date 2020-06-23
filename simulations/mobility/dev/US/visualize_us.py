@@ -365,20 +365,31 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
             state_data = state_data[state_data['R0_7days']<6]
             state_data = state_data[state_data['date']<'2020-06-06']
+            #Get cases last week and normalize with total
+            cases_last_week = np.zeros(len(state_data))
+            for j in range(7,len(state_data)):
+                state_total_cases = np.sum(state_data.loc[:j-1,'cases'])
+                if state_total_cases == 0:
+                    cases_last_week[j-1]=0
+                else:
+                    cases_last_week[j-1]=np.sum(state_data.loc[j-7:j-1,'cases'])/state_total_cases
+            state_data['cases_last_week']=cases_last_week
             close_data = state_data[state_data['date']<'2020-04-25']
             open_data = state_data[state_data['date']>='2020-04-25']
 
             #Plot R from EpiEstim
             axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
 
+
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
             close_y.extend(np.array(close_data['R0_7days']))
-
+            #close_y.extend(np.array(close_data['cases'])/max(state_data['cases']))
+            #close_y.extend(np.array(close_data['cases_last_week']))
             open_x.extend(np.array(open_data[key]))
             open_y.extend(np.array(open_data['R0_7days']))
-
-
+            #open_y.extend(np.array(open_data['cases'])/max(state_data['cases']))
+            #open_y.extend(np.array(open_data['cases_last_week']))
         #Plot formatting
         #EpiEstim R
         #Dates
