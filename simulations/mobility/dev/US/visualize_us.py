@@ -332,17 +332,19 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
     #Plot per state
     states = complete_df['region'].unique()
 
-    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
-                'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
-                'transit_stations_percent_change_from_baseline':'tab:pink',
-                'workplaces_percent_change_from_baseline':'tab:olive',
-                'residential_percent_change_from_baseline':'tab:cyan'}
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'Reds',
+                'grocery_and_pharmacy_percent_change_from_baseline':'Purples',
+                'transit_stations_percent_change_from_baseline':'spring_r',
+                'workplaces_percent_change_from_baseline':'YlGn',
+                'residential_percent_change_from_baseline':'Blues',
+                }
+
     xlims = {'retail_and_recreation_percent_change_from_baseline':[-60,-30],
                 'grocery_and_pharmacy_percent_change_from_baseline':[-30,10],
                 'transit_stations_percent_change_from_baseline':[-70,-30],
                 'workplaces_percent_change_from_baseline':[-60,-30],
                 'residential_percent_change_from_baseline':[10,20]}
-    titles =  {1:'Retail and recreation',2:'Grocery and pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
+    titles =  {1:'Retail + recreation',2:'Grocery + pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
     i=0
     for key in mob_keys:
         close_x = []
@@ -350,23 +352,22 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         close_y = []
         open_y = []
 
-        figR_close, axR_close = plt.subplots(figsize=(12/2.54, 12/2.54))
-        figR_open, axR_open = plt.subplots(figsize=(12/2.54, 12/2.54))
+        figR, axR = plt.subplots(figsize=(12/2.54, 12/2.54))
         for state in states:
             if state == 'District of Columbia':
                 continue
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            #epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
-            epiestim_state = epiestim_df[epiestim_df['state']==state]
+            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            #epiestim_state = epiestim_df[epiestim_df['state']==state]
             #Cases per state
             case_state = case_df[case_df['region']==state]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
             state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['Mean(R)']<6]
-            #state_data = state_data[state_data['date']<'2020-06-06']
+            state_data = state_data[state_data['R0_7days']<6]
+            state_data = state_data[state_data['date']<'2020-06-06']
             #Get cases last week and normalize with total
             cases_last_week = np.zeros(len(state_data))
             for j in range(7,len(state_data)):
@@ -375,48 +376,45 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
                     cases_last_week[j-1]=0
                 else:
                     cases_last_week[j-1]=np.sum(state_data.loc[j-7:j-1,'cases'])/state_total_cases
+
+
             state_data['cases_last_week']=cases_last_week
             close_data = state_data[state_data['date']<'2020-04-25']
             open_data = state_data[state_data['date']>='2020-04-25']
 
             #Plot R from EpiEstim
-            axR_close.plot(close_data['date'], close_data['Mean(R)'], color = 'b', alpha = 0.5)
-            axR_open.plot(open_data['date'], open_data['Mean(R)'], color = 'b', alpha = 0.5)
+            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
+
 
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['Mean(R)']))
+            close_y.extend(np.array(close_data['R0_7days']))
             #close_y.extend(np.array(close_data['cases'])/max(state_data['cases']))
+            #close_y.extend(np.gradient(np.array(close_data['cases'])/max(state_data['cases'])))
             #close_y.extend(np.array(close_data['cases_last_week']))
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['Mean(R)']))
+            open_y.extend(np.array(open_data['R0_7days']))
             #open_y.extend(np.array(open_data['cases'])/max(state_data['cases']))
+            #open_y.extend(np.gradient(np.array(open_data['cases'])/max(state_data['cases'])))
             #open_y.extend(np.array(open_data['cases_last_week']))
+
         #Plot formatting
         #EpiEstim R
         #Dates
-        #start = min(complete_df['date'])
-        #end = max(complete_df['date'])
-        #dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
-        #xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112]
-        #dates = dates[xticks]
-        #selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
-        #axR.set_xticks(dates)
-        #axR.set_xticklabels(selected_short_dates,rotation='vertical')
-        axR_close.set_ylabel('EpiEstim R')
+        start = min(complete_df['date'])
+        end = max(complete_df['date'])
+        dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
+        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112]
+        dates = dates[xticks]
+        selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
+        axR.set_xticks(dates)
+        axR.set_xticklabels(selected_short_dates,rotation='vertical')
+        axR.set_ylabel('EpiEstim R')
         #Hide
-        axR_close.spines['top'].set_visible(False)
-        axR_close.spines['right'].set_visible(False)
-        figR_close.tight_layout()
-        figR_close.savefig(outdir+'epiR_close.png', format = 'png')
-
-        axR_open.set_ylabel('EpiEstim R')
-        #Hide
-        axR_open.spines['top'].set_visible(False)
-        axR_open.spines['right'].set_visible(False)
-        plt.xticks(rotation='vertical')
-        figR_open.tight_layout()
-        figR_open.savefig(outdir+'epiR_open.png', format = 'png')
+        axR.spines['top'].set_visible(False)
+        axR.spines['right'].set_visible(False)
+        figR.tight_layout()
+        figR.savefig(outdir+'epiR.png', format = 'png')
         i+=1
 
 
@@ -424,12 +422,12 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         #Close
         figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
         close_R=np.round(np.corrcoef(close_x,close_y)[0,1],2)
-        sns.kdeplot(close_x,close_y, cmap='Blues')
+        sns.kdeplot(close_x,close_y, cmap=mob_keys[key])
         axclose.set_xlabel('Mobility change')
         axclose.set_ylabel('EpiEstim R')
         axclose.set_title(titles[i]+'\nR='+str(np.average(close_R)))
-        axclose.set_yticks([1,2,3,4,5,6])
-        axclose.set_ylim([0.5,6])
+        #axclose.set_yticks([1,2,3,4,5,6])
+        #axclose.set_ylim([0.5,6])
         #Hide
         axclose.spines['top'].set_visible(False)
         axclose.spines['right'].set_visible(False)
@@ -440,13 +438,13 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
         #Open
         figopen, axopen = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
-        sns.kdeplot(open_x,open_y, cmap='Blues')
+        sns.kdeplot(open_x,open_y, cmap=mob_keys[key])
         axopen.set_xlabel('Mobility change')
         axopen.set_ylabel('EpiEstim R')
         open_R=np.round(np.corrcoef(open_x,open_y)[0,1],2)
         axopen.set_title(titles[i]+'\nR='+str(np.average(open_R)))
-        axopen.set_ylim([0.5,1.5])
-        axopen.set_yticks([1])
+        #axopen.set_ylim([0.5,1.5])
+        #axopen.set_yticks([0.5,1,1.5])
         #Hide
         axopen.spines['top'].set_visible(False)
         axopen.spines['right'].set_visible(False)
