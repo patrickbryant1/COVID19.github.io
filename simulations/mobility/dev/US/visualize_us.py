@@ -360,7 +360,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
             state_data = state_data[state_data['R0_7days']<6]
             state_data = state_data[state_data['date']<'2020-06-06']
             close_data = state_data[state_data['date']<'2020-04-25']
-            open_data = state_data[state_data['date']>'2020-04-25']
+            open_data = state_data[state_data['date']>='2020-04-25']
             #Plot R from EpiEstim
             axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
             #Plot death curve normalized with the first peak
@@ -403,7 +403,8 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
         axclose.set_xlabel('Mobility change')
         axclose.set_ylabel('EpiEstim R')
         axclose.set_title(titles[i]+'\nR='+str(np.average(close_R)))
-        axclose.set_yticks([1,2,3,4,5])
+        axclose.set_yticks([1,2,3,4,5,6])
+        axclose.set_ylim([0.5,6])
         #Hide
         axclose.spines['top'].set_visible(False)
         axclose.spines['right'].set_visible(False)
@@ -419,7 +420,8 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
         axopen.set_ylabel('EpiEstim R')
         open_R=np.round(np.corrcoef(open_x,open_y)[0,1],2)
         axopen.set_title(titles[i]+'\nR='+str(np.average(open_R)))
-        axopen.set_ylim([0.5,1.5])
+        axopen.set_ylim([0,2])
+        axopen.set_yticks([1,2])
         #Hide
         axopen.spines['top'].set_visible(False)
         axopen.spines['right'].set_visible(False)
