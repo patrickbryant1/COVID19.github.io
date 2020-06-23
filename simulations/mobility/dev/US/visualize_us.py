@@ -347,6 +347,8 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
     titles =  {1:'Retail + recreation',2:'Grocery + pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
     i=0
     for key in mob_keys:
+        all_x = []
+        all_y = []
         close_x = []
         open_x = []
         close_y = []
@@ -385,7 +387,9 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
             #Plot R from EpiEstim
             axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
 
-
+            #Get all data together
+            all_x.extend(np.array(state_data[key]))
+            all_y.extend(np.array(state_data['R0_7days']))
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
             close_y.extend(np.array(close_data['R0_7days']))
@@ -417,7 +421,22 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         figR.savefig(outdir+'epiR.png', format = 'png')
         i+=1
 
-
+        #Close and Open
+        figall, axall = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        all_R=np.round(np.corrcoef(all_x,all_y)[0,1],2)
+        sns.kdeplot(all_x,all_y, cmap=mob_keys[key])
+        axall.set_xlabel('Mobility change')
+        axall.set_ylabel('EpiEstim R')
+        axall.set_title(titles[i]+'\nR='+str(np.average(all_R)))
+        axall.set_yticks([1,2,3,4,5,6])
+        axall.set_ylim([0.5,6])
+        #Hide
+        axall.spines['top'].set_visible(False)
+        axall.spines['right'].set_visible(False)
+        if key != 'residential_percent_change_from_baseline':
+            axall.invert_xaxis() #Invert axis
+        figall.tight_layout()
+        figall.savefig(outdir+key+'_all_curves.png', format = 'png')
 
         #Close
         figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))

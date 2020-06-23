@@ -6,5 +6,7 @@ montage 'retail_and_recreation_percent_change_from_baseline_all_close_curves.png
 montage 'retail_and_recreation_percent_change_from_baseline_all_open_curves.png' 'grocery_and_pharmacy_percent_change_from_baseline_all_open_curves.png' 'transit_stations_percent_change_from_baseline_all_open_curves.png' 'workplaces_percent_change_from_baseline_all_open_curves.png' 'residential_percent_change_from_baseline_all_open_curves.png' -tile 5x1 -geometry +2+2 epiestim_vs_mob_open.png
 montage  epiestim_vs_mob_close.png epiestim_vs_mob_open.png -tile 1x2 -geometry +2+2 epiestim_vs_mob_open_and_close.png
 
+montage 'retail_and_recreation_percent_change_from_baseline_all_curves.png' 'grocery_and_pharmacy_percent_change_from_baseline_all_curves.png' 'transit_stations_percent_change_from_baseline_all_curves.png' 'workplaces_percent_change_from_baseline_all_curves.png' 'residential_percent_change_from_baseline_all_curves.png' -tile 5x1 -geometry +2+2 epiestim_vs_mob_all.png
+
 #EpiEstim R
 montage  epiR_close.png epiR_open.png -tile 2x1 -geometry +2+2 epiR_open_and_close.png
