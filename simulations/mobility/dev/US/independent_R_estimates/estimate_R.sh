@@ -17,3 +17,6 @@ time for i in {1..50}
     echo $STATE
     Rscript ./model_R.R $EPIDATA $STATE $OUTDIR
   done
+
+#Join all data
+./join_epiR.py --indir /home/patrick/results/COVID19/mobility_and_spread/US/EpiEstimR/ --outdir ./

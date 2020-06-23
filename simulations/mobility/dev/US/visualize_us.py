@@ -353,26 +353,26 @@ def epiestim_vs_mob(complete_df, epiestim_df, short_dates):
         for state in states:
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            epiestim_state = epiestim_df[epiestim_df['state']==state)]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['R0_7days']<6]
+            state_data = state_data[state_data['Mean(R)']<6]
             state_data = state_data[state_data['date']<'2020-06-06']
             close_data = state_data[state_data['date']<'2020-04-25']
             open_data = state_data[state_data['date']>='2020-04-25']
             #Plot R from EpiEstim
-            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
+            axR.plot(state_data['date'], state_data['Mean(R)'], color = 'b', alpha = 0.5)
             #Plot death curve normalized with the first peak
             if state == 'District of Columbia':
                 continue
 
 
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['R0_7days']))
+            close_y.extend(np.array(close_data['Mean(R)']))
 
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['R0_7days']))
+            open_y.extend(np.array(open_data['Mean(R)']))
 
 
         #Plot formatting

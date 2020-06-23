@@ -34,6 +34,6 @@ for file in estimates:
     state_R = pd.read_csv(file)
     state_R['state'] = state
     #Append data to final df
-    all_R = complete_df.append(state_R, ignore_index=True)
+    all_R = all_R.append(state_R, ignore_index=True)
 
-pdb.set_trace()
+all_R.to_csv('EpiEstimR_estimates.csv')
