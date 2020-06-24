@@ -150,26 +150,34 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate,days_earlier):
         higher75_cases, higher75_deaths = model_earlier_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI,days_earlier)
         #Add to df
         state_lockdown = pd.DataFrame()
+        early_i =exi-days_earlier
+        if exi-days_earlier<0:
+            early_i = 0
         #Means
         state_lockdown['mean_cases']=mean_cases
         state_lockdown['mean_deaths']=mean_deaths
-        state_lockdown['mean_Rt']=means['Rt'][exi]
+        state_lockdown['mean_Rt']=means['Rt']
+        state_lockdown.loc[early_i:,'mean_Rt']=means['Rt'][exi]
         #95 %
         state_lockdown['lower_cases']=lower_cases
         state_lockdown['lower_deaths']=lower_deaths
-        state_lockdown['lower_Rt']=lower_bound['Rt'][exi]
+        state_lockdown['lower_Rt']=lower_bound['Rt']
+        state_lockdown.loc[early_i:,'lower_Rt']=lower_bound['Rt'][exi]
         state_lockdown['higher_cases']=higher_cases
         state_lockdown['higher_deaths']=higher_deaths
-        state_lockdown['higher_Rt']=higher_bound['Rt'][exi]
+        state_lockdown['higher_Rt']=higher_bound['Rt']
+        state_lockdown.loc[early_i:,'higher_Rt']=higher_bound['Rt'][exi]
         #50%
         state_lockdown['lower25_cases']=lower25_cases
         state_lockdown['lower25_deaths']=lower25_deaths
-        state_lockdown['lower25_Rt']=lower_bound25['Rt'][exi]
+        state_lockdown['lower25_Rt']=lower_bound25['Rt']
+        state_lockdown.loc[early_i:,'lower25_Rt']=lower_bound25['Rt'][exi]
         state_lockdown['higher75_cases']=higher75_cases
         state_lockdown['higher75_deaths']=higher75_deaths
-        state_lockdown['higher75_Rt']=higher_bound75['Rt'][exi]
+        state_lockdown['higher75_Rt']=higher_bound75['Rt']
+        state_lockdown.loc[early_i:,'higher75_Rt']=higher_bound75['Rt'][exi]
         state_lockdown['state'] = state
-        state_lockdown['extreme_index']=exi
+        state_lockdown['extreme_index']=early_i
 
         #Add to the total df
         diff_df = diff_df.append(state_lockdown, ignore_index=True)
@@ -183,11 +191,14 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate,days_earlier):
 def model_earlier_lockdown(cases,R, exi,days, f, SI, days_earlier):
     '''Calculate what would have happened if the lockdown was set x days earlier
     '''
+    early_i =exi-days_earlier
+    if exi-days_earlier<0:
+        early_i = 0
 
     pred_cases = np.zeros(days)
-    pred_cases[:exi-days_earlier]=cases[:exi-days_earlier]
+    pred_cases[:early_i]=cases[:early_i]
     pred_deaths = np.zeros(days)
-    for i in range(exi-days_earlier,days):
+    for i in range(early_i,days):
         convolution=0 #reset
     	#loop through all days up to current
         for j in range(0,i-1):
@@ -196,7 +207,7 @@ def model_earlier_lockdown(cases,R, exi,days, f, SI, days_earlier):
         pred_cases[i] = R[exi] * convolution #Scale with average spread per case
 
 	#Step through all days til end of forecast
-    for i in range(exi-days_earlier,days):
+    for i in range(early_i,days):
         for j in range(0,i-1):
           pred_deaths[i] += pred_cases[j]*f[i-j] #Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
 

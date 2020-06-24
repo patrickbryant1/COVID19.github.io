@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 INDIR=/home/patrick/results/COVID19/mobility_and_spread/US/20200611/
-COMDF=./complete_df.csv
+COMDF=/home/patrick/results/COVID19/mobility_and_spread/US/20200611/complete_df.csv
 CASEDF=./independent_R_estimates/complete_case_df.csv
 LOCKDF=./lockdown_df.csv
 EARLYLOCKDF=./earlier_lockdown_df.csv

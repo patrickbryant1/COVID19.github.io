@@ -15,7 +15,6 @@ import numpy as np
 import seaborn as sns
 import datetime
 
-
 import pdb
 
 
@@ -26,6 +25,7 @@ parser = argparse.ArgumentParser(description = '''Visuaize results from model us
 parser.add_argument('--indir', nargs=1, type= str, default=sys.stdin, help = 'Path to directory with results.')
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with all state data used for modelling.')
 parser.add_argument('--lockdown_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with continued lockdown results.')
+parser.add_argument('--early_lockdown_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with earlier and continued lockdown results.')
 parser.add_argument('--epiestim_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with epiestim results.')
 parser.add_argument('--case_df', nargs=1, type= str, default=sys.stdin, help = 'Dataframe with cases per day.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
@@ -33,7 +33,7 @@ parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'P
 
 
 
-def visualize_results(complete_df, lockdown_df, epiestim_df, indir, short_dates, outdir):
+def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir):
     '''Visualize results
     '''
 
@@ -100,6 +100,9 @@ def visualize_results(complete_df, lockdown_df, epiestim_df, indir, short_dates,
         #Lockdown data
         state_lockdown = lockdown_df[lockdown_df['state']==state]
         state_lockdown = state_lockdown.reset_index()
+        #Early lockdown data
+        state_early_lockdown = early_lockdown_df[early_lockdown_df['state']==state]
+        state_early_lockdown = state_early_lockdown.reset_index()
         #Extract modeling results
         means = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))}
         lower_bound = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))} #Estimated 2.5 %
@@ -118,18 +121,18 @@ def visualize_results(complete_df, lockdown_df, epiestim_df, indir, short_dates,
 
         #Plot cases
         #Per day
-        # plot_shade_ci(days, state_data,state_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
-        # higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        # outdir+'plots/'+state+'_cases.png', short_dates)
-        #
-        # #Plot Deaths
-        # #Per day
-        # plot_shade_ci(days,state_data,state_lockdown,'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
-        # lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        # outdir+'plots/'+state+'_deaths.png', short_dates)
-        # #Plot R
-        # plot_shade_ci(days,state_data,state_lockdown,'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        # higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
+        plot_shade_ci(days, state_data,state_lockdown, state_early_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
+        higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
+        outdir+'plots/'+state+'_cases.png', short_dates)
+
+        #Plot Deaths
+        #Per day
+        plot_shade_ci(days,state_data,state_lockdown, state_early_lockdown, 'deaths',means['E_deaths'], lower_bound['E_deaths'], higher_bound['E_deaths'],
+        lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
+        outdir+'plots/'+state+'_deaths.png', short_dates)
+        #Plot R
+        plot_shade_ci(days,state_data,state_lockdown,state_early_lockdown, 'Rt',means['Rt'], lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
+        higher_bound75['Rt'],'Rt',outdir+'plots/'+state+'_Rt.png', short_dates)
 
         #Save deaths at end point vs deaths at end point if continued lockdown
         metrics.loc[i-1,'state']=state
@@ -166,7 +169,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
     plt.close()
 
-def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, higher_bound, lower_bound25, higher_bound75, ylabel, outname, short_dates):
+def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param, means, lower_bound, higher_bound, lower_bound25, higher_bound75, ylabel, outname, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = state_data['date']
@@ -179,10 +182,7 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     #Plot observed dates
     if param=='deaths':
         ax1.bar(x,np.round(state_data[param],0), alpha = 0.5)
-    #Plot simulation
-    ax1.plot(x,means, alpha=0.5, linewidth = 2.0, color = 'b')
-    ax1.fill_between(x, lower_bound, higher_bound, color='cornflowerblue', alpha=0.4)
-    ax1.fill_between(x, lower_bound25, higher_bound75, color='cornflowerblue', alpha=0.6)
+
 
     #Plot continued lockdown
     exi = int(state_lockdown['extreme_index'].values[0])
@@ -192,6 +192,20 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
         pdb.set_trace()
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
+
+    #Plot earlier continued lockdown
+    exi = int(state_early_lockdown['extreme_index'].values[0])
+    try:
+        ax1.plot(x,state_early_lockdown.loc[:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'grey')
+    except:
+        pdb.set_trace()
+    ax1.fill_between(x,state_early_lockdown.loc[:,'lower_'+param], state_early_lockdown.loc[:,'higher_'+param], color='grey', alpha=0.4)
+    ax1.fill_between(x,state_early_lockdown.loc[:,'lower25_'+param], state_early_lockdown.loc[:,'higher75_'+param], color='grey', alpha=0.6)
+
+    #Plot simulation
+    ax1.plot(x,means, alpha=0.5, linewidth = 2.0, color = 'b')
+    ax1.fill_between(x, lower_bound, higher_bound, color='cornflowerblue', alpha=0.4)
+    ax1.fill_between(x, lower_bound25, higher_bound75, color='cornflowerblue', alpha=0.6)
 
     #Mobility
     mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
@@ -208,7 +222,7 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     #ax1
     ax1.set_ylabel(ylabel)
     ax1.set_title(state_data['region'].unique()[0])
-    xticks=np.arange(len(x)-1,0,-1)
+    xticks=np.arange(len(x)-1,0,-14)
     ax1.set_xticks(xticks)
     try:
         ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
@@ -220,6 +234,7 @@ def plot_shade_ci(days, state_data, state_lockdown, param, means, lower_bound, h
     #ax2
     ax2.set_ylim([-80,40])
     ax2.set_yticks([-50,-25,0,25])
+
     #Hide
     ax1.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)
@@ -510,6 +525,7 @@ complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
 epiestim_df['date']=pd.to_datetime(epiestim_df['date'], format='%Y/%m/%d')
 case_df['date']=pd.to_datetime(case_df['date'], format='%Y/%m/%d')
 lockdown_df = pd.read_csv(args.lockdown_df[0])
+early_lockdown_df = pd.read_csv(args.early_lockdown_df[0])
 short_dates = pd.read_csv(args.short_dates[0])
 
 #Make sure the np dates are in the correct format
@@ -520,8 +536,8 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-#metrics = visualize_results(complete_df, lockdown_df, indir, short_dates, outdir)
+metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
 #print_CI(metrics)
 #Analyze mobility and R relstionhip
-epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
+#epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
