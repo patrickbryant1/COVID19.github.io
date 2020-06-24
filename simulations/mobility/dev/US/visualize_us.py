@@ -193,14 +193,14 @@ def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param,
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
     ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
 
-    #Plot earlier continued lockdown
-    exi = int(state_early_lockdown['extreme_index'].values[0])
-    try:
-        ax1.plot(x,state_early_lockdown.loc[:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'grey')
-    except:
-        pdb.set_trace()
-    ax1.fill_between(x,state_early_lockdown.loc[:,'lower_'+param], state_early_lockdown.loc[:,'higher_'+param], color='grey', alpha=0.4)
-    ax1.fill_between(x,state_early_lockdown.loc[:,'lower25_'+param], state_early_lockdown.loc[:,'higher75_'+param], color='grey', alpha=0.6)
+    # #Plot earlier continued lockdown
+    # exi = int(state_early_lockdown['extreme_index'].values[0])
+    # try:
+    #     ax1.plot(x,state_early_lockdown.loc[:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'grey')
+    # except:
+    #     pdb.set_trace()
+    # ax1.fill_between(x,state_early_lockdown.loc[:,'lower_'+param], state_early_lockdown.loc[:,'higher_'+param], color='grey', alpha=0.4)
+    # ax1.fill_between(x,state_early_lockdown.loc[:,'lower25_'+param], state_early_lockdown.loc[:,'higher75_'+param], color='grey', alpha=0.6)
 
     #Plot simulation
     ax1.plot(x,means, alpha=0.5, linewidth = 2.0, color = 'b')
@@ -338,7 +338,7 @@ def print_CI(metrics):
         php_cl_lower = str(np.round(100*row_i['lower cont. deaths']/row_i['previous peak mean deaths'],1))
         php_cl_higher = str(np.round(100*row_i['higher cont. deaths']/row_i['previous peak mean deaths'],1))
 
-        print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' ['+php_cl_lower+','+php_cl_higher+']')
+        print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' % ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' % ['+php_cl_lower+','+php_cl_higher+']')
 
 def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
     '''Analyze the relationship btw mobility change and R change
@@ -537,8 +537,8 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-#metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
-#print_CI(metrics)
+print_CI(metrics)
 #Analyze mobility and R relstionhip
-epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
+#epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
