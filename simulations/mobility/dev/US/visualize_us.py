@@ -344,7 +344,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
                 'transit_stations_percent_change_from_baseline':[-70,-30],
                 'workplaces_percent_change_from_baseline':[-60,-30],
                 'residential_percent_change_from_baseline':[10,20]}
-    titles =  {1:'Retail + recreation',2:'Grocery + pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
+    titles =  {1:'Retail & recreation',2:'Grocery & pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
     i=0
     for key in mob_keys:
         all_x = []
@@ -421,10 +421,29 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         figR.savefig(outdir+'epiR.png', format = 'png')
         i+=1
 
+
         #Close and Open
+        def get_average(x,y,s):
+            '''Computes the average relationship
+            btw x and y with intervals of s
+            '''
+            xmin = min(x) #x is the mobility data
+            xmax = max(x) #and will be used for the intervals
+            xav = [] #Save averages
+            yav = []
+            vals = np.arange(xmax, xmin-s,-s)
+            for i in range(len(vals)-1):
+                int_x = np.where((x<=vals[i]) & (x>vals[i+1]))
+                xav.append(np.median(x[int_x]))
+                yav.append(np.median(y[int_x]))
+
+            return xav, yav
+
         figall, axall = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
         all_R=np.round(np.corrcoef(all_x,all_y)[0,1],2)
+        xav, yav = get_average(np.array(all_x), np.array(all_y), 5)
         sns.kdeplot(all_x,all_y, cmap=mob_keys[key])
+        axall.plot(xav,yav,color='grey', linewidth=1)
         axall.set_xlabel('Mobility change')
         axall.set_ylabel('EpiEstim R')
         axall.set_title(titles[i]+'\nR='+str(np.average(all_R)))
@@ -441,12 +460,14 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         #Close
         figclose, axclose = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
         close_R=np.round(np.corrcoef(close_x,close_y)[0,1],2)
+        xav, yav = get_average(np.array(close_x), np.array(close_y), 5)
         sns.kdeplot(close_x,close_y, cmap=mob_keys[key])
+        axclose.plot(xav,yav,color='grey', linewidth=1)
         axclose.set_xlabel('Mobility change')
         axclose.set_ylabel('EpiEstim R')
         axclose.set_title(titles[i]+'\nR='+str(np.average(close_R)))
-        #axclose.set_yticks([1,2,3,4,5,6])
-        #axclose.set_ylim([0.5,6])
+        axclose.set_yticks([1,2,3,4,5,6])
+        axclose.set_ylim([0.5,6])
         #Hide
         axclose.spines['top'].set_visible(False)
         axclose.spines['right'].set_visible(False)
@@ -457,13 +478,15 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
         #Open
         figopen, axopen = plt.subplots(figsize=(3.6/2.54, 3.6/2.54))
+        xav, yav = get_average(np.array(open_x), np.array(open_y), 5)
         sns.kdeplot(open_x,open_y, cmap=mob_keys[key])
+        axopen.plot(xav,yav,color='grey', linewidth=1)
         axopen.set_xlabel('Mobility change')
         axopen.set_ylabel('EpiEstim R')
         open_R=np.round(np.corrcoef(open_x,open_y)[0,1],2)
         axopen.set_title(titles[i]+'\nR='+str(np.average(open_R)))
-        #axopen.set_ylim([0.5,1.5])
-        #axopen.set_yticks([0.5,1,1.5])
+        axopen.set_ylim([0.5,1.5])
+        axopen.set_yticks([0.5,1,1.5])
         #Hide
         axopen.spines['top'].set_visible(False)
         axopen.spines['right'].set_visible(False)
