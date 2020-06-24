@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Path to all input data.')
 parser.add_argument('--modelling_results', nargs=1, type= str, default=sys.stdin, help = 'Path to stan model results.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--days_earlier', nargs=1, type= int, default=sys.stdin, help = 'Number of days earlier to set lockdown to.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -87,8 +88,8 @@ def get_death_f(N2):
 
     return f
 
-def calculate_diff(complete_df,modelling_results,days_to_simulate):
-    '''Calculate the scenario that would have been obtained if lockdown had not ended
+def calculate_diff(complete_df,modelling_results,days_to_simulate,days_earlier):
+    '''Calculate the scenario that would have been obtained if lockdown had occured x days earlier
     Get the R estimate at the extreme points in mobility.
     '''
     #Covariate names
@@ -142,11 +143,11 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
                     higher_bound75[var][j-1]=var_ij['75%'].values[0]
 
         #Use the latest extreme index to fetch R
-        mean_cases, mean_deaths = model_continued_lockdown(means['prediction'],means['Rt'], exi,days, f, SI)
-        lower_cases,lower_deaths = model_continued_lockdown(lower_bound['prediction'],lower_bound['Rt'], exi,days, f, SI)
-        higher_cases, higher_deaths = model_continued_lockdown(higher_bound['prediction'],higher_bound['Rt'], exi,days, f, SI)
-        lower25_cases,lower25_deaths = model_continued_lockdown(lower_bound25['prediction'],lower_bound25['Rt'], exi,days, f, SI)
-        higher75_cases, higher75_deaths = model_continued_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI)
+        mean_cases, mean_deaths = model_earlier_lockdown(means['prediction'],means['Rt'], exi,days, f, SI,days_earlier)
+        lower_cases,lower_deaths = model_earlier_lockdown(lower_bound['prediction'],lower_bound['Rt'], exi,days, f, SI,days_earlier)
+        higher_cases, higher_deaths = model_earlier_lockdown(higher_bound['prediction'],higher_bound['Rt'], exi,days, f, SI,days_earlier)
+        lower25_cases,lower25_deaths = model_earlier_lockdown(lower_bound25['prediction'],lower_bound25['Rt'], exi,days, f, SI,days_earlier)
+        higher75_cases, higher75_deaths = model_earlier_lockdown(higher_bound75['prediction'],higher_bound75['Rt'], exi,days, f, SI,days_earlier)
         #Add to df
         state_lockdown = pd.DataFrame()
         #Means
@@ -175,18 +176,18 @@ def calculate_diff(complete_df,modelling_results,days_to_simulate):
 
 
     #Save df
-    diff_df.to_csv('lockdown_df.csv')
-    print('Saved lockdown dataframe')
+    diff_df.to_csv('earlier_lockdown_df.csv')
+    print('Saved earlier lockdown dataframe')
     return None
 
-def model_continued_lockdown(cases,R, exi,days, f, SI):
-    '''Calculate what would have happened if the lockdown was continued
+def model_earlier_lockdown(cases,R, exi,days, f, SI, days_earlier):
+    '''Calculate what would have happened if the lockdown was set x days earlier
     '''
 
     pred_cases = np.zeros(days)
-    pred_cases[:exi]=cases[:exi]
+    pred_cases[:exi-days_earlier]=cases[:exi-days_earlier]
     pred_deaths = np.zeros(days)
-    for i in range(exi,days):
+    for i in range(exi-days_earlier,days):
         convolution=0 #reset
     	#loop through all days up to current
         for j in range(0,i-1):
@@ -195,7 +196,7 @@ def model_continued_lockdown(cases,R, exi,days, f, SI):
         pred_cases[i] = R[exi] * convolution #Scale with average spread per case
 
 	#Step through all days til end of forecast
-    for i in range(exi,days):
+    for i in range(exi-days_earlier,days):
         for j in range(0,i-1):
           pred_deaths[i] += pred_cases[j]*f[i-j] #Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
 
@@ -205,5 +206,6 @@ args = parser.parse_args()
 complete_df = pd.read_csv(args.complete_df[0])
 modelling_results = pd.read_csv(args.modelling_results[0])
 days_to_simulate = args.days_to_simulate[0]
+days_earlier = args.days_earlier[0]
 outdir = args.outdir[0]
-calculate_diff(complete_df,modelling_results,days_to_simulate)
+calculate_diff(complete_df,modelling_results,days_to_simulate,days_earlier)
