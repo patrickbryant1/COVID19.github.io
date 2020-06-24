@@ -375,17 +375,17 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
                 continue
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            #epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
-            epiestim_state = epiestim_df[epiestim_df['state']==state]
+            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            #epiestim_state = epiestim_df[epiestim_df['state']==state]
             #Cases per state
             case_state = case_df[case_df['region']==state]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
             state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['Mean(R)']<6] #'R0_7days'
+            state_data = state_data[state_data['R0_7days']<6] #'R0_7days'
             #Plot R from EpiEstim
-            axR.plot(state_data['date'], state_data['Mean(R)'], color = 'b', alpha = 0.5)
+            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
             state_data = state_data[state_data['date']<'2020-06-06']
             #Get cases last week and normalize with total
             cases_last_week = np.zeros(len(state_data))
@@ -405,15 +405,15 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
             #Get all data together
             all_x.extend(np.array(state_data[key]))
-            all_y.extend(np.array(state_data['Mean(R)']))
+            all_y.extend(np.array(state_data['R0_7days']))
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['Mean(R)']))
+            close_y.extend(np.array(close_data['R0_7days']))
             #close_y.extend(np.array(close_data['cases'])/max(state_data['cases']))
             #close_y.extend(np.gradient(np.array(close_data['cases'])/max(state_data['cases'])))
             #close_y.extend(np.array(close_data['cases_last_week']))
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['Mean(R)']))
+            open_y.extend(np.array(open_data['R0_7days']))
             #open_y.extend(np.array(open_data['cases'])/max(state_data['cases']))
             #open_y.extend(np.gradient(np.array(open_data['cases'])/max(state_data['cases'])))
             #open_y.extend(np.array(open_data['cases_last_week']))
@@ -424,7 +424,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         start = min(complete_df['date'])
         end = max(complete_df['date'])
         dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
-        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112,125]
+        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,111]
         dates = dates[xticks]
         selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
         axR.set_xticks(dates)
@@ -537,8 +537,8 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+#metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
-print_CI(metrics)
+#print_CI(metrics)
 #Analyze mobility and R relstionhip
-#epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
+epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
