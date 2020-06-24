@@ -228,7 +228,6 @@ def read_and_format_data(us_deaths, mobility_data, N2):
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
 
-
         return stan_data,complete_df
 
 
