@@ -68,7 +68,7 @@ def vis_comorbidity(comorbidity_data, conditions, outname):
 
     plt.xticks(rotation='vertical')
     plt.legend()
-    ax.set_title(condition)
+    ax.set_title('Comorbidity')
     ax.set_ylabel('Deaths')
     fig.tight_layout()
     fig.savefig(outname, format='png')
@@ -81,6 +81,6 @@ args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 comorbidity_data = pd.read_csv(args.comorbidity_data[0])
 outdir = args.outdir[0]
-vis_states(epidemic_data, outdir)
-#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:3], outdir+'comorbidity/comorbidity1.png')
-#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[3:], outdir+'comorbidity/comorbidity2.png')
+#vis_states(epidemic_data, outdir)
+vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:1], outdir+'comorbidity/comorbidity1.png')
+vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[1:], outdir+'comorbidity/comorbidity2.png')
