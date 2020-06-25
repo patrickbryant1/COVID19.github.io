@@ -38,12 +38,13 @@ def vis_states(epidemic_data, comorbidity_data, outdir):
         plt.xticks(rotation='vertical')
         plt.legend()
         ax.set_title(state)
+        ax.set_ylabel('Deaths')
         fig.tight_layout()
         fig.savefig(outdir+state.replace(" ", "_")+'.png', format='png')
         plt.close()
 
 
-    
+
 #####MAIN#####
 #Set font size
 args = parser.parse_args()
