@@ -22,7 +22,7 @@ parser.add_argument('--comorbidity_data', nargs=1, type= str, default=sys.stdin,
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def vis_states(epidemic_data, comorbidity_data, outdir):
+def vis_states(epidemic_data, outdir):
     '''Plot the deaths per state and feature
     '''
 
@@ -32,9 +32,14 @@ def vis_states(epidemic_data, comorbidity_data, outdir):
         state_data = epidemic_data[epidemic_data['State']==state]
         ethnicities = state_data['Race and Hispanic Origin Group'].unique()
         age_groups = state_data['Age group'].unique()
+        prev=np.zeros(len(age_groups))
         for ethnicity in ethnicities:
             eth_state_data = state_data[state_data['Race and Hispanic Origin Group']==ethnicity]
-            ax.bar(eth_state_data['Age group'], eth_state_data['COVID-19 Deaths'],label=ethnicity)
+            if np.sum(prev)<1:
+                ax.bar(eth_state_data['Age group'], eth_state_data['COVID-19 Deaths'], label=ethnicity)
+            else:
+                ax.bar(eth_state_data['Age group'], eth_state_data['COVID-19 Deaths'],bottom = prev, label=ethnicity)
+            prev += eth_state_data['COVID-19 Deaths']
         plt.xticks(rotation='vertical')
         plt.legend()
         ax.set_title(state)
@@ -43,6 +48,31 @@ def vis_states(epidemic_data, comorbidity_data, outdir):
         fig.savefig(outdir+state.replace(" ", "_")+'.png', format='png')
         plt.close()
 
+def vis_comorbidity(comorbidity_data, conditions, outname):
+    '''Visualize the covid comorbidity
+    '''
+    fig, ax = plt.subplots(figsize=(27/2.54, 18/2.54))
+    cols = ['0-24 years', '25-34 years', '35-44 years',
+       '45-54 years', '55-64 years', '65-74 years', '75-84 years',
+       '85 years and over']
+
+    prev=np.zeros(len(cols))
+    for condition in conditions:
+        condition_data = comorbidity_data[comorbidity_data['Condition']==condition]
+        if np.sum(prev)<1:
+            ax.bar(cols,np.array(condition_data[cols])[0], label=condition)
+        else:
+            ax.bar(cols,np.array(condition_data[cols])[0], bottom = prev, label=condition)
+        prev+=np.array(condition_data[cols])[0]
+        print(prev)
+
+    plt.xticks(rotation='vertical')
+    plt.legend()
+    ax.set_title(condition)
+    ax.set_ylabel('Deaths')
+    fig.tight_layout()
+    fig.savefig(outname, format='png')
+    plt.close()
 
 
 #####MAIN#####
@@ -51,4 +81,6 @@ args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 comorbidity_data = pd.read_csv(args.comorbidity_data[0])
 outdir = args.outdir[0]
-vis_states(epidemic_data, comorbidity_data, outdir)
+vis_states(epidemic_data, outdir)
+#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:3], outdir+'comorbidity/comorbidity1.png')
+#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[3:], outdir+'comorbidity/comorbidity2.png')
