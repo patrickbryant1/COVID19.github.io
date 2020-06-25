@@ -1,0 +1,199 @@
+TBLID,GEOID,GEONAME,PROFTBL,PROFLN,TITLE,PRF_ESTIMATE,PRF_MG_ERROR,PCT_ESTIMATE,PCT_MG_ERROR
+DP02PR,04000US72,Puerto Rico,,0,SELECTED SOCIAL CHARACTERISTICS IN PUERTO RICO,,,,
+DP02PR,04000US72,Puerto Rico,,0.5,SELECTED SOCIAL CHARACTERISTICS IN PUERTO RICO,,,,
+DP02PR,04000US72,Puerto Rico,,0.8,HOUSEHOLDS BY TYPE,,,,
+DP02PR,04000US72,Puerto Rico,1,1,Total households,"1,179,637","+/-9,819","1,179,637",(X)
+DP02PR,04000US72,Puerto Rico,1,2,Family households (families),"791,354","+/-11,339",67.1,+/-0.7
+DP02PR,04000US72,Puerto Rico,1,3,With own children of the householder under 18 years,"268,032","+/-7,119",22.7,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,4,Married-couple family,"438,070","+/-8,214",37.1,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,5,With own children of the householder under 18 years,"114,276","+/-4,765",9.7,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,6,"Male householder, no wife present, family","82,218","+/-4,876",7.0,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,7,With own children of the householder under 18 years,"34,827","+/-3,377",3.0,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,8,"Female householder, no husband present, family","271,066","+/-6,470",23.0,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,9,With own children of the householder under 18 years,"118,929","+/-4,884",10.1,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,10,Nonfamily households,"388,283","+/-7,736",32.9,+/-0.7
+DP02PR,04000US72,Puerto Rico,1,11,Householder living alone,"335,367","+/-7,586",28.4,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,12,65 years and over,"166,543","+/-5,255",14.1,+/-0.5
+DP02PR,04000US72,Puerto Rico,,12.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,13,Households with one or more people under 18 years,"320,217","+/-7,205",27.1,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,14,Households with one or more people 65 years and over,"464,544","+/-5,242",39.4,+/-0.4
+DP02PR,04000US72,Puerto Rico,,14.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,15,Average household size,2.68,+/-0.02,(X),(X)
+DP02PR,04000US72,Puerto Rico,1,16,Average family size,3.32,+/-0.04,(X),(X)
+DP02PR,04000US72,Puerto Rico,,16.3,,,,,
+DP02PR,04000US72,Puerto Rico,,16.5,RELATIONSHIP,,,,
+DP02PR,04000US72,Puerto Rico,1,17,Population in households,"3,159,695",*****,"3,159,695",(X)
+DP02PR,04000US72,Puerto Rico,1,18,Householder,"1,179,637","+/-9,819",37.3,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,19,Spouse,"438,125","+/-8,466",13.9,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,20,Child,"1,072,052","+/-14,595",33.9,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,21,Other relatives,"322,824","+/-14,489",10.2,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,22,Nonrelatives,"147,057","+/-7,047",4.7,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,23,Unmarried partner,"110,445","+/-5,486",3.5,+/-0.2
+DP02PR,04000US72,Puerto Rico,,23.3,,,,,
+DP02PR,04000US72,Puerto Rico,,23.5,MARITAL STATUS,,,,
+DP02PR,04000US72,Puerto Rico,1,24,Males 15 years and over,"1,276,876","+/-2,101","1,276,876",(X)
+DP02PR,04000US72,Puerto Rico,1,25,Never married,"563,590","+/-8,339",44.1,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,26,"Now married, except separated","493,596","+/-8,559",38.7,+/-0.7
+DP02PR,04000US72,Puerto Rico,1,27,Separated,"27,331","+/-2,633",2.1,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,28,Widowed,"44,857","+/-3,290",3.5,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,29,Divorced,"147,502","+/-6,650",11.6,+/-0.5
+DP02PR,04000US72,Puerto Rico,,29.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,30,Females 15 years and over,"1,443,965","+/-1,972","1,443,965",(X)
+DP02PR,04000US72,Puerto Rico,1,31,Never married,"540,924","+/-8,621",37.5,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,32,"Now married, except separated","489,977","+/-9,608",33.9,+/-0.7
+DP02PR,04000US72,Puerto Rico,1,33,Separated,"35,566","+/-3,287",2.5,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,34,Widowed,"164,077","+/-5,456",11.4,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,35,Divorced,"213,421","+/-6,789",14.8,+/-0.5
+DP02PR,04000US72,Puerto Rico,,35.3,,,,,
+DP02PR,04000US72,Puerto Rico,,35.5,FERTILITY,,,,
+DP02PR,04000US72,Puerto Rico,1,36,Number of women 15 to 50 years old who had a birth in the past 12 months,"21,107","+/-2,781","21,107",(X)
+DP02PR,04000US72,Puerto Rico,1,37,"Unmarried women (widowed, divorced, and never married)","10,701","+/-1,977",50.7,+/-5.3
+DP02PR,04000US72,Puerto Rico,1,38,"Per 1,000 unmarried women",20,+/-4,(X),(X)
+DP02PR,04000US72,Puerto Rico,1,39,"Per 1,000 women 15 to 50 years old",28,+/-4,(X),(X)
+DP02PR,04000US72,Puerto Rico,1,40,"Per 1,000 women 15 to 19 years old",20,+/-10,(X),(X)
+DP02PR,04000US72,Puerto Rico,1,41,"Per 1,000 women 20 to 34 years old",52,+/-8,(X),(X)
+DP02PR,04000US72,Puerto Rico,1,42,"Per 1,000 women 35 to 50 years old",9,+/-3,(X),(X)
+DP02PR,04000US72,Puerto Rico,,42.3,,,,,
+DP02PR,04000US72,Puerto Rico,,42.5,GRANDPARENTS,,,,
+DP02PR,04000US72,Puerto Rico,1,43,Number of grandparents living with own grandchildren under 18 years,"74,106","+/-6,167","74,106",(X)
+DP02PR,04000US72,Puerto Rico,1,44,Grandparents responsible for grandchildren,"26,608","+/-3,691",35.9,+/-4.0
+DP02PR,04000US72,Puerto Rico,,44.9,Years responsible for grandchildren,,,,
+DP02PR,04000US72,Puerto Rico,1,45,Less than 1 year,"5,877","+/-1,403",7.9,+/-1.7
+DP02PR,04000US72,Puerto Rico,1,46,1 or 2 years,"4,253","+/-1,395",5.7,+/-1.8
+DP02PR,04000US72,Puerto Rico,1,47,3 or 4 years,"3,174",+/-929,4.3,+/-1.2
+DP02PR,04000US72,Puerto Rico,1,48,5 or more years,"13,304","+/-2,265",18.0,+/-2.9
+DP02PR,04000US72,Puerto Rico,,48.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,49,Number of grandparents responsible for own grandchildren under 18 years,"26,608","+/-3,691","26,608",(X)
+DP02PR,04000US72,Puerto Rico,1,50,Who are female,"17,286","+/-2,283",65.0,+/-3.7
+DP02PR,04000US72,Puerto Rico,1,51,Who are married,"15,731","+/-2,910",59.1,+/-5.6
+DP02PR,04000US72,Puerto Rico,,51.3,,,,,
+DP02PR,04000US72,Puerto Rico,,51.5,SCHOOL ENROLLMENT,,,,
+DP02PR,04000US72,Puerto Rico,1,52,Population 3 years and over enrolled in school,"742,847","+/-9,569","742,847",(X)
+DP02PR,04000US72,Puerto Rico,1,53,"Nursery school, preschool","35,928","+/-3,116",4.8,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,54,Kindergarten,"27,389","+/-2,674",3.7,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,55,Elementary school (grades 1-8),"289,314","+/-4,936",38.9,+/-0.9
+DP02PR,04000US72,Puerto Rico,1,56,High school (grades 9-12),"153,451","+/-4,374",20.7,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,57,College or graduate school,"236,765","+/-10,080",31.9,+/-1.0
+DP02PR,04000US72,Puerto Rico,,57.3,,,,,
+DP02PR,04000US72,Puerto Rico,,57.5,EDUCATIONAL ATTAINMENT,,,,
+DP02PR,04000US72,Puerto Rico,1,58,Population 25 years and over,"2,288,030","+/-2,377","2,288,030",(X)
+DP02PR,04000US72,Puerto Rico,1,59,Less than 9th grade,"336,242","+/-10,920",14.7,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,60,"9th to 12th grade, no diploma","178,663","+/-7,687",7.8,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,61,High school graduate (includes equivalency),"644,702","+/-12,611",28.2,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,62,"Some college, no degree","276,042","+/-8,157",12.1,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,63,Associate's degree,"241,678","+/-8,641",10.6,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,64,Bachelor's degree,"430,692","+/-10,597",18.8,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,65,Graduate or professional degree,"180,011","+/-8,230",7.9,+/-0.4
+DP02PR,04000US72,Puerto Rico,,65.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,66,High school graduate or higher,"1,773,125","+/-12,360",77.5,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,67,Bachelor's degree or higher,"610,703","+/-13,439",26.7,+/-0.6
+DP02PR,04000US72,Puerto Rico,,67.3,,,,,
+DP02PR,04000US72,Puerto Rico,,67.5,VETERAN STATUS,,,,
+DP02PR,04000US72,Puerto Rico,1,68,Civilian population 18 years and over,"2,599,633",+/-573,"2,599,633",(X)
+DP02PR,04000US72,Puerto Rico,1,69,Civilian veterans,"74,415","+/-4,353",2.9,+/-0.2
+DP02PR,04000US72,Puerto Rico,,69.3,,,,,
+DP02PR,04000US72,Puerto Rico,,69.5,DISABILITY STATUS OF THE CIVILIAN NONINSTITUTIONALIZED POPULATION,,,,
+DP02PR,04000US72,Puerto Rico,1,70,Total Civilian Noninstitutionalized Population,"3,171,580",+/-573,"3,171,580",(X)
+DP02PR,04000US72,Puerto Rico,1,71,With a disability,"675,318","+/-12,070",21.3,+/-0.4
+DP02PR,04000US72,Puerto Rico,,71.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,72,Under 18 years,"593,120",+/-21,"593,120",(X)
+DP02PR,04000US72,Puerto Rico,1,73,With a disability,"42,155","+/-3,345",7.1,+/-0.6
+DP02PR,04000US72,Puerto Rico,,73.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,74,18 to 64 years,"1,925,133","+/-1,136","1,925,133",(X)
+DP02PR,04000US72,Puerto Rico,1,75,With a disability,"328,525","+/-9,356",17.1,+/-0.5
+DP02PR,04000US72,Puerto Rico,,75.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,76,65 years and over,"653,327",+/-952,"653,327",(X)
+DP02PR,04000US72,Puerto Rico,1,77,With a disability,"304,638","+/-6,567",46.6,+/-1.0
+DP02PR,04000US72,Puerto Rico,,77.3,,,,,
+DP02PR,04000US72,Puerto Rico,,77.5,RESIDENCE 1 YEAR AGO,,,,
+DP02PR,04000US72,Puerto Rico,1,78,Population 1 year and over,"3,173,956","+/-2,199","3,173,956",(X)
+DP02PR,04000US72,Puerto Rico,1,79,Same house,"2,915,696","+/-14,840",91.9,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,80,Different house in Puerto Rico or the U.S.,"255,074","+/-14,447",8.0,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,81,In Puerto Rico,"234,174","+/-14,034",7.4,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,82,Same municipio,"148,667","+/-11,406",4.7,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,83,Different municipio,"85,507","+/-8,649",2.7,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,84,In the United States,"20,900","+/-4,606",0.7,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,85,Elsewhere,"3,186",+/-975,0.1,+/-0.1
+DP02PR,04000US72,Puerto Rico,,85.3,,,,,
+DP02PR,04000US72,Puerto Rico,,85.5,PLACE OF BIRTH,,,,
+DP02PR,04000US72,Puerto Rico,1,86,Total population,"3,195,153",*****,"3,195,153",(X)
+DP02PR,04000US72,Puerto Rico,1,87,Native,"3,109,805","+/-5,137",97.3,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,88,Born in Puerto Rico or the United States,"3,100,729","+/-5,491",97.0,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,89,In Puerto Rico,"2,939,602","+/-8,215",92.0,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,90,In the United States,"161,127","+/-6,532",5.0,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,91,"Born in U.S. Island Areas, or born abroad of American parents","9,076","+/-1,774",0.3,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,92,Foreign born,"85,348","+/-5,137",2.7,+/-0.2
+DP02PR,04000US72,Puerto Rico,,92.3,,,,,
+DP02PR,04000US72,Puerto Rico,,92.5,U.S. CITIZENSHIP STATUS,,,,
+DP02PR,04000US72,Puerto Rico,1,93,Foreign-born population,"85,348","+/-5,137","85,348",(X)
+DP02PR,04000US72,Puerto Rico,1,94,Naturalized U.S. citizen,"42,620","+/-3,797",49.9,+/-3.4
+DP02PR,04000US72,Puerto Rico,1,95,Not a U.S. citizen,"42,728","+/-3,907",50.1,+/-3.4
+DP02PR,04000US72,Puerto Rico,,95.3,,,,,
+DP02PR,04000US72,Puerto Rico,,95.5,YEAR OF ENTRY,,,,
+DP02PR,04000US72,Puerto Rico,1,96,Population born outside Puerto Rico,"255,551","+/-8,215","255,551",(X)
+DP02PR,04000US72,Puerto Rico,,96.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,97,Native,"170,203","+/-7,084","170,203",(X)
+DP02PR,04000US72,Puerto Rico,1,98,Entered 2010 or later,"25,415","+/-3,413",14.9,+/-1.8
+DP02PR,04000US72,Puerto Rico,1,99,Entered before 2010,"144,788","+/-6,404",85.1,+/-1.8
+DP02PR,04000US72,Puerto Rico,,99.3,,,,,
+DP02PR,04000US72,Puerto Rico,1,100,Foreign born,"85,348","+/-5,137","85,348",(X)
+DP02PR,04000US72,Puerto Rico,1,101,Entered 2010 or later,"19,321","+/-3,039",22.6,+/-2.9
+DP02PR,04000US72,Puerto Rico,1,102,Entered before 2010,"66,027","+/-4,063",77.4,+/-2.9
+DP02PR,04000US72,Puerto Rico,,102.3,,,,,
+DP02PR,04000US72,Puerto Rico,,102.5,WORLD REGION OF BIRTH OF FOREIGN BORN,,,,
+DP02PR,04000US72,Puerto Rico,1,103,"Foreign-born population, excluding population born at sea","85,348","+/-5,137","85,348",(X)
+DP02PR,04000US72,Puerto Rico,1,104,Europe,"3,401",+/-942,4.0,+/-1.1
+DP02PR,04000US72,Puerto Rico,1,105,Asia,"2,137",+/-913,2.5,+/-1.0
+DP02PR,04000US72,Puerto Rico,1,106,Africa,121,+/-166,0.1,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,107,Oceania,380,+/-371,0.4,+/-0.4
+DP02PR,04000US72,Puerto Rico,1,108,Latin America,"79,210","+/-4,813",92.8,+/-1.7
+DP02PR,04000US72,Puerto Rico,1,109,Northern America,99,+/-161,0.1,+/-0.2
+DP02PR,04000US72,Puerto Rico,,109.3,,,,,
+DP02PR,04000US72,Puerto Rico,,109.5,LANGUAGE SPOKEN AT HOME,,,,
+DP02PR,04000US72,Puerto Rico,1,110,Population 5 years and over,"3,069,357",+/-683,"3,069,357",(X)
+DP02PR,04000US72,Puerto Rico,1,111,English only,"164,039","+/-9,916",5.3,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,112,Language other than English,"2,905,318","+/-9,999",94.7,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,113,"Speak English less than ""very well""","2,353,987","+/-17,919",76.7,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,114,Spanish,"2,901,288","+/-10,213",94.5,+/-0.3
+DP02PR,04000US72,Puerto Rico,1,115,"Speak English less than ""very well""","2,352,245","+/-17,969",76.6,+/-0.6
+DP02PR,04000US72,Puerto Rico,1,116,Other Indo-European languages,"2,746",+/-948,0.1,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,117,"Speak English less than ""very well""","1,076",+/-465,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,118,Asian and Pacific Islander languages,"1,143",+/-671,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,119,"Speak English less than ""very well""",566,+/-539,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,120,Other languages,141,+/-135,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,121,"Speak English less than ""very well""",100,+/-116,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,,121.3,,,,,
+DP02PR,04000US72,Puerto Rico,,121.5,ANCESTRY,,,,
+DP02PR,04000US72,Puerto Rico,1,122,Total population,"3,195,153",*****,"3,195,153",(X)
+DP02PR,04000US72,Puerto Rico,1,123,American,"56,332","+/-5,353",1.8,+/-0.2
+DP02PR,04000US72,Puerto Rico,1,124,Arab,948,+/-772,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,125,Czech,147,+/-241,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,126,Danish,58,+/-98,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,127,Dutch,236,+/-237,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,128,English,770,+/-510,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,129,French (except Basque),"1,455",+/-722,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,130,French Canadian,166,+/-200,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,131,German,"1,938",+/-832,0.1,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,132,Greek,81,+/-142,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,133,Hungarian,46,+/-75,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,134,Irish,787,+/-461,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,135,Italian,"3,333","+/-1,047",0.1,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,136,Lithuanian,0,+/-228,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,137,Norwegian,54,+/-95,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,138,Polish,267,+/-283,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,139,Portuguese,0,+/-228,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,140,Russian,101,+/-169,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,141,Scotch-Irish,106,+/-129,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,142,Scottish,46,+/-75,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,143,Slovak,0,+/-228,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,144,Subsaharan African,"4,536","+/-1,637",0.1,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,145,Swedish,197,+/-205,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,146,Swiss,0,+/-228,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,147,Ukrainian,76,+/-128,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,148,Welsh,41,+/-43,0.0,+/-0.1
+DP02PR,04000US72,Puerto Rico,1,149,West Indian (excluding Hispanic origin groups),"6,415","+/-2,304",0.2,+/-0.1
+DP02PR,04000US72,Puerto Rico,,149.3,,,,,
+DP02PR,04000US72,Puerto Rico,,149.5,COMPUTERS AND INTERNET USE,,,,
+DP02PR,04000US72,Puerto Rico,1,150,Total households,"1,179,637","+/-9,819","1,179,637",(X)
+DP02PR,04000US72,Puerto Rico,1,151,With a computer,"844,462","+/-9,211",71.6,+/-0.5
+DP02PR,04000US72,Puerto Rico,1,152,With a broadband Internet subscription,"733,317","+/-10,369",62.2,+/-0.7
