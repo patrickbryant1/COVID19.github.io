@@ -537,8 +537,8 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-#metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
 #print_CI(metrics)
 #Analyze mobility and R relstionhip
-epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
+#epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
