@@ -19,9 +19,17 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Analyze the effect of population differences on state death tolls. ''')
 parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
 parser.add_argument('--comorbidity_data', nargs=1, type= str, default=sys.stdin, help = 'Path to comorbidity data (csv).')
+parser.add_argument('--age_age_ethnicity_data', nargs=1, type= str, default=sys.stdin, help = 'Path to ethnicity data per state (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
+def format_ethnicity(age_ethnicity_data):
+    '''Extract ethnicity data per state
+    '''
+    extracted_data = pd.DataFrame()
+    for state in age_ethnicity_data['GEONMAE'].unique():
+        eth_per_state = age_ethnicity_data[age_ethnicity_data['GEONMAE']==state]
+        
 def vis_states(epidemic_data, outdir):
     '''Plot the deaths per state and feature
     '''
@@ -80,6 +88,7 @@ def vis_comorbidity(comorbidity_data, conditions, outname):
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 comorbidity_data = pd.read_csv(args.comorbidity_data[0])
+age_ethnicity_data = pd.read_csv(args.age_ethnicity_data[0])
 outdir = args.outdir[0]
 #vis_states(epidemic_data, outdir)
 vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:1], outdir+'comorbidity/comorbidity1.png')
