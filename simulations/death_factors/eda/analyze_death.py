@@ -19,17 +19,36 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Analyze the effect of population differences on state death tolls. ''')
 parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
 parser.add_argument('--comorbidity_data', nargs=1, type= str, default=sys.stdin, help = 'Path to comorbidity data (csv).')
-parser.add_argument('--age_age_ethnicity_data', nargs=1, type= str, default=sys.stdin, help = 'Path to ethnicity data per state (csv).')
+parser.add_argument('--sex_eth_age_data', nargs=1, type= str, default=sys.stdin, help = 'Path to data with sex age and ethnicity per state (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
-def format_ethnicity(age_ethnicity_data):
+def format_ethnicity(sex_eth_age_data):
     '''Extract ethnicity data per state
     '''
     extracted_data = pd.DataFrame()
-    for state in age_ethnicity_data['GEONMAE'].unique():
-        eth_per_state = age_ethnicity_data[age_ethnicity_data['GEONMAE']==state]
-        
+    sexes = {0:'Total', 1:'Male', 2:'Female'}
+    origins = {1:'Non-Hispanic',2:'Hispanic'}
+    ethnicities = {1:'White', 2:'Black',3:'American Indian or Alaska Native',4:'Asian',5:'Native Hawaiian and Other Pacific Islander',6:'More than one race'}
+    #Combining origin 1 and ethnicity gives Non-Hispanic + ethinicity (same used in COVID reportings)
+    #AGE is single-year of age (0, 1, 2,... 84, 85+ years)
+    age_groups = {0:'Under 1 year',4:'1-4 years',14:'5-14 years',24:'15-24 years',34:'25-34 years',44:'35-44 years',54:'45-54 years', 64:'55-64 yeaers', 74:'65-74 years',84:'75-84 years'}
+    #Assign columns
+    extracted_data['State'] = ''
+    extracted_data['Ethnicity'] = ''
+    for age in age_groups:
+        extracted_data[age_groups[age]] = 0
+
+    for state in sex_eth_age_data['NAME'].unique():
+        per_state = sex_eth_age_data[sex_eth_age_data['NAME']==state]
+        #Loop through origins
+        hispanic_state = per_state[per_state['ORIGIN']==2]
+        for eth in ethnicities:
+            hispanic_state_eth = hispanic_state[hispanic_state['RACE']==eth] #All the Hispanic ethnicities will be summed
+            hispanic_state_eth = hispanic_state.reset_index()
+            for age in age_groups:
+                hispanic_state_eth_age = np.sum(hispanic_state_eth.loc[age,'POPESTIMATE2019'])
+                pdb.set_trace()
 def vis_states(epidemic_data, outdir):
     '''Plot the deaths per state and feature
     '''
@@ -88,8 +107,9 @@ def vis_comorbidity(comorbidity_data, conditions, outname):
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 comorbidity_data = pd.read_csv(args.comorbidity_data[0])
-age_ethnicity_data = pd.read_csv(args.age_ethnicity_data[0])
+sex_eth_age_data = pd.read_csv(args.sex_eth_age_data[0])
 outdir = args.outdir[0]
 #vis_states(epidemic_data, outdir)
-vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:1], outdir+'comorbidity/comorbidity1.png')
-vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[1:], outdir+'comorbidity/comorbidity2.png')
+#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:1], outdir+'comorbidity/comorbidity1.png')
+#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[1:], outdir+'comorbidity/comorbidity2.png')
+format_ethnicity(sex_eth_age_data)
