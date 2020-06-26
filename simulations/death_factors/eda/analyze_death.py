@@ -116,17 +116,16 @@ def vis_states(epidemic_data, eth_age_data_per_state, outdir):
                 normalized = normalized*100
 
             if np.sum(prev)<1:
-                ax.bar(eth_state_data['Age group'],normalized, label=ethnicity)
+                ax.bar(eth_state_data['Age group'],normalized,bottom = prev, label=ethnicity)
             else:
                 ax.bar(eth_state_data['Age group'], normalized, bottom = prev, label=ethnicity)
             prev += normalized
 
-        if state == 'Indiana':
-            pdb.set_trace()
+
         plt.xticks(rotation='vertical')
         plt.legend()
         ax.set_title(state)
-        ax.set_ylabel('Death fraction per ethnicity')
+        ax.set_ylabel('Death % per ethnicity')
         fig.tight_layout()
         fig.savefig(outdir+state.replace(" ", "_")+'.png', format='png')
         plt.close()
