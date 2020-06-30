@@ -174,32 +174,6 @@ def get_county_variables(people,income,jobs):
 
 
 
-def vis_comorbidity(comorbidity_data, conditions, outname):
-    '''Visualize the covid comorbidity
-    '''
-    fig, ax = plt.subplots(figsize=(27/2.54, 18/2.54))
-    cols = ['0-24 years', '25-34 years', '35-44 years',
-       '45-54 years', '55-64 years', '65-74 years', '75-84 years',
-       '85 years and over']
-
-    prev=np.zeros(len(cols))
-    for condition in conditions:
-        condition_data = comorbidity_data[comorbidity_data['Condition']==condition]
-        if np.sum(prev)<1:
-            ax.bar(cols,np.array(condition_data[cols])[0], label=condition)
-        else:
-            ax.bar(cols,np.array(condition_data[cols])[0], bottom = prev, label=condition)
-        prev+=np.array(condition_data[cols])[0]
-        print(prev)
-
-    plt.xticks(rotation='vertical')
-    plt.legend()
-    ax.set_title('Comorbidity')
-    ax.set_ylabel('Deaths')
-    fig.tight_layout()
-    fig.savefig(outname, format='png')
-    plt.close()
-
 
 #####MAIN#####
 args = parser.parse_args()
@@ -227,7 +201,7 @@ complete_df = pd.merge(sex_eth_age_data, epidemic_data, left_on=['State','County
 complete_df = complete_df.rename(columns={'countyFIPS':'FIPS'})
 #Join all on FIPS
 #Remove county to avoid duplicates
-people = people.drop(['County'],axis=1)
+people = people.drop(['State','County'],axis=1)
 complete_df = pd.merge(complete_df, people, on=['FIPS'], how='inner')
 #Remove state and county to avoid duplicates
 income = income.drop(['State', 'County'],axis=1)
