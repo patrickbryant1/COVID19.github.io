@@ -95,12 +95,11 @@ def sum_deaths(epidemic_data):
     '''Get a death total over all dates
     '''
 
-    epidemic_data['Cumulative deaths'] = 0
-    for i in range(len(epidemic_data)):
-        epidemic_data.loc[i, 'Cumulative deaths'] = np.sum(epidemic_data.iloc[i,4:-1])
+    epidemic_data['Cumulative deaths'] = epidemic_data['6/27/2020']
     #Remove unwanted columns
     index = np.arange(4,len(epidemic_data.columns)-1)
     epidemic_data = epidemic_data.drop(epidemic_data.columns[index],axis=1)
+    pdb.set_trace()
     return epidemic_data
 
 def get_county_variables(people,income,jobs):
