@@ -43,41 +43,50 @@ def format_age_per_ethnicity(sex_eth_age_data):
     'H':'Hispanic'}
     #Combining origin 1 and ethnicity gives Non-Hispanic + ethinicity (same used in COVID reportings)
     #AGE is single-year of age (0, 1, 2,... 84, 85+ years)
-    age_groups = {0:'Total for ethnicity',1:'0-4 years',2:'5-9 years',3:'10-14 years',4:'15-19 years',
+    age_groups = {0:'total',1:'0-4 years',2:'5-9 years',3:'10-14 years',4:'15-19 years',
     5:'20-24 years',6:'25-29 years', 7:'30-34 years', 8:'35-39 years',9:'40-44 years',
-    10:'45 -49 years', 11:'50-54 years', 12:'55-59 years', 13:'60-64 years',14:'65-69 years',
+    10:'45-49 years', 11:'50-54 years', 12:'55-59 years', 13:'60-64 years',14:'65-69 years',
     15:'70-74 years', 16:'75-79 years', 17:'80-84 years',18:'85 years and over'}
 
     #Assign columns
+    extracted_data['State'] = ''
     extracted_data['County'] = ''
-    extracted_data['Ethnicity'] = ''
     extracted_data['County total'] = '' #Total population in county
-    for age in age_groups:
-        extracted_data[age_groups[age]] = 0
+    for eth in ethnicities:
+        for age in age_groups:
+            extracted_data[ethnicities[eth]+' '+age_groups[age]] = 0
 
     #Loop through all counties
-    counties = sex_eth_age_data['CTYNAME'].unique()
-    for county in counties:
-        county_data = sex_eth_age_data[sex_eth_age_data['CTYNAME']==county]
-        #Reset index
-        county_data = county_data.reset_index()
-        #Get total county pop
-        tot_county_pop = np.sum(county_data['TOT_POP'])
-        #All the ethnicities
-        for eth in ethnicities:
+    #NOTE!!!!!!!!!!!
+    #Several states have counties named the same thing.
+    #It is therefore necessary to get the county and state at the same time
+    states = sex_eth_age_data['STATE'].unique()
+    for state in states:
+        state_data = sex_eth_age_data[sex_eth_age_data['STATE']==state]
+        counties = state_data['CTYNAME'].unique()
+        for county in counties:
+            county_data = state_data[state_data['CTYNAME']==county]
+            #Reset index
+            county_data = county_data.reset_index()
+            #Get total county pop
+            tot_county_pop = county_data.loc[0,'TOT_POP'] #index 0 is the total
             #Save data
             vals = []
+            vals.append(state)
             vals.append(county)
-            vals.append(ethnicities[eth])
             vals.append(tot_county_pop)
-            age_fracs = np.zeros(len(age_groups))
-            for sex in sexes:
-                for i in range(len(age_groups)):
-                    age_fracs[i]+=np.sum(county_data.loc[i,eth+'_'+sex])
-            vals.extend(age_fracs/tot_county_pop)#Normalize with the total county pop
+            age_fracs = []
+            #All the ethnicities
+            for eth in ethnicities:
+                age_fracs_eth = np.zeros(len(age_groups))
+                #Both sexes to get total
+                for sex in sexes:
+                    for i in range(len(age_groups)):
+                        age_fracs_eth[i]+=np.sum(county_data.loc[i,eth+'_'+sex])
+                age_fracs.extend(age_fracs_eth)
+            vals.extend(np.array(age_fracs)/tot_county_pop)#Normalize with the total county pop
             slice = pd.DataFrame([vals],columns=extracted_data.columns)
             extracted_data=pd.concat([extracted_data,slice])
-
     #Save df
     extracted_data.to_csv('formatted_eth_age_data_per_county.csv')
     return extracted_data
@@ -89,6 +98,7 @@ def sum_deaths(epidemic_data):
     epidemic_data['Cumulative deaths'] = 0
     for i in range(len(epidemic_data)):
         epidemic_data.loc[i, 'Cumulative deaths'] = np.sum(epidemic_data.iloc[i,4:-1])
+    #Remove unwanted columns
     index = np.arange(4,len(epidemic_data.columns)-1)
     epidemic_data = epidemic_data.drop(epidemic_data.columns[index],axis=1)
     return epidemic_data
@@ -164,8 +174,6 @@ def get_county_variables(people,income,jobs):
 
 
 
-     #Join all on FIPS
-
 def vis_comorbidity(comorbidity_data, conditions, outname):
     '''Visualize the covid comorbidity
     '''
@@ -196,6 +204,7 @@ def vis_comorbidity(comorbidity_data, conditions, outname):
 #####MAIN#####
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
+#The sex_eth_age_data conatins only 1877 counties of the over 3000 in total
 sex_eth_age_data = pd.read_csv(args.sex_eth_age_data[0])
 people = pd.read_csv(args.people[0])
 income = pd.read_csv(args.income[0])
@@ -204,16 +213,29 @@ jobs = pd.read_csv(args.jobs[0])
 sex_eth_age_data = sex_eth_age_data[sex_eth_age_data['YEAR']==12]
 outdir = args.outdir[0]
 try:
-    sex_eth_age_data = pd.read_csv('formatted_eth_age_data_per_county.csv')
+   sex_eth_age_data = pd.read_csv('formatted_eth_age_data_per_county.csv')
 except:
-    sex_eth_age_data = format_age_per_ethnicity(sex_eth_age_data)
+   sex_eth_age_data = format_age_per_ethnicity(sex_eth_age_data)
 
 #Sum deaths
 epidemic_data = sum_deaths(epidemic_data)
 #Rename column for merge
 epidemic_data = epidemic_data.rename(columns={'County Name':'County'})
+epidemic_data = epidemic_data.drop(['State'],axis=1)
 #Merge epidemic data with sex_eth_age_data
-complete_df = pd.merge(sex_eth_age_data, epidemic_data, on=['County'], how='left')
+complete_df = pd.merge(sex_eth_age_data, epidemic_data, left_on=['State','County'], right_on=['stateFIPS','County'], how='left')
+complete_df = complete_df.rename(columns={'countyFIPS':'FIPS'})
+#Join all on FIPS
+#Remove county to avoid duplicates
+people = people.drop(['County'],axis=1)
+complete_df = pd.merge(complete_df, people, on=['FIPS'], how='inner')
+#Remove state and county to avoid duplicates
+income = income.drop(['State', 'County'],axis=1)
+jobs = jobs.drop(['State', 'County'],axis=1)
+complete_df = pd.merge(complete_df, income, on=['FIPS'], how='inner')
+complete_df = pd.merge(complete_df, jobs, on=['FIPS'], how='inner')
 #Get death rate per total county pop
-complete_df['Death rate'] = complete_df['Cumulative deaths']/complete_df['County total']
+complete_df['Death rate per 1000'] = 1000*(complete_df['Cumulative deaths']/complete_df['County total'])
+#Save df
+complete_df.to_csv('complete_df.csv')
 pdb.set_trace()
