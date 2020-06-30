@@ -19,8 +19,9 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Analyze the effect of population differences on county death tolls. ''')
 parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
 parser.add_argument('--sex_eth_age_data', nargs=1, type= str, default=sys.stdin, help = 'Path to data with sex age and ethnicity per county.')
+parser.add_argument('--people', nargs=1, type= str, default=sys.stdin, help = 'Path to data with people data, including e.g. education, per county.')
 parser.add_argument('--income', nargs=1, type= str, default=sys.stdin, help = 'Path to data with income data per county.')
-parser.add_argument('--jobs', nargs=1, type= str, default=sys.stdin, help = 'Path to data with income data per county.')
+parser.add_argument('--jobs', nargs=1, type= str, default=sys.stdin, help = 'Path to data with job data per county.')
 
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
@@ -97,7 +98,7 @@ def get_county_variables(jobs,income):
     '''
     Should get income a few years back. The historical income will surely affect the current status.
     Average over the last 10 years as well as having the current median.
-    E.g. the employment rate in Autauga has dropped from 8.9 to 3.6 between 2010 and 2018. 
+    E.g. the employment rate in Autauga has dropped from 8.9 to 3.6 between 2010 and 2018.
     '''
 def vis_comorbidity(comorbidity_data, conditions, outname):
     '''Visualize the covid comorbidity
