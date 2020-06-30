@@ -86,20 +86,86 @@ def sum_deaths(epidemic_data):
     '''Get a death total over all dates
     '''
 
-    epidemic_data['cumulative deaths'] = 0
+    epidemic_data['Cumulative deaths'] = 0
     for i in range(len(epidemic_data)):
-        epidemic_data.loc[i, 'cumulative deaths'] = np.sum(epidemic_data.iloc[i,4:-1])
-
+        epidemic_data.loc[i, 'Cumulative deaths'] = np.sum(epidemic_data.iloc[i,4:-1])
     index = np.arange(4,len(epidemic_data.columns)-1)
     epidemic_data = epidemic_data.drop(epidemic_data.columns[index],axis=1)
     return epidemic_data
 
-def get_county_variables(jobs,income):
+def get_county_variables(people,income,jobs):
     '''
     Should get income a few years back. The historical income will surely affect the current status.
     Average over the last 10 years as well as having the current median.
     E.g. the employment rate in Autauga has dropped from 8.9 to 3.6 between 2010 and 2018.
     '''
+
+    people_cols = ['FIPS', 'State', 'County', 'PopChangeRate1718', 'PopChangeRate1018',
+       'TotalPopEst2018', 'NetMigrationRate1018', 'NaturalChangeRate1018',
+       'Net_International_Migration_Rate_2010_2018', 'PopChangeRate0010',
+       'NetMigrationRate0010', 'NaturalChangeRate0010',
+       'Immigration_Rate_2000_2010', 'PopDensity2010', 'Under18Pct2010',
+       'Age65AndOlderPct2010', 'WhiteNonHispanicPct2010',
+       'BlackNonHispanicPct2010', 'AsianNonHispanicPct2010',
+       'NativeAmericanNonHispanicPct2010', 'HispanicPct2010',
+       'MultipleRacePct2010', 'NonHispanicWhitePopChangeRate0010',
+       'NonHispanicBlackPopChangeRate0010',
+       'NonHispanicAsianPopChangeRate0010',
+       'NonHispanicNativeAmericanPopChangeRate0010',
+       'HispanicPopChangeRate0010', 'MultipleRacePopChangeRate0010',
+       'WhiteNonHispanicNum2010', 'BlackNonHispanicNum2010',
+       'AsianNonHispanicNum2010', 'NativeAmericanNonHispanicNum2010',
+       'HispanicNum2010', 'MultipleRaceNum2010', 'ForeignBornPct',
+       'ForeignBornEuropePct', 'ForeignBornMexPct', 'NonEnglishHHPct',
+       'Ed1LessThanHSPct', 'Ed2HSDiplomaOnlyPct', 'Ed3SomeCollegePct',
+       'Ed4AssocDegreePct', 'Ed5CollegePlusPct', 'AvgHHSize', 'FemaleHHPct',
+       'HH65PlusAlonePct', 'OwnHomePct', 'Ed5CollegePlusNum',
+       'Ed3SomeCollegeNum', 'Ed2HSDiplomaOnlyNum', 'Ed1LessThanHSNum',
+       'TotalPop25Plus', 'ForeignBornAfricaPct', 'TotalPopACS', 'TotalOccHU',
+       'ForeignBornAsiaPct', 'Ed4AssocDegreeNum', 'ForeignBornNum',
+       'HH65PlusAloneNum', 'OwnHomeNum', 'FemaleHHNum', 'TotalHH',
+       'NonEnglishHHNum', 'ForeignBornCentralSouthAmPct',
+       'ForeignBornCentralSouthAmNum', 'ForeignBornCaribPct',
+       'ForeignBornCaribNum', 'ForeignBornAfricaNum', 'ForeignBornAsiaNum',
+       'ForeignBornMexNum', 'ForeignBornEuropeNum', 'Age65AndOlderNum2010',
+       'TotalPop2010', 'LandAreaSQMiles2010', 'Under18Num2010',
+       'Net_International_Migration_2000_2010', 'NaturalChangeNum0010',
+       'NetMigrationNum0010', 'TotalPopEst2012', 'TotalPopEst2013',
+       'TotalPopEst2010', 'TotalPopEst2014', 'TotalPopEst2011',
+       'Net_International_Migration_2010_2018', 'NaturalChange1018',
+       'TotalPopEst2015', 'TotalPopEst2016', 'TotalPopEst2017',
+       'NetMigration1018', 'TotalPopEstBase2010']
+
+    income_cols = ['FIPS', 'State', 'County', 'MedHHInc', 'PerCapitaInc',
+       'PovertyUnder18Pct', 'PovertyAllAgesPct', 'Deep_Pov_All',
+       'Deep_Pov_Children', 'PovertyUnder18Num', 'PovertyAllAgesNum']
+
+    jobs_cols = ['FIPS', 'State', 'County', 'UnempRate2018', 'UnempRate2017',
+       'UnempRate2016', 'UnempRate2015', 'UnempRate2014', 'UnempRate2010',
+       'UnempRate2007', 'PctEmpChange1018', 'PctEmpChange1718',
+       'PctEmpChange0718', 'PctEmpChange0710', 'PctEmpAgriculture',
+       'PctEmpMining', 'PctEmpConstruction', 'PctEmpManufacturing',
+       'PctEmpTrade', 'PctEmpTrans', 'PctEmpInformation', 'PctEmpFIRE',
+       'PctEmpServices', 'PctEmpGovt', 'NumCivEmployed', 'NumUnemployed2010',
+       'NumUnemployed2011', 'NumCivLaborForce2011', 'UnempRate2011',
+       'NumEmployed2011', 'NumEmployed2010', 'NumCivLaborForce2010',
+       'NumUnemployed2009', 'NumEmployed2009', 'NumCivLaborForce2009',
+       'UnempRate2008', 'NumCivLaborForce2012', 'NumEmployed2008',
+       'NumCivLaborForce2008', 'UnempRate2009', 'NumUnemployed2008',
+       'NumUnemployed2014', 'NumUnemployed2018', 'NumEmployed2018',
+       'NumCivLaborforce2018', 'NumUnemployed2017', 'NumEmployed2017',
+       'NumCivLaborforce2017', 'NumUnemployed2016', 'NumEmployed2016',
+       'NumCivLaborforce2016', 'NumCivLaborforce2015', 'NumEmployed2007',
+       'NumUnemployed2015', 'UnempRate2012', 'NumEmployed2014',
+       'NumCivLaborforce2014', 'UnempRate2013', 'NumUnemployed2013',
+       'NumEmployed2013', 'NumCivLaborforce2013', 'NumUnemployed2007',
+       'NumCivLaborforce2007', 'NumUnemployed2012', 'NumEmployed2012',
+       'NumEmployed2015']
+
+
+
+     #Join all on FIPS
+
 def vis_comorbidity(comorbidity_data, conditions, outname):
     '''Visualize the covid comorbidity
     '''
@@ -128,10 +194,12 @@ def vis_comorbidity(comorbidity_data, conditions, outname):
 
 
 #####MAIN#####
-#Set font size
 args = parser.parse_args()
 epidemic_data = pd.read_csv(args.epidemic_data[0])
 sex_eth_age_data = pd.read_csv(args.sex_eth_age_data[0])
+people = pd.read_csv(args.people[0])
+income = pd.read_csv(args.income[0])
+jobs = pd.read_csv(args.jobs[0])
 #Make sure only YEAR=12 (2019):
 sex_eth_age_data = sex_eth_age_data[sex_eth_age_data['YEAR']==12]
 outdir = args.outdir[0]
@@ -146,7 +214,6 @@ epidemic_data = sum_deaths(epidemic_data)
 epidemic_data = epidemic_data.rename(columns={'County Name':'County'})
 #Merge epidemic data with sex_eth_age_data
 complete_df = pd.merge(sex_eth_age_data, epidemic_data, on=['County'], how='left')
+#Get death rate per total county pop
+complete_df['Death rate'] = complete_df['Cumulative deaths']/complete_df['County total']
 pdb.set_trace()
-vis_states(epidemic_data, eth_age_data_per_state, outdir)
-#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[:1], outdir+'comorbidity/comorbidity1.png')
-#vis_comorbidity(comorbidity_data, comorbidity_data['Condition'].unique()[1:], outdir+'comorbidity/comorbidity2.png')
