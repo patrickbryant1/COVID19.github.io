@@ -11,6 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from scipy.stats import pearsonr
 import pdb
 
 
@@ -99,7 +100,7 @@ def sum_deaths(epidemic_data):
     #Remove unwanted columns
     index = np.arange(4,len(epidemic_data.columns)-1)
     epidemic_data = epidemic_data.drop(epidemic_data.columns[index],axis=1)
-    pdb.set_trace()
+
     return epidemic_data
 
 def get_county_variables(people,income,jobs):
@@ -172,7 +173,38 @@ def get_county_variables(people,income,jobs):
        'NumEmployed2015']
 
 
+def corr_feature_with_death(complete_df, outdir):
+    '''Investigate the correlation of different features with the deaths
+    '''
+    print('Before NaN removal', len(complete_df))
+    #Remove NaNs
+    complete_df = complete_df.dropna()
+    print('After NaN removal', len(complete_df))
+    y = np.array(complete_df['Death rate per individual'])*100000
+    data = complete_df.drop(['Death rate per individual','Cumulative deaths'],axis=1)
+    X = np.array(data[data.columns[4:]])
+    corr = []
+    pvals = []
+    for i in range(X.shape[1]):
+        R,p = pearsonr(X[:,i],y)
+        corr.append(R)
+        pvals.append(p)
 
+    #Visualize
+    corr_df = pd.DataFrame()
+    corr_df['Feature'] = data.columns[4:]
+    corr_df['Pearson R'] = np.array(corr)
+    corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
+
+    fig, ax = plt.subplots(figsize=(18/2.54,100/2.54))
+    sns.barplot(x="Pearson R", y="Feature", data=corr_df)
+    #ax.set_ylim([min(coefs),max(coefs)])
+    fig.tight_layout()
+    fig.show()
+    fig.savefig(outdir+'feature_correlations.png', format='png')
+    plt.close()
+
+    pdb.set_trace()
 
 #####MAIN#####
 args = parser.parse_args()
@@ -208,7 +240,9 @@ jobs = jobs.drop(['State', 'County'],axis=1)
 complete_df = pd.merge(complete_df, income, on=['FIPS'], how='inner')
 complete_df = pd.merge(complete_df, jobs, on=['FIPS'], how='inner')
 #Get death rate per total county pop
-complete_df['Death rate per 1000'] = 1000*(complete_df['Cumulative deaths']/complete_df['County total'])
+complete_df['Death rate per individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])
 #Save df
 complete_df.to_csv('complete_df.csv')
-pdb.set_trace()
+print('Merged')
+#Analyze correlations
+corr_feature_with_death(complete_df, outdir)
