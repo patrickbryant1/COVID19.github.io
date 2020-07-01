@@ -5,5 +5,6 @@ PEOPLE=../../data/county_level/People.csv
 INCOME=../../data/county_level/Income.csv
 JOBS=../../data/county_level/Jobs.csv
 HI=../../data/county_level/sahie_2018.csv
+LIFEEXP=../../data/county_level/US_life_expectancy.csv
 OUTDIR=./plots/
-./analyze_death.py --epidemic_data $EPIDATA --sex_eth_age_data $SEX_ETH_AGE --people $PEOPLE --income $INCOME --jobs $JOBS --health_insurance $HI --outdir $OUTDIR
+./analyze_death.py --epidemic_data $EPIDATA --sex_eth_age_data $SEX_ETH_AGE --people $PEOPLE --income $INCOME --jobs $JOBS --health_insurance $HI --life_expectancy $LIFEEXP --outdir $OUTDIR

@@ -24,7 +24,9 @@ parser.add_argument('--people', nargs=1, type= str, default=sys.stdin, help = 'P
 parser.add_argument('--income', nargs=1, type= str, default=sys.stdin, help = 'Path to data with income data per county.')
 parser.add_argument('--jobs', nargs=1, type= str, default=sys.stdin, help = 'Path to data with job data per county.')
 parser.add_argument('--health_insurance', nargs=1, type= str, default=sys.stdin, help = 'Path to health insurance data per county.')
+parser.add_argument('--life_expectancy', nargs=1, type= str, default=sys.stdin, help = 'Path to life expectancy data per county.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
+
 
 ###FUNCTIONS###
 def format_age_per_ethnicity(sex_eth_age_data):
@@ -118,6 +120,7 @@ def format_health_insurance(health_insurance):
     extracted_data = pd.DataFrame()
     extracted_data['stateFIPS']=''
     extracted_data['county_name']=''
+    extracted_data['countyFIPS']=''
     for age in age_cats:
         for sex in sex_cats:
             #Under 19 only exists for both sexes
@@ -134,9 +137,11 @@ def format_health_insurance(health_insurance):
             vals = [] #Save data
             vals.append(state)
             vals.append(county.strip())
+
             if county.strip() == '':#whole state
                 continue
             county_data = state_data[state_data['county_name']==county]
+            vals.append(county_data['countyfips'].values[0])
             if len(county_data['racecat'].unique())>1:
                 pdb.set_trace()
 
@@ -168,6 +173,38 @@ def format_health_insurance(health_insurance):
     #Save df
     extracted_data.to_csv('formatted_health_insurance_data_per_county.csv')
     return extracted_data
+
+def format_life_insurance(life_expectancy):
+    '''Format the life insurance data per county
+    Life expectancy per age group, e(x)
+    '''
+
+    age_groups = life_expectancy['Age Group'].unique()
+
+    extracted_data = pd.DataFrame()
+    extracted_data['stateFIPS']=0
+    extracted_data['countyFIPS']=0
+
+    for age in age_groups:
+        extracted_data['Life expectancy '+age]=0
+
+    states = life_expectancy['STATE2KX'].unique()
+    for state in states:
+        state_data = life_expectancy[life_expectancy['STATE2KX']==state]
+        counties = state_data['CNTY2KX'].unique()
+        for county in counties:
+            vals = [] #save data
+            vals.append(state)
+            vals.append(county)
+            county_data = state_data[state_data['CNTY2KX']==county]
+            for age in age_groups:
+                
+
+
+            #Add to extracted data
+            slice = pd.DataFrame([vals],columns=extracted_data.columns)
+            extracted_data=pd.concat([extracted_data,slice])
+
 
 def corr_feature_with_death(complete_df, outdir):
     '''Investigate the correlation of different features with the deaths
@@ -215,6 +252,7 @@ people = pd.read_csv(args.people[0])
 income = pd.read_csv(args.income[0])
 jobs = pd.read_csv(args.jobs[0])
 health_insurance = pd.read_csv(args.health_insurance[0])
+life_expectancy = pd.read_csv(args.life_expectancy[0])
 #Make sure only YEAR=12 (2019):
 sex_eth_age_data = sex_eth_age_data[sex_eth_age_data['YEAR']==12]
 outdir = args.outdir[0]
@@ -229,6 +267,8 @@ try:
 except:
     health_insurance = format_health_insurance(health_insurance)
 
+#Format life expectancy
+format_life_insurance(life_expectancy)
 #Sum deaths
 epidemic_data = sum_deaths(epidemic_data)
 #Rename column for merge
