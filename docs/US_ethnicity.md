@@ -3,7 +3,7 @@ layout: page
 title: US ethnicity
 ---
 
-## Pearson Correlation
+## Pearson Correlation with deaths per 100000
 ![enet1](./assets/feature_correlations.png)
 
 ## Enet Coefficients
