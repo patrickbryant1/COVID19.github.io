@@ -198,13 +198,16 @@ def format_life_insurance(life_expectancy):
             vals.append(county)
             county_data = state_data[state_data['CNTY2KX']==county]
             for age in age_groups:
-                
-
+                county_age_data = county_data[county_data['Age Group']==age]
+                vals.append(np.average(county_age_data['e(x)']))
 
             #Add to extracted data
             slice = pd.DataFrame([vals],columns=extracted_data.columns)
             extracted_data=pd.concat([extracted_data,slice])
 
+    #Save df
+    extracted_data.to_csv('formatted_life_expectancy_data_per_county.csv')
+    return extracted_data
 
 def corr_feature_with_death(complete_df, outdir):
     '''Investigate the correlation of different features with the deaths
