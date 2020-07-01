@@ -60,7 +60,7 @@ def fit_model(data,outdir):
     #data = data[data['Death rate per individual']>x]
     y1 = np.array(data['Death rate per individual'])*100000
     y2 = np.array(data['Cumulative deaths'])
-    data = data.drop(['Death rate per individual','Cumulative deaths'],axis=1)
+    data = data.drop(['Death rate per individual','Cumulative deaths','FIPS', 'stateFIPS'],axis=1)
     X = np.array(data[data.columns[4:]])
     #Fit 1
     regr1 = ElasticNet(random_state=0,alpha=1.0, l1_ratio=0.5, fit_intercept=True,

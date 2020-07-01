@@ -181,8 +181,8 @@ def corr_feature_with_death(complete_df, outdir):
     complete_df = complete_df.dropna()
     print('After NaN removal', len(complete_df))
     y = np.array(complete_df['Death rate per individual'])*100000
-    data = complete_df.drop(['Death rate per individual','Cumulative deaths'],axis=1)
-    X = np.array(data[data.columns[4:]])
+    data = complete_df.drop(['Death rate per individual','Cumulative deaths', 'FIPS', 'stateFIPS'],axis=1)
+    X = np.array(data[data.columns[3:]])
     corr = []
     pvals = []
     for i in range(X.shape[1]):
@@ -192,7 +192,7 @@ def corr_feature_with_death(complete_df, outdir):
 
     #Visualize
     corr_df = pd.DataFrame()
-    corr_df['Feature'] = data.columns[4:]
+    corr_df['Feature'] = data.columns[3:]
     corr_df['Pearson R'] = np.array(corr)
     corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
 
