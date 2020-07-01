@@ -116,7 +116,7 @@ def format_health_insurance(health_insurance):
     4:'At or below 400% of poverty',5:'Between 138-400% of poverty'}
 
     extracted_data = pd.DataFrame()
-    extracted_data['state_name']=''
+    extracted_data['stateFIPS']=''
     extracted_data['county_name']=''
     for age in age_cats:
         for sex in sex_cats:
@@ -126,13 +126,13 @@ def format_health_insurance(health_insurance):
             for income in income_cats:
                 extracted_data['PCTUI '+age_cats[age]+' '+sex_cats[sex]+' '+income_cats[income]]=''
 
-    states = health_insurance['state_name'].unique()
+    states = health_insurance['statefips'].unique()
     for state in states:
-        state_data = health_insurance[health_insurance['state_name']==state]
+        state_data = health_insurance[health_insurance['statefips']==state]
         counties = state_data['county_name'].unique()
         for county in counties:
             vals = [] #Save data
-            vals.append(state.strip())
+            vals.append(state)
             vals.append(county.strip())
             if county.strip() == '':#whole state
                 continue
@@ -150,18 +150,25 @@ def format_health_insurance(health_insurance):
                     county_age_sex_data = county_age_data[county_age_data['sexcat']==sex]
                     if len(county_age_sex_data)<1:
                         pdb.set_trace()
-                        continue
                     for income in income_cats:
                         county_age_sex_income_data = county_age_sex_data[county_age_sex_data['iprcat']==income]
                         if len(county_age_sex_income_data)<1:
                             pdb.set_trace()
-                        vals.append(county_age_sex_income_data['PCTUI'].values[0])
+                        #There is missing data
+                        try:
+                            vals.append(float(county_age_sex_income_data['PCTUI'].values[0]))
+                        except:
+                            vals.append(np.nan)
 
 
             #Add to extracted data
             slice = pd.DataFrame([vals],columns=extracted_data.columns)
             extracted_data=pd.concat([extracted_data,slice])
+
+    #Save df
+    extracted_data.to_csv('formatted_health_insurance_data_per_county.csv')
     return extracted_data
+
 def corr_feature_with_death(complete_df, outdir):
     '''Investigate the correlation of different features with the deaths
     '''
@@ -170,12 +177,16 @@ def corr_feature_with_death(complete_df, outdir):
     complete_df = complete_df.dropna()
     print('After NaN removal', len(complete_df))
     y = np.array(complete_df['Death rate per individual'])*100000
-    data = complete_df.drop(['Death rate per individual','Cumulative deaths', 'FIPS', 'stateFIPS'],axis=1)
+    data = complete_df.drop(['Death rate per individual','Cumulative deaths', 'FIPS'],axis=1)
     X = np.array(data[data.columns[3:]])
+
     corr = []
     pvals = []
     for i in range(X.shape[1]):
-        R,p = pearsonr(X[:,i],y)
+        try:
+            R,p = pearsonr(X[:,i],y)
+        except:
+            pdb.set_trace()
         corr.append(R)
         pvals.append(p)
 
@@ -185,7 +196,7 @@ def corr_feature_with_death(complete_df, outdir):
     corr_df['Pearson R'] = np.array(corr)
     corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
 
-    fig, ax = plt.subplots(figsize=(18/2.54,100/2.54))
+    fig, ax = plt.subplots(figsize=(18/2.54,150/2.54))
     sns.barplot(x="Pearson R", y="Feature", data=corr_df)
     #ax.set_ylim([min(coefs),max(coefs)])
     fig.tight_layout()
@@ -213,8 +224,11 @@ except:
    sex_eth_age_data = format_age_per_ethnicity(sex_eth_age_data)
 
 #Format health_insurance
-health_insurance = format_health_insurance(health_insurance)
-pdb.set_trace()
+try:
+    health_insurance = pd.read_csv('formatted_health_insurance_data_per_county.csv')
+except:
+    health_insurance = format_health_insurance(health_insurance)
+
 #Sum deaths
 epidemic_data = sum_deaths(epidemic_data)
 #Rename column for merge
@@ -222,6 +236,9 @@ epidemic_data = epidemic_data.rename(columns={'County Name':'County'})
 epidemic_data = epidemic_data.drop(['State'],axis=1)
 #Merge epidemic data with sex_eth_age_data
 complete_df = pd.merge(sex_eth_age_data, epidemic_data, left_on=['State','County'], right_on=['stateFIPS','County'], how='left')
+
+#Merge with health_insurance
+complete_df = pd.merge(complete_df, health_insurance, left_on=['State','County'], right_on=['stateFIPS','county_name'], how='inner')
 complete_df = complete_df.rename(columns={'countyFIPS':'FIPS'})
 #Join all on FIPS
 #Remove county to avoid duplicates
@@ -234,6 +251,8 @@ complete_df = pd.merge(complete_df, income, on=['FIPS'], how='inner')
 complete_df = pd.merge(complete_df, jobs, on=['FIPS'], how='inner')
 #Get death rate per total county pop
 complete_df['Death rate per individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])
+#Drop unwanted columns
+complete_df = complete_df.drop(['stateFIPS_x', 'Unnamed: 0_y', 'stateFIPS_y', 'county_name'],axis=1)
 #Save df
 complete_df.to_csv('complete_df.csv')
 print('Merged')
