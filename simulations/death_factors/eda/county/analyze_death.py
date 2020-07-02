@@ -18,7 +18,8 @@ import pdb
 
 #Arguments for argparse module:
 parser = argparse.ArgumentParser(description = '''Analyze the effect of population differences on county death tolls. ''')
-parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to eidemic data (csv).')
+parser.add_argument('--case_data', nargs=1, type= str, default=sys.stdin, help = 'Path to case data (csv).')
+parser.add_argument('--death_data', nargs=1, type= str, default=sys.stdin, help = 'Path to death data (csv).')
 parser.add_argument('--sex_eth_age_data', nargs=1, type= str, default=sys.stdin, help = 'Path to data with sex age and ethnicity per county.')
 parser.add_argument('--people', nargs=1, type= str, default=sys.stdin, help = 'Path to data with people data, including e.g. education, per county.')
 parser.add_argument('--income', nargs=1, type= str, default=sys.stdin, help = 'Path to data with income data per county.')
@@ -94,14 +95,17 @@ def format_age_per_ethnicity(sex_eth_age_data):
     extracted_data.to_csv('formatted_eth_age_data_per_county.csv')
     return extracted_data
 
-def sum_deaths(epidemic_data):
-    '''Get a death total over all dates
+def cumulative_cases_deaths(case_data,death_data):
+    '''Get case and death totals over all dates
     '''
 
-    epidemic_data['Cumulative deaths'] = epidemic_data['6/27/2020']
-    #Remove unwanted columns
-    index = np.arange(4,len(epidemic_data.columns)-1)
-    epidemic_data = epidemic_data.drop(epidemic_data.columns[index],axis=1)
+    epidemic_data = pd.DataFrame()
+    #Add county identifiers
+    epidemic_data[death_data.columns[0:4]] = death_data[death_data.columns[0:4]]
+    #Add cases
+    epidemic_data['Cumulative cases'] = case_data['6/27/20']
+    #Add deaths
+    epidemic_data['Cumulative deaths'] = death_data['6/27/2020']
 
     return epidemic_data
 
@@ -249,7 +253,8 @@ def corr_feature_with_death(complete_df, outdir):
 
 #####MAIN#####
 args = parser.parse_args()
-epidemic_data = pd.read_csv(args.epidemic_data[0])
+case_data = pd.read_csv(args.case_data[0])
+death_data = pd.read_csv(args.death_data[0])
 #The sex_eth_age_data conatins only 1877 counties of the over 3000 in total
 sex_eth_age_data = pd.read_csv(args.sex_eth_age_data[0])
 people = pd.read_csv(args.people[0])
@@ -276,8 +281,8 @@ try:
     life_expectancy = pd.read_csv('formatted_life_expectancy_data_per_county.csv')
 except:
     life_expectancy = format_life_expectancy(life_expectancy)
-#Sum deaths
-epidemic_data = sum_deaths(epidemic_data)
+#Get cumulative cases and deaths
+epidemic_data = cumulative_cases_deaths(case_data,death_data)
 #Rename column for merge
 epidemic_data = epidemic_data.rename(columns={'County Name':'County'})
 epidemic_data = epidemic_data.drop(['State'],axis=1)
