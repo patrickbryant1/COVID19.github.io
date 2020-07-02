@@ -315,7 +315,7 @@ complete_df['Death rate per confirmed case,individual'] = (complete_df['Cumulati
 complete_df['Death rate per confirmed case'] = (complete_df['Cumulative deaths']/complete_df['Cumulative cases'])
 
 #Drop unwanted columns
-complete_df = complete_df.drop(['stateFIPS_x', 'Unnamed: 0_y', 'stateFIPS_y', 'county_name','Unnamed: 0'],axis=1)
+complete_df = complete_df.drop(['stateFIPS','stateFIPS_x','stateFIPS_y', 'Unnamed: 0_y', 'county_name','Unnamed: 0'],axis=1)
 #Save df
 complete_df.to_csv('complete_df.csv')
 print('Merged')

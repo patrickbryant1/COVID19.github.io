@@ -14,13 +14,15 @@ import seaborn as sns
 import pdb
 
 from scipy.stats import pearsonr
-from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import ElasticNet, LinearRegression, Ridge, Lars, Lasso, BayesianRidge, ARDRegression
+from sklearn.ensemble import RandomForestRegressor
 
 
 
 #Arguments for argparse module:
 parser = argparse.ArgumentParser(description = '''Analyze the effect of population differences on county death tolls using an elastic net regression model. ''')
 parser.add_argument('--data', nargs=1, type= str, default=sys.stdin, help = 'Path to all formatted data per county).')
+parser.add_argument('--sig_feature_corr', nargs=1, type= str, default=sys.stdin, help = 'Path to significant features.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 def visualize_output(cols,coefs,outdir,id):
@@ -53,50 +55,167 @@ def visualize_output(cols,coefs,outdir,id):
 
 
 
-def fit_model(data,outdir):
-    '''Fit model to data
+def fit_enet(X,y,cols,outdir):
+    '''Fit an enet model to data
     '''
-    #Select data where the Death rate per individual is at least x
-    #data = data[data['Death rate per individual']>x]
-    y1 = np.array(data['Death rate per individual'])*100000
-    y2 = np.array(data['Cumulative deaths'])
-    data = data.drop(['Death rate per individual','Cumulative deaths','FIPS', 'stateFIPS'],axis=1)
-    X = np.array(data[data.columns[4:]])
-    #Fit 1
-    regr1 = ElasticNet(random_state=0,alpha=1.0, l1_ratio=0.5, fit_intercept=True,
+    #Fit
+    regr = ElasticNet(random_state=0,alpha=1.0, l1_ratio=0.5, fit_intercept=True,
     normalize=False, precompute=False, max_iter=1000, copy_X=True, tol=0.001,
     warm_start=True, positive=False, selection='cyclic')
-    regr1.fit(X,y1)
-    visualize_output(data.columns[4:], regr1.coef_ ,outdir,'per100000')
-    pred = regr1.predict(X)
-    err=np.average(np.absolute(pred-y1))
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'enet_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
-    R,p=pearsonr(pred,y1)
+    R,p=pearsonr(pred,y)
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y1,pred,s=2)
+    plt.scatter(y,pred,s=2)
     plt.title('R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
-    fig.savefig(outdir+'pred_vs_true_per100000.png', format='png')
+    fig.savefig(outdir+'enet_pred_vs_true_per100000.png', format='png')
 
-    #Fit 2
-    regr2 = ElasticNet(random_state=0)
-    regr2.fit(X,y2)
-    visualize_output(data.columns[4:], regr2.coef_ ,outdir,'cum_deaths')
-    pred = regr2.predict(X)
-    R,p=pearsonr(pred,y2)
-    err = np.average(np.absolute(pred-y2))
+def rf_reg(X,y,cols,outdir):
+    '''Fit a RandomForestRegressor
+    '''
+    regr = RandomForestRegressor(max_depth=2, random_state=0)
+    regr.fit(X,y)
+    visualize_output(cols, regr.feature_importances_ ,outdir,'rf_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y2,pred,s=2)
+    plt.scatter(y,pred,s=2)
     plt.title('R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
-    fig.savefig(outdir+'pred_vs_true_cum_deaths.png', format='png')
+    fig.savefig(outdir+'rf_pred_vs_true_per100000.png', format='png')
+
+def fit_lreg(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = LinearRegression()
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'lreg_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'lreg_pred_vs_true_per100000.png', format='png')
+
+
+def fit_ridge(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = Ridge()
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'ridge_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'ridge_pred_vs_true_per100000.png', format='png')
+
+def fit_lasso(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = Lasso()
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'lasso_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'lasso_pred_vs_true_per100000.png', format='png')
+
+def fit_lars(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = Lars(n_nonzero_coefs=7)
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'lars_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'lars_pred_vs_true_per100000.png', format='png')
+
+def fit_BayesianRidge(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = BayesianRidge()
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'BayesianRidge_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'BayesianRidge_pred_vs_true_per100000.png', format='png')
+
+def fit_ARDRegression(X,y,cols,outdir,id):
+    '''Fit an enet model to data
+    '''
+    #Fit
+    regr = ARDRegression()
+    regr.fit(X,y)
+    visualize_output(cols, regr.coef_ ,outdir,'ARDRegression_per100000')
+    pred = regr.predict(X)
+    err=np.average(np.absolute(pred-y))
+    print('Average error:',np.round(err,2))
+    R,p=pearsonr(pred,y)
+    print('Pearson R:',np.round(R,2))
+    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
+    plt.scatter(y,pred,s=2)
+    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    ax.set_xlabel('True')
+    ax.set_ylabel('Predicted')
+    fig.tight_layout()
+    fig.savefig(outdir+'ARDRegression_pred_vs_true_per100000.png', format='png')
 
 #####MAIN#####
 args = parser.parse_args()
@@ -105,6 +224,17 @@ print('Before NaN removal', len(data))
 #Remove NaNs
 data = data.dropna()
 print('After NaN removal', len(data))
+sig_feature_corr = pd.read_csv(args.sig_feature_corr[0])
 outdir = args.outdir[0]
-fit_model(data,outdir)
+X = np.array(data[sig_feature_corr['Feature']])
+y = np.array(data['Death rate per individual'])*100000
+cols=np.array(sig_feature_corr['Feature'])
+#fit_enet(X,y,cols,outdir)
+# fit_lreg(X,y,cols,outdir,'Lreg')
+# fit_ridge(X,y,cols,outdir,'Ridge')
+# fit_lasso(X,y,cols,outdir,'Lasso')
+#fit_lars(X,y,cols,outdir,'Lars')
+#fit_BayesianRidge(X,y,cols,outdir,'BayesianRidge')
+fit_ARDRegression(X,y,cols,outdir,'ARDRegression')
+#rf_reg(X2,y2,cols,outdir)
 pdb.set_trace()
