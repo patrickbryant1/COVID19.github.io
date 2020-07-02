@@ -16,7 +16,7 @@ import pdb
 from scipy.stats import pearsonr
 from sklearn.linear_model import ElasticNet, LinearRegression, Ridge, Lars, Lasso, BayesianRidge, ARDRegression
 from sklearn.ensemble import RandomForestRegressor
-
+from sklearn.model_selection import KFold
 
 
 #Arguments for argparse module:
@@ -46,63 +46,73 @@ def visualize_output(cols,coefs,outdir,id):
     coef_df = coef_df.reset_index()
     top10 = coef_df.loc[0:9]
     bottom10 = coef_df.loc[len(coef_df)-10:len(coef_df)]
+    if id == 'RandomForestRegressor':
+        bottom10 = coef_df.loc[10:19]
     top_bottom = pd.concat([top10,bottom10])
     fig, ax = plt.subplots(figsize=(18/2.54,18/2.54))
     sns.barplot(x="Coefficient", y="Feature", data=top_bottom)
+    ax.set_title(id)
     fig.tight_layout()
     fig.savefig(outdir+id+'_top_bottom10_enet_coefs.png', format='png')
     plt.close()
 
 
 
-def fit_enet(X,y,cols,outdir):
+def fit_enet(X_train, X_test,y_train, y_test,cols,split,metrics,outdir):
     '''Fit an enet model to data
     '''
     #Fit
     regr = ElasticNet(random_state=0,alpha=1.0, l1_ratio=0.5, fit_intercept=True,
     normalize=False, precompute=False, max_iter=1000, copy_X=True, tol=0.001,
     warm_start=True, positive=False, selection='cyclic')
-    regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'enet_per100000')
-    pred = regr.predict(X)
-    err=np.average(np.absolute(pred-y))
-    print('Average error:',np.round(err,2))
-    R,p=pearsonr(pred,y)
-    print('Pearson R:',np.round(R,2))
-    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y,pred,s=2)
-    plt.title('R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    regr.fit(X_train,y_train)
+    visualize_output(cols, regr.coef_ ,outdir,'ElasticNet_'+str(split))
+    pred = regr.predict(X_test)
+    err=np.average(np.absolute(pred-y_test))
+    R,p=pearsonr(pred,y_test)
+    fig, ax = plt.subplots(figsize=(6/2.54,6/2.54))
+    plt.scatter(y_test,pred,s=2)
+    plt.title('ElasticNet\nR='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
-    fig.savefig(outdir+'enet_pred_vs_true_per100000.png', format='png')
+    fig.savefig(outdir+str(split)+'_enet_pred_vs_true_per100000.png', format='png')
 
-def rf_reg(X,y,cols,outdir):
+    metrics['Model'].append('ElasticNet')
+    metrics['Average error'].append(np.round(err,2))
+    metrics['Pearson R'].append(np.round(R,2))
+    return metrics
+
+def rf_reg(X_train, X_test,y_train, y_test,cols,split,metrics,outdir):
     '''Fit a RandomForestRegressor
     '''
     regr = RandomForestRegressor(max_depth=2, random_state=0)
-    regr.fit(X,y)
-    visualize_output(cols, regr.feature_importances_ ,outdir,'rf_per100000')
-    pred = regr.predict(X)
-    err=np.average(np.absolute(pred-y))
-    print('Average error:',np.round(err,2))
-    R,p=pearsonr(pred,y)
-    print('Pearson R:',np.round(R,2))
+    regr.fit(X_train,y_train)
+    visualize_output(cols, regr.feature_importances_ ,outdir,'RandomForestRegressor_'+str(split))
+    pred = regr.predict(X_test)
+    err=np.average(np.absolute(pred-y_test))
+    R,p=pearsonr(pred,y_test)
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y,pred,s=2)
-    plt.title('R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    plt.scatter(y_test,pred,s=2)
+    plt.title('RandomForestRegressor\nR='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
-    fig.savefig(outdir+'rf_pred_vs_true_per100000.png', format='png')
+    fig.savefig(outdir+str(split)+'rf_pred_vs_true_per100000.png', format='png')
 
+    metrics['Model'].append('RandomForestRegressor')
+    metrics['Average error'].append(np.round(err,2))
+    metrics['Pearson R'].append(np.round(R,2))
+
+    return metrics
+    
 def fit_lreg(X,y,cols,outdir,id):
     '''Fit an enet model to data
     '''
     #Fit
     regr = LinearRegression()
     regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'lreg_per100000')
+    visualize_output(cols, regr.coef_ ,outdir,'LinearRegression')
     pred = regr.predict(X)
     err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
@@ -110,7 +120,7 @@ def fit_lreg(X,y,cols,outdir,id):
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
     plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    plt.title('LinearRegression\nR='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
@@ -123,7 +133,7 @@ def fit_ridge(X,y,cols,outdir,id):
     #Fit
     regr = Ridge()
     regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'ridge_per100000')
+    visualize_output(cols, regr.coef_ ,outdir,'RidgeRegression')
     pred = regr.predict(X)
     err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
@@ -131,7 +141,7 @@ def fit_ridge(X,y,cols,outdir,id):
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
     plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    plt.title('RidgeRegression\n|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
@@ -143,7 +153,7 @@ def fit_lasso(X,y,cols,outdir,id):
     #Fit
     regr = Lasso()
     regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'lasso_per100000')
+    visualize_output(cols, regr.coef_ ,outdir,'LassoRegression')
     pred = regr.predict(X)
     err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
@@ -151,31 +161,11 @@ def fit_lasso(X,y,cols,outdir,id):
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
     plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    plt.title('LassoRegression\n|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
     fig.savefig(outdir+'lasso_pred_vs_true_per100000.png', format='png')
-
-def fit_lars(X,y,cols,outdir,id):
-    '''Fit an enet model to data
-    '''
-    #Fit
-    regr = Lars(n_nonzero_coefs=7)
-    regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'lars_per100000')
-    pred = regr.predict(X)
-    err=np.average(np.absolute(pred-y))
-    print('Average error:',np.round(err,2))
-    R,p=pearsonr(pred,y)
-    print('Pearson R:',np.round(R,2))
-    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
-    ax.set_xlabel('True')
-    ax.set_ylabel('Predicted')
-    fig.tight_layout()
-    fig.savefig(outdir+'lars_pred_vs_true_per100000.png', format='png')
 
 def fit_BayesianRidge(X,y,cols,outdir,id):
     '''Fit an enet model to data
@@ -183,7 +173,7 @@ def fit_BayesianRidge(X,y,cols,outdir,id):
     #Fit
     regr = BayesianRidge()
     regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'BayesianRidge_per100000')
+    visualize_output(cols, regr.coef_ ,outdir,'BayesianRidge')
     pred = regr.predict(X)
     err=np.average(np.absolute(pred-y))
     print('Average error:',np.round(err,2))
@@ -191,31 +181,12 @@ def fit_BayesianRidge(X,y,cols,outdir,id):
     print('Pearson R:',np.round(R,2))
     fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
     plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
+    plt.title('BayesianRidge\nR='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
     ax.set_xlabel('True')
     ax.set_ylabel('Predicted')
     fig.tight_layout()
     fig.savefig(outdir+'BayesianRidge_pred_vs_true_per100000.png', format='png')
 
-def fit_ARDRegression(X,y,cols,outdir,id):
-    '''Fit an enet model to data
-    '''
-    #Fit
-    regr = ARDRegression()
-    regr.fit(X,y)
-    visualize_output(cols, regr.coef_ ,outdir,'ARDRegression_per100000')
-    pred = regr.predict(X)
-    err=np.average(np.absolute(pred-y))
-    print('Average error:',np.round(err,2))
-    R,p=pearsonr(pred,y)
-    print('Pearson R:',np.round(R,2))
-    fig, ax = plt.subplots(figsize=(9/2.54,9/2.54))
-    plt.scatter(y,pred,s=2)
-    plt.title(id+'|R='+str(np.round(R,2))+'|av.err.='+str(np.round(err,2)))
-    ax.set_xlabel('True')
-    ax.set_ylabel('Predicted')
-    fig.tight_layout()
-    fig.savefig(outdir+'ARDRegression_pred_vs_true_per100000.png', format='png')
 
 #####MAIN#####
 args = parser.parse_args()
@@ -229,12 +200,18 @@ outdir = args.outdir[0]
 X = np.array(data[sig_feature_corr['Feature']])
 y = np.array(data['Death rate per individual'])*100000
 cols=np.array(sig_feature_corr['Feature'])
-#fit_enet(X,y,cols,outdir)
-# fit_lreg(X,y,cols,outdir,'Lreg')
-# fit_ridge(X,y,cols,outdir,'Ridge')
-# fit_lasso(X,y,cols,outdir,'Lasso')
-#fit_lars(X,y,cols,outdir,'Lars')
-#fit_BayesianRidge(X,y,cols,outdir,'BayesianRidge')
-fit_ARDRegression(X,y,cols,outdir,'ARDRegression')
-#rf_reg(X2,y2,cols,outdir)
+#Cross validation
+kf = KFold(n_splits=5,random_state=42, shuffle=True)
+metrics = {'Model':[],'Average error':[],'Pearson R':[]}
+i=1
+for train_index, test_index in kf.split(X):
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    metrics = fit_enet(X_train, X_test,y_train, y_test,cols,i,metrics,outdir)
+    # fit_lreg(X,y,cols,outdir,'Lreg')
+    # fit_ridge(X,y,cols,outdir,'Ridge')
+    # fit_lasso(X,y,cols,outdir,'Lasso')
+    # fit_BayesianRidge(X,y,cols,outdir,'BayesianRidge')
+    metrics = rf_reg(X_train, X_test,y_train, y_test,cols,i,metrics,outdir)
+    i+=1
 pdb.set_trace()
