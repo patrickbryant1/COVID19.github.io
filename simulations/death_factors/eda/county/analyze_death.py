@@ -174,8 +174,8 @@ def format_health_insurance(health_insurance):
     extracted_data.to_csv('formatted_health_insurance_data_per_county.csv')
     return extracted_data
 
-def format_life_insurance(life_expectancy):
-    '''Format the life insurance data per county
+def format_life_expectancy(life_expectancy):
+    '''Format the life expectancy data per county
     Life expectancy per age group, e(x)
     '''
 
@@ -207,6 +207,7 @@ def format_life_insurance(life_expectancy):
 
     #Save df
     extracted_data.to_csv('formatted_life_expectancy_data_per_county.csv')
+
     return extracted_data
 
 def corr_feature_with_death(complete_df, outdir):
@@ -271,7 +272,10 @@ except:
     health_insurance = format_health_insurance(health_insurance)
 
 #Format life expectancy
-format_life_insurance(life_expectancy)
+try:
+    life_expectancy = pd.read_csv('formatted_life_expectancy_data_per_county.csv')
+except:
+    life_expectancy = format_life_expectancy(life_expectancy)
 #Sum deaths
 epidemic_data = sum_deaths(epidemic_data)
 #Rename column for merge
@@ -282,7 +286,11 @@ complete_df = pd.merge(sex_eth_age_data, epidemic_data, left_on=['State','County
 
 #Merge with health_insurance
 complete_df = pd.merge(complete_df, health_insurance, left_on=['State','County'], right_on=['stateFIPS','county_name'], how='inner')
-complete_df = complete_df.rename(columns={'countyFIPS':'FIPS'})
+complete_df = complete_df.rename(columns={'countyFIPS_x':'FIPS','countyFIPS_y':'countyFIPS'})
+
+#Merge with life life_expectancy
+complete_df = pd.merge(complete_df, life_expectancy, left_on=['State','countyFIPS'], right_on=['stateFIPS','countyFIPS'], how='inner')
+
 #Join all on FIPS
 #Remove county to avoid duplicates
 people = people.drop(['State','County'],axis=1)
