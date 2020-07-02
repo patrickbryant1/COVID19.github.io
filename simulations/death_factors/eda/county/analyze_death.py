@@ -221,8 +221,8 @@ def corr_feature_with_death(complete_df, outdir):
     #Remove NaNs
     complete_df = complete_df.dropna()
     print('After NaN removal', len(complete_df))
-    y = np.array(complete_df['Death rate per individual'])*100000
-    data = complete_df.drop(['Death rate per individual','Cumulative deaths', 'FIPS'],axis=1)
+    y = np.array(complete_df['Death rate per individual'])
+    data = complete_df.drop(['FIPS','Death rate per individual','Death rate per confirmed case','Death rate per confirmed case,individual','Cumulative deaths','Cumulative cases'],axis=1)
     X = np.array(data[data.columns[3:]])
 
     corr = []
@@ -239,16 +239,20 @@ def corr_feature_with_death(complete_df, outdir):
     corr_df = pd.DataFrame()
     corr_df['Feature'] = data.columns[3:]
     corr_df['Pearson R'] = np.array(corr)
+    corr_df['p-value'] = np.array(pvals)
+    #Bonferroni correction
+    corr_df = corr_df[corr_df['p-value']<(0.05/X.shape[1])]
     corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
 
     fig, ax = plt.subplots(figsize=(18/2.54,150/2.54))
     sns.barplot(x="Pearson R", y="Feature", data=corr_df)
-    #ax.set_ylim([min(coefs),max(coefs)])
     fig.tight_layout()
     fig.show()
     fig.savefig(outdir+'feature_correlations.png', format='png')
     plt.close()
 
+    #Save significant features
+    corr_df.to_csv('sig_feature_corr.csv')
     pdb.set_trace()
 
 #####MAIN#####
@@ -307,8 +311,11 @@ complete_df = pd.merge(complete_df, income, on=['FIPS'], how='inner')
 complete_df = pd.merge(complete_df, jobs, on=['FIPS'], how='inner')
 #Get death rate per total county pop
 complete_df['Death rate per individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])
+complete_df['Death rate per confirmed case,individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])/complete_df['Cumulative cases']
+complete_df['Death rate per confirmed case'] = (complete_df['Cumulative deaths']/complete_df['Cumulative cases'])
+
 #Drop unwanted columns
-complete_df = complete_df.drop(['stateFIPS_x', 'Unnamed: 0_y', 'stateFIPS_y', 'county_name'],axis=1)
+complete_df = complete_df.drop(['stateFIPS_x', 'Unnamed: 0_y', 'stateFIPS_y', 'county_name','Unnamed: 0'],axis=1)
 #Save df
 complete_df.to_csv('complete_df.csv')
 print('Merged')

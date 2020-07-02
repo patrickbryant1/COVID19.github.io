@@ -3,7 +3,7 @@ layout: page
 title: US ethnicity
 ---
 
-## Pearson Correlation with deaths per 100000
+## Statistically significant (Bonferroni) Pearson Correlations with Death rate per individual
 ![enet1](./assets/feature_correlations.png)
 
 ## Enet Coefficients
