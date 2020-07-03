@@ -56,8 +56,6 @@ def visualize_output(cols,coefs,outdir,id):
     fig.savefig(outdir+id+'_top_bottom10_enet_coefs.png', format='png')
     plt.close()
 
-
-
 def fit_enet(X_train, X_test,y_train, y_test,cols,split,metrics,outdir):
     '''Fit an enet model to data
     '''
@@ -116,7 +114,107 @@ def rf_reg(X_train, X_test,y_train, y_test,cols,split,metrics,outdir):
                 metrics['Pearson R'].append(np.round(R,2))
     return metrics
 
+
+def vis_enet_opt(df):
+    '''Visualize the optimization
+    '''
+
+    fig, ax1 = plt.subplots(figsize=(18/2.54,9/2.54))
+    ax2 = ax1.twinx()
+    alpha = df['alpha'].unique()
+    l1 = df['l1_ratio'].unique()
+    tol = df['tol'].unique()
+    xticks = ['alpha:\nl1_ratio:\ntol:']
+    combo = 1
+    for a in alpha:
+        a_df = df[df['alpha']==a]
+        for l in l1:
+            a_l_df = a_df[a_df['l1_ratio']==l]
+            for t in tol:
+                a_l_t_df = a_l_df[a_l_df['tol']==t]
+                #Pearson R
+                ax1.errorbar(combo,np.average(a_l_t_df['Pearson R']), yerr=np.std(a_l_t_df['Pearson R']),color='cornflowerblue')
+                ax1.scatter(combo,np.average(a_l_t_df['Pearson R']),color='b',marker='x')
+                #Average error
+                ax2.errorbar(combo+0.2,np.average(a_l_t_df['Average error']),yerr=np.std(a_l_t_df['Average error']), color='mediumseagreen')
+                ax2.scatter(combo+0.2,np.average(a_l_t_df['Average error']), color='g',marker='x')
+                xticks.append(str(a)+'\n'+str(l)+'\n'+str(t))
+                combo+=1
+
+    ax1.set_ylabel('Pearson R',color='b')
+    ax1.set_ylim([0.4,0.7])
+    ax2.set_ylabel('Average error',color='g')
+    ax2.set_ylim([14,19])
+    ax1.set_xticks(np.arange(0,13))
+    ax2.set_xticks(np.arange(0,13))
+    ax1.set_xticklabels(xticks)
+    plt.title('Elastic Net Regression')
+    fig.tight_layout()
+    #Hide axis and set colors
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['bottom'].set_color('grey')
+    ax2.spines['left'].set_color('blue')
+    ax1.spines['right'].set_color('green')
+    ax2.spines['right'].set_color('green')
+    for t in ax2.xaxis.get_ticklines(): t.set_color('grey')
+    for t in ax2.yaxis.get_ticklines(): t.set_color('grey')
+    plt.show()
+    pdb.set_trace()
+    fig.savefig(outdir+id+'_all_enet_coefs.png', format='png')
+    plt.close()
+
+def vis_rf_opt(df):
+    '''Visualize the optimization
+    '''
+
+    fig, ax1 = plt.subplots(figsize=(18/2.54,9/2.54))
+    ax2 = ax1.twinx()
+    alpha = df['alpha'].unique()
+    l1 = df['l1_ratio'].unique()
+    tol = df['tol'].unique()
+    xticks = ['alpha:\nl1_ratio:\ntol:']
+    combo = 1
+    for a in alpha:
+        a_df = df[df['alpha']==a]
+        for l in l1:
+            a_l_df = a_df[a_df['l1_ratio']==l]
+            for t in tol:
+                a_l_t_df = a_l_df[a_l_df['tol']==t]
+                #Pearson R
+                ax1.errorbar(combo,np.average(a_l_t_df['Pearson R']), yerr=np.std(a_l_t_df['Pearson R']),color='cornflowerblue')
+                ax1.scatter(combo,np.average(a_l_t_df['Pearson R']),color='b',marker='x')
+                #Average error
+                ax2.errorbar(combo+0.2,np.average(a_l_t_df['Average error']),yerr=np.std(a_l_t_df['Average error']), color='mediumseagreen')
+                ax2.scatter(combo+0.2,np.average(a_l_t_df['Average error']), color='g',marker='x')
+                xticks.append(str(a)+'\n'+str(l)+'\n'+str(t))
+                combo+=1
+
+    ax1.set_ylabel('Pearson R',color='b')
+    ax1.set_ylim([0.4,0.7])
+    ax2.set_ylabel('Average error',color='g')
+    ax2.set_ylim([14,19])
+    ax1.set_xticks(np.arange(0,13))
+    ax2.set_xticks(np.arange(0,13))
+    ax1.set_xticklabels(xticks)
+    plt.title('Elastic Net Regression')
+    fig.tight_layout()
+    #Hide axis and set colors
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['bottom'].set_color('grey')
+    ax2.spines['left'].set_color('blue')
+    ax1.spines['right'].set_color('green')
+    ax2.spines['right'].set_color('green')
+    for t in ax2.xaxis.get_ticklines(): t.set_color('grey')
+    for t in ax2.yaxis.get_ticklines(): t.set_color('grey')
+    plt.show()
+    pdb.set_trace()
+    fig.savefig(outdir+id+'_all_enet_coefs.png', format='png')
+    plt.close()
+
 #####MAIN#####
+matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 data = pd.read_csv(args.data[0])
 print('Before NaN removal', len(data))
@@ -128,24 +226,32 @@ outdir = args.outdir[0]
 X = np.array(data[sig_feature_corr['Feature']])
 y = np.array(data['Death rate per individual'])*100000
 cols=np.array(sig_feature_corr['Feature'])
-#Cross validation
-kf = KFold(n_splits=5,random_state=42, shuffle=True)
-enet_metrics = {'alpha':[],'l1_ratio':[],'tol':[],'Average error':[],'Pearson R':[]}
-rf_metrics = {'n_estimators':[],'min_samples_split':[],'min_samples_leaf':[],'Average error':[],'Pearson R':[]}
-i=1
-for train_index, test_index in kf.split(X):
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
-    enet_metrics = fit_enet(X_train, X_test,y_train, y_test,cols,i,enet_metrics,outdir)
-    rf_metrics = rf_reg(X_train, X_test,y_train, y_test,cols,i,rf_metrics,outdir)
-    i+=1
+try:
+    enet_df = pd.read_csv('enet_df.csv')
+    rf_df = pd.read_csv('rf_df.csv')
+except:
+    #Cross validation
+    kf = KFold(n_splits=5,random_state=42, shuffle=True)
+    enet_metrics = {'alpha':[],'l1_ratio':[],'tol':[],'Average error':[],'Pearson R':[]}
+    rf_metrics = {'n_estimators':[],'min_samples_split':[],'min_samples_leaf':[],'Average error':[],'Pearson R':[]}
+    i=1
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        enet_metrics = fit_enet(X_train, X_test,y_train, y_test,cols,i,enet_metrics,outdir)
+        rf_metrics = rf_reg(X_train, X_test,y_train, y_test,cols,i,rf_metrics,outdir)
+        i+=1
 
-#Construct metric dfs
-enet_df = pd.DataFrame()
-for key in enet_metrics:
-    enet_df[key]=enet_metrics[key]
-enet_df.to_csv('enet_df.csv')
-rf_df = pd.DataFrame()
-for key in rf_metrics:
-    rf_df[key]=rf_metrics[key]
-rf_df.to_csv('rf_df.csv')
+    #Construct metric dfs
+    enet_df = pd.DataFrame()
+    for key in enet_metrics:
+        enet_df[key]=enet_metrics[key]
+    enet_df.to_csv('enet_df.csv')
+    rf_df = pd.DataFrame()
+    for key in rf_metrics:
+        rf_df[key]=rf_metrics[key]
+    rf_df.to_csv('rf_df.csv')
+
+#Visualize
+vis_enet_opt(enet_df)
+vis_rf_opt(rf_df)
