@@ -115,7 +115,7 @@ def rf_reg(X_train, X_test,y_train, y_test,cols,split,metrics,outdir):
     return metrics
 
 
-def vis_enet_opt(df):
+def vis_enet_opt(df, outdir):
     '''Visualize the optimization
     '''
 
@@ -159,35 +159,33 @@ def vis_enet_opt(df):
     ax2.spines['right'].set_color('green')
     for t in ax2.xaxis.get_ticklines(): t.set_color('grey')
     for t in ax2.yaxis.get_ticklines(): t.set_color('grey')
-    plt.show()
-    pdb.set_trace()
-    fig.savefig(outdir+id+'_all_enet_coefs.png', format='png')
+    fig.savefig(outdir+'enet_opt.png', format='png')
     plt.close()
 
-def vis_rf_opt(df):
+def vis_rf_opt(df, outdir):
     '''Visualize the optimization
     '''
 
     fig, ax1 = plt.subplots(figsize=(18/2.54,9/2.54))
     ax2 = ax1.twinx()
-    alpha = df['alpha'].unique()
-    l1 = df['l1_ratio'].unique()
-    tol = df['tol'].unique()
-    xticks = ['alpha:\nl1_ratio:\ntol:']
+    n_est= df['n_estimators'].unique()
+    mss = df['min_samples_split'].unique()
+    msl = df['min_samples_leaf'].unique()
+    xticks = ['n_est:\nmin_split:\nmin_leaf:']
     combo = 1
-    for a in alpha:
-        a_df = df[df['alpha']==a]
-        for l in l1:
-            a_l_df = a_df[a_df['l1_ratio']==l]
-            for t in tol:
-                a_l_t_df = a_l_df[a_l_df['tol']==t]
+    for n in n_est:
+        n_df = df[df['n_estimators']==n]
+        for m in mss:
+            n_m_df = n_df[n_df['min_samples_split']==m]
+            for ml in msl:
+                n_m_ml_df = n_m_df[n_m_df['min_samples_leaf']==ml]
                 #Pearson R
-                ax1.errorbar(combo,np.average(a_l_t_df['Pearson R']), yerr=np.std(a_l_t_df['Pearson R']),color='cornflowerblue')
-                ax1.scatter(combo,np.average(a_l_t_df['Pearson R']),color='b',marker='x')
+                ax1.errorbar(combo,np.average(n_m_ml_df['Pearson R']), yerr=np.std(n_m_ml_df['Pearson R']),color='cornflowerblue')
+                ax1.scatter(combo,np.average(n_m_ml_df['Pearson R']),color='b',marker='x')
                 #Average error
-                ax2.errorbar(combo+0.2,np.average(a_l_t_df['Average error']),yerr=np.std(a_l_t_df['Average error']), color='mediumseagreen')
-                ax2.scatter(combo+0.2,np.average(a_l_t_df['Average error']), color='g',marker='x')
-                xticks.append(str(a)+'\n'+str(l)+'\n'+str(t))
+                ax2.errorbar(combo+0.2,np.average(n_m_ml_df['Average error']),yerr=np.std(n_m_ml_df['Average error']), color='mediumseagreen')
+                ax2.scatter(combo+0.2,np.average(n_m_ml_df['Average error']), color='g',marker='x')
+                xticks.append(str(n)+'\n'+str(m)+'\n'+str(ml))
                 combo+=1
 
     ax1.set_ylabel('Pearson R',color='b')
@@ -197,7 +195,7 @@ def vis_rf_opt(df):
     ax1.set_xticks(np.arange(0,13))
     ax2.set_xticks(np.arange(0,13))
     ax1.set_xticklabels(xticks)
-    plt.title('Elastic Net Regression')
+    plt.title('Random Forest Regression')
     fig.tight_layout()
     #Hide axis and set colors
     ax1.spines['top'].set_visible(False)
@@ -208,9 +206,7 @@ def vis_rf_opt(df):
     ax2.spines['right'].set_color('green')
     for t in ax2.xaxis.get_ticklines(): t.set_color('grey')
     for t in ax2.yaxis.get_ticklines(): t.set_color('grey')
-    plt.show()
-    pdb.set_trace()
-    fig.savefig(outdir+id+'_all_enet_coefs.png', format='png')
+    fig.savefig(outdir+'rf_opt.png', format='png')
     plt.close()
 
 #####MAIN#####
@@ -253,5 +249,5 @@ except:
     rf_df.to_csv('rf_df.csv')
 
 #Visualize
-vis_enet_opt(enet_df)
-vis_rf_opt(rf_df)
+#vis_enet_opt(enet_df, outdir)
+vis_rf_opt(rf_df, outdir)
