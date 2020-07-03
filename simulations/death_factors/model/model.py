@@ -249,5 +249,5 @@ except:
     rf_df.to_csv('rf_df.csv')
 
 #Visualize
-#vis_enet_opt(enet_df, outdir)
+vis_enet_opt(enet_df, outdir)
 vis_rf_opt(rf_df, outdir)

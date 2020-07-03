@@ -222,7 +222,8 @@ def corr_feature_with_death(complete_df, outdir):
     complete_df = complete_df.dropna()
     print('After NaN removal', len(complete_df))
     y = np.array(complete_df['Death rate per individual'])
-    data = complete_df.drop(['FIPS','Death rate per individual','Death rate per confirmed case','Death rate per confirmed case,individual','Cumulative deaths','Cumulative cases'],axis=1)
+    #'Cumulative cases'
+    data = complete_df.drop(['FIPS','Death rate per individual','Death rate per confirmed case','Death rate per confirmed case,individual','Cumulative deaths','Cumulative cases','Case rate per individual'],axis=1)
     X = np.array(data[data.columns[3:]])
 
     corr = []
@@ -319,6 +320,7 @@ complete_df = pd.merge(complete_df, income, on=['FIPS'], how='inner')
 complete_df = pd.merge(complete_df, jobs, on=['FIPS'], how='inner')
 #Get death rate per total county pop
 complete_df['Death rate per individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])
+complete_df['Case rate per individual'] = (complete_df['Cumulative cases']/complete_df['County total'])
 complete_df['Death rate per confirmed case,individual'] = (complete_df['Cumulative deaths']/complete_df['County total'])/complete_df['Cumulative cases']
 complete_df['Death rate per confirmed case'] = (complete_df['Cumulative deaths']/complete_df['Cumulative cases'])
 
