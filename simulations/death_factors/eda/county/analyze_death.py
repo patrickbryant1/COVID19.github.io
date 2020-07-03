@@ -243,17 +243,25 @@ def corr_feature_with_death(complete_df, outdir):
     #Bonferroni correction
     corr_df = corr_df[corr_df['p-value']<(0.05/X.shape[1])]
     corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
-
+    #All
     fig, ax = plt.subplots(figsize=(18/2.54,150/2.54))
     sns.barplot(x="Pearson R", y="Feature", data=corr_df)
     fig.tight_layout()
-    fig.show()
     fig.savefig(outdir+'feature_correlations.png', format='png')
     plt.close()
-
+    #top and bottom 10
+    fig, ax = plt.subplots(figsize=(12/2.54,12/2.54))
+    corr_df = corr_df.reset_index()
+    top10 = corr_df.loc[0:9]
+    bottom10 = corr_df.loc[len(corr_df)-10:len(corr_df)]
+    top_bottom = pd.concat([top10,bottom10])
+    sns.barplot(x="Pearson R", y="Feature", data=top_bottom)
+    fig.tight_layout()
+    fig.savefig(outdir+'top_bottom_feature_correlations.png', format='png')
+    plt.close()
     #Save significant features
     corr_df.to_csv('sig_feature_corr.csv')
-    pdb.set_trace()
+
 
 #####MAIN#####
 args = parser.parse_args()
