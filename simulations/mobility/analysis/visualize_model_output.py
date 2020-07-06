@@ -127,14 +127,28 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date, covaria
 
         return stan_data
 
+def plot_posterior(matrix, countries, param):
+    '''Visualize the posterior distributions of different parameters
+    '''
+    for i in range(matrix.shape[1]):
+        fig, ax = plt.subplots(figsize=(3/2.54, 3/2.54))
+        sns.distplot(matrix[2000:,i]) #The first 2000 samplings are warmup
+        ax.set_title(countries[i])
+        ax.set_xlabel(param)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png')
+        plt.close()
+
+
 def visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates):
     '''Visualize results
     '''
-    #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
-    #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
-    #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-    #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-    #'prediction0', 'E_deaths0' = w/o mobility changes
+    #Investigate parameter posterior distributions
+    param = 'mu'
+    param_matrix = np.load(outdir+'mu.npy', allow_pickle=True)
+    plot_posterior(param_matrix, countries, 'mean R0')
 
     #Read in data
     #For models fit using MCMC, also included in the summary are the
@@ -155,30 +169,21 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     #Plot values from each iteration as r function mcmc_parcoord
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
-    #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
+    #Plot alpha posteriors
     fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
     alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
-    for i in range(1,6):
-        alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
-        alpha_m = 1-np.exp(-alpha['mean'].values[0])
-        alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
-        alpha_25 = 1-np.exp(-alpha['25%'].values[0])
-        alpha_75 = 1-np.exp(-alpha['75%'].values[0])
-        alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-        ax.plot([i-0.25,i+0.25],[alpha_m,alpha_m],color = alpha_colors[i-1])
-        ax.plot([i]*2,[alpha_2_5,alpha_97_5],  marker = '_',color = alpha_colors[i-1])
-        rect = Rectangle((i-0.25,alpha_25),0.5,alpha_75-alpha_25,linewidth=1, color = alpha_colors[i-1], alpha = 0.3)
-        ax.add_patch(rect)
-    ax.set_ylim([0,1])
-    ax.set_ylabel('Fractional reduction in R0')
-    ax.set_xticks([1,2,3,4,5])
-    ax.set_xticklabels(['retail and recreation', 'grocery and pharmacy', 'transit stations','workplace', 'residential'],rotation='vertical')
-    plt.tight_layout()
-    fig.savefig(outdir+'plots/alphas.png', format='png', dpi=300)
-    plt.close()
+    alpha_names = {0:'retail and recreation',1:'grocery and pharmacy',2:'transit stations',3:'workplace',4:'residential'}
 
-
-
+    for i in range(5):
+        fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
+        sns.distplot(alphas[2000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
+        ax.set_title(alpha_names[i])
+        ax.set_xlabel('Weight')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        fig.savefig(outdir+'plots/posterior/alpha_'+alpha_names[i]+'.png', format = 'png')
+        plt.close()
 
     #plot per country
     #Read in intervention dates
@@ -281,7 +286,7 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
 
     #Plot predicted dates
-    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='Forecast', linewidth = 1.0)
+    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='Forecast', linewidth = 2.0)
     ax1.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
     ax1.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
 
@@ -297,8 +302,11 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
         'social_distancing_encouraged':'p', 'self_isolating_if_ill':'d'}
     NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
         'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
-    y_npi = max(y[:forecast])*0.9
-    y_step = y_npi/20
+    if ylabel == 'Rt':
+        y_npi = max(y[:forecast])*0.9
+    else:
+        y_npi = max(higher_bound[:forecast])*0.9
+    y_step = y_npi/15
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
         if country_npi[npi].values[0] == '0': #If nan
@@ -325,9 +333,11 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     #ax1
     #ax1.legend(loc='lower left', frameon=False, markerscale=2)
     ax1.set_ylabel(ylabel)
+    if country=='United_Kingdom':
+        country = 'United Kingdom'
     ax1.set_title(country)
     ax1.set_ylim([0,max(higher_bound[:forecast])])
-    xticks=np.arange(forecast-1,0,-7)
+    xticks=np.arange(forecast-1,0,-14)
     ax1.set_xticks(xticks)
     ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     #Plot a dashed line at Rt=1
