@@ -22,3 +22,5 @@ montage forecast/Austria_forecast.svg  forecast/Germany_forecast.svg  forecast/S
 #Montage posterior distributions
 montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and pharmacy.png' 'posterior/alpha_transit stations.png' posterior/alpha_workplace.png posterior/alpha_residential.png -tile 3x2 -geometry +2+2 posterior/alphas.png
 montage 'posterior/mean R0*' -tile 6x2 -geometry +2+2 posterior/meanR0_all.png
+#Montage correlations
+montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and pharmacy.png' 'posterior/alpha_transit stations.png' posterior/alpha_workplace.png posterior/alpha_residential.png -tile 3x2 -geometry +2+2 posterior/alphas.png

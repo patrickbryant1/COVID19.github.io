@@ -139,16 +139,16 @@ def analyze_corr(model_data, covariate_names, outdir):
     '''
 
 
-
+    x =10 #minimum number of days to inculde for correlation analysis
     deaths = model_data['deaths_by_country']
     #Save correlations in array
-    correlations = np.zeros((deaths.shape[1],len(covariate_names), int(min(model_data['days_by_country']))-10))
+    correlations = np.zeros((deaths.shape[1],len(covariate_names), int(min(model_data['days_by_country']))-x))
     for i in range(deaths.shape[1]):
         country_days = int(model_data['days_by_country'][i])
-        country_deaths = deaths[:correlations.shape[2]+10,i]
+        country_deaths = deaths[:country_days,i]
 
         for j in range(len(covariate_names)):
-            cov_data = model_data[covariate_names[j]][:correlations.shape[2]+10,i]
+            cov_data = model_data[covariate_names[j]][:country_days,i]
             #Correlate with delay
             R,p = pearsonr(country_deaths,cov_data) #0 delay
 
@@ -158,6 +158,26 @@ def analyze_corr(model_data, covariate_names, outdir):
                 correlations[i,j,k]=R
 
     #Plot correlations
+    keys = ['retail and recreation', 'grocery and pharmacy',
+            'transit stations','workplaces','residential']
+    cmaps = ['Reds','Purples','Oranges','Greens','Blues']
+    colors =['tab:red','tab:purple','tab:pink', 'tab:olive', 'tab:cyan']
+    for j in range(correlations.shape[1]): #Go through all covariates
+        fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
+        all_countries_x=[]
+        all_countries_y=[]
+        for i in range(correlations.shape[0]):#Go through countries
+            all_countries_x.extend(np.arange(28,correlations.shape[2]))
+            all_countries_y.extend(correlations[i,j,28:])
+            ax.plot(np.arange(correlations.shape[2]),correlations[i,j,:],color=colors[j], linewidth=1, alpha = 0.5)
+        #sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[j])
+        ax.set_title(keys[j])
+        ax.set_xlabel('Time delay for deaths (days)')
+        ax.set_ylabel('Pearson R')
+        fig.tight_layout()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.savefig(outdir+'correlations/'+covariate_names[j]+'.png',  format='png', dpi=300)
     pdb.set_trace()
 
 #####MAIN#####
