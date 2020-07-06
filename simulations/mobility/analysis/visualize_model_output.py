@@ -214,8 +214,6 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         for j in range(1,days_to_simulate+1):
             for var in ['prediction', 'E_deaths', 'Rt']:
                 var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
-                if len(var_ij)<1:
-                    pdb.set_trace()
                 means[var].append(var_ij['mean'].values[0])
                 lower_bound[var].append(var_ij['2.5%'].values[0])
                 higher_bound[var].append(var_ij['97.5%'].values[0])
@@ -272,7 +270,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-19')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
@@ -334,10 +332,11 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
     #ax2
-    ax2.set_ylabel('Relative change')
+    #ax2.set_ylabel('Relative change')
     ax2.set_ylim([-1,0.4])
     ax2.set_yticks([-1,-0.5,0,0.4])
-
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
     fig.tight_layout()
     fig.savefig(outname, format = 'png')
     fig.savefig(outname.split('.png')[0]+'.png', format = 'png')
