@@ -11,12 +11,6 @@ montage "NPI_markers.png" "mobility_markers.png" "foreacast_markers.png" -tile 3
 montage  "markers.png" "Austria"  "Belgium" "Denmark" "France"  -tile 1x5 -geometry +2+2 'part1.png'
 montage  "Germany" "Italy" "Norway" "Spain" "Sweden" -tile 1x5 -geometry +2+2 'part2.png'
 montage  "Switzerland" "United_Kingdom" -tile 1x2 -geometry +2+2 'part3.png'
-#All countries
-montage  "Austria"  "Belgium" "Denmark" "France"   "Germany" "Italy"  "Norway" "Spain" "Sweden" "Switzerland" "United_Kingdom"   -tile 1x11 -geometry +2+2 'mobility_model.png'
-montage "markers.png" "mobility_model.png" -tile 1x2 -geometry +2+2 "mobility_model.png"
-#Mobility
-montage  "Austria_mobility"  "Belgium_mobility" "Denmark_mobility" "France_mobility"  -tile 2x2 -geometry +2+2 'mobility_1.png'
-montage  "Germany_mobility" "Italy_mobility"  "Norway_mobility" "Spain_mobility" "Sweden_mobility" "Switzerland_mobility" "United_Kingdom_mobility"   -tile 2x4 -geometry +2+2 'mobility_2.png'
 
 #Sweden and Italy together
 montage   "Italy" "Sweden" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
