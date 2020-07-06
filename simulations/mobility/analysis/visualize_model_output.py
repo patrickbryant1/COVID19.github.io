@@ -135,6 +135,8 @@ def plot_posterior(matrix, countries, param):
         sns.distplot(matrix[2000:,i]) #The first 2000 samplings are warmup
         ax.set_title(countries[i])
         ax.set_xlabel(param)
+        ax.set_xlim([1.5,5.5])
+        ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
@@ -178,7 +180,10 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
         sns.distplot(alphas[2000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
         ax.set_title(alpha_names[i])
-        ax.set_xlabel('Weight')
+        ax.set_ylabel('Density')
+        ax.set_xlabel('Value')
+        ax.axvline(x=np.median(alphas[2000:,i]), ymin=0, ymax=20, linestyle='--',linewidth=1)
+        print(np.round(np.median(alphas[2000:,i]),2))
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()

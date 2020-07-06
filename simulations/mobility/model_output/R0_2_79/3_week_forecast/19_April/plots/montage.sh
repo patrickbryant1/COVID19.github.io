@@ -20,5 +20,5 @@ montage 'Sweden_Italy.png' "markers.png" -tile 1x2 -geometry +2+2 'Sweden_Italy.
 montage forecast/Austria_forecast.svg  forecast/Germany_forecast.svg  forecast/Sweden_forecast.svg forecast/Belgium_forecast.svg  forecast/Italy_forecast.svg    forecast/Switzerland_forecast.svg forecast/Denmark_forecast.svg  forecast/Norway_forecast.svg   forecast/United_Kingdom_forecast.svg forecast/France_forecast.svg   forecast/Spain_forecast.svg -tile 3x4 -geometry +2+2 'forecast.png'
 
 #Montage posterior distributions
-montage posterior/alpha* -tile 3x2 -geometry +2+2 alphas.png
-montage 'posterior/mean R0*' -tile 6x2 -geometry +2+2 meanR0_all.png
+montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and pharmacy.png' 'posterior/alpha_transit stations.png' posterior/alpha_workplace.png posterior/alpha_residential.png -tile 3x2 -geometry +2+2 posterior/alphas.png
+montage 'posterior/mean R0*' -tile 6x2 -geometry +2+2 posterior/meanR0_all.png
