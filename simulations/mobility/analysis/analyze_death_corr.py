@@ -131,7 +131,6 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date, covaria
                     #Add covariate info to forecast
                     #cov_i[N:days_to_simulate]=cov_i[N-1]
                     model_data[name][:,c] = cov_i
-                pdb.set_trace()
         return model_data
 
 
@@ -151,17 +150,13 @@ def analyze_corr(model_data, covariate_names, outdir):
         for j in range(len(covariate_names)):
             cov_data = model_data[covariate_names[j]][:correlations.shape[2]+10,i]
             #Correlate with delay
-            try:
-                R,p = pearsonr(country_deaths,cov_data) #0 delay
-            except:
-                pdb.set_trace()
+            R,p = pearsonr(country_deaths,cov_data) #0 delay
+
             correlations[i,j,0]=R
             for k in range(1,correlations.shape[2]): #Include at least 10 points
-                try:
-                    R,p = pearsonr(country_deaths[k:],cov_data[:-k])
-                    correlations[i,j,k]=R
-                except:
-                    pdb.set_trace()
+                R,p = pearsonr(country_deaths[k:],cov_data[:-k])
+                correlations[i,j,k]=R
+
     #Plot correlations
     pdb.set_trace()
 
