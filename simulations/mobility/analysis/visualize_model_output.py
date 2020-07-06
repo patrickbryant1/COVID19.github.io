@@ -29,18 +29,20 @@ parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate, covariate_names):
+def read_and_format_data(datadir, countries, days_to_simulate, end_date, covariate_names):
         '''Read in and format all data needed for the model
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200429.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200603.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+        epidemic_data = epidemic_data[epidemic_data['dateRep']<=end_date]
         #Mobility data
         mobility_data = pd.read_csv(datadir+'Global_Mobility_Report.csv')
         #Convert to datetime
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
+        mobility_data = mobility_data[mobility_data['date']<=end_date]
         #Model data - to be used for plotting
         stan_data = {'dates_by_country':np.zeros((days_to_simulate,len(countries)), dtype='datetime64[D]'),
                     'deaths_by_country':np.zeros((days_to_simulate,len(countries))),
@@ -157,7 +159,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*-exp(sum{mob_change*alpha1-6}))
-    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
+    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
     alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(1,6):
         alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
@@ -212,6 +214,8 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         for j in range(1,days_to_simulate+1):
             for var in ['prediction', 'E_deaths', 'Rt']:
                 var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+                if len(var_ij)<1:
+                    pdb.set_trace()
                 means[var].append(var_ij['mean'].values[0])
                 lower_bound[var].append(var_ij['2.5%'].values[0])
                 higher_bound[var].append(var_ij['97.5%'].values[0])
@@ -268,7 +272,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
 def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-05-21')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-04-19')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
@@ -277,7 +281,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #Plot observed dates
     if len(observed_y)>1:
         ax1.bar(x[:end],observed_y[:end], alpha = 0.5) #3 week forecast
-    ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 1.0)
+    ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 2.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
 
@@ -314,11 +318,11 @@ def plot_shade_ci(x,end,start_date,y, observed_y, lower_bound, higher_bound,lowe
     #Plot mobility data
     #Use a twin of the other x axis
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 1.0)
-    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 1.0)
-    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 1.0)
-    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 1.0)
-    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 1.0)
+    ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='tab:red', linewidth = 2.0)
+    ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 2.0)
+    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 2.0)
+    ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 2.0)
+    ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 2.0)
 
     #Plot formatting
     #ax1
@@ -348,6 +352,7 @@ args = parser.parse_args()
 datadir = args.datadir[0]
 countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
+end_date=args.end_date[0]
 short_dates = pd.read_csv(args.short_dates[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
@@ -360,7 +365,7 @@ covariate_names = ['retail_and_recreation_percent_change_from_baseline',
 'residential_percent_change_from_baseline']
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate, covariate_names)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date, covariate_names)
 
 #Visualize
 visualize_results(outdir, countries, stan_data, days_to_simulate, short_dates)
