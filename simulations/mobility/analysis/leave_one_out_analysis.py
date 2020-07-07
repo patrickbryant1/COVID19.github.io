@@ -22,21 +22,17 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Visuaize results from leave one out analysis of model using google mobility data and most of the ICL response team model. The script compares the means for all countries in all leave one out analyses.''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
+parser.add_argument('--epidemic_data', nargs=1, type= str, default=sys.stdin, help = 'Path to ECDC data.')
 parser.add_argument('--country_combos', nargs=1, type= str, default=sys.stdin, help = 'Country combinations modeled in leave one out analysis (csv).')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, country, days_to_simulate):
+def read_and_format_data(epidemic_data, country, days_to_simulate):
         '''Read in and format all data needed for the model
         '''
 
-        #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
-        #Convert to datetime
-        epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
-
         #Model data - to be used for plotting
-        stan_data = {'dates_by_country':np.zeros(days_to_simulate, dtype='datetime64[D]'),
+        model_data = {'dates_by_country':np.zeros(days_to_simulate, dtype='datetime64[D]'),
              'deaths_by_country':np.zeros(days_to_simulate),
              'cases_by_country':np.zeros(days_to_simulate),
              'days_by_country':0
@@ -64,7 +60,7 @@ def read_and_format_data(datadir, country, days_to_simulate):
         print(country, len(country_epidemic_data))
         #Check that foreacast is really a forecast
         N = len(country_epidemic_data)
-        stan_data['days_by_country']=N
+        model_data['days_by_country']=N
         forecast = days_to_simulate - N
         if forecast <0: #If the number of predicted days are less than the number available
             days_to_simulate = N
@@ -73,15 +69,15 @@ def read_and_format_data(datadir, country, days_to_simulate):
             pdb.set_trace()
 
         #Save dates
-        stan_data['dates_by_country'][:N] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
+        model_data['dates_by_country'][:N] = np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')
         #Save deaths
-        stan_data['deaths_by_country'][:N] = country_epidemic_data['deaths']
+        model_data['deaths_by_country'][:N] = country_epidemic_data['deaths']
         #Save cases
-        stan_data['cases_by_country'][:N] = country_epidemic_data['cases']
+        model_data['cases_by_country'][:N] = country_epidemic_data['cases']
 
-        return stan_data
+        return model_data
 
-def visualize_results(outdir, country_combos, country_data, all_countries, days_to_simulate):
+def visualize_results(datadir, outdir, country_combos, country_data, all_countries, days_to_simulate):
     '''Visualize results by reading in all information from all countries in all combinations
     of the leave one out analysis.
     '''
@@ -99,7 +95,6 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
                      "United_Kingdom":np.zeros((3,10,country_data['United_Kingdom']['days_by_country']))
                     }
 
-    alpha_per_combo = np.zeros((3,5,11)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
@@ -114,16 +109,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
                 missing_country = check
         if missing_country == "United_Kingdom":
             missing_country = "United Kingdom"
-        summary = pd.read_csv(outdir+'COMBO'+str(i+1)+'/summary.csv')
-        #Get alphas
-        for a in range(5):
-            alpha = summary[summary['Unnamed: 0']=='alpha['+str(a+1)+']']
-            alpha_m = 1-np.exp(-alpha['mean'].values[0])
-            alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
-            alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
-            alpha_per_combo[0,a,i]=alpha_m #Save mean
-            alpha_per_combo[1,a,i]=alpha_2_5 #Save mean
-            alpha_per_combo[2,a,i]=alpha_97_5 #Save mean
+        summary = pd.read_csv(datadir+'summary'+str(i+1)+'.csv')
         #Loop through all countries in combo
         for j in range(len(countries)):
             country= countries[j]
@@ -150,31 +136,20 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     #Plot alphas - influence of each mobility parameter
     covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     alpha_colors =  {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
-    for i in range(5): #Loop through all mobility params
-        for j in range(11):
+    for i in range(1,12): #Loop through all mobility params
+        alphas = np.load(datadir+'alpha'+str(i)+'.npy')
+        for j in range(5):
             fig, ax = plt.subplots(figsize=(3/2.54, 3/2.54))
-            sns.distplot(matrix[2000:,i]) #The first 2000 samplings are warmup
-            ax.set_title(countries[i])
-            if countries[i] == 'United_Kingdom':
+            sns.distplot(alphas[2000:,j],color=alpha_colors[j]) #The first 2000 samplings are warmup
+            ax.set_title(all_countries[i-1])
+            if all_countries[i-1] == 'United_Kingdom':
                 ax.set_title('United Kingdom')
-            ax.set_xlabel(param)
-            ax.set_xlim([1.5,5.5])
-            ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
+            ax.set_xlabel('Value')
+            ax.set_ylabel('Density')
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             fig.tight_layout()
-            fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png')
-            plt.close()
-            lo_country = all_countries[i] #Left out country
-            ax.scatter(j+1,alpha_per_combo[0,i,j], marker="_", color = alpha_colors[i]) #plot mean
-            ax.plot([j+1]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
-            ax.set_ylim([0,1])
-            ax.set_ylabel('Fractional reduction in R0')
-            ax.set_xticks(np.arange(1,12))
-            ax.set_xticklabels(['Austria','Belgium','Denmark','France','Germany','Italy','Norway','Spain','Sweden','Switzerland','United Kingdom'],rotation='vertical')
-            ax.set_title(covariate_names[i])
-            fig.tight_layout()
-            fig.savefig(outdir+'/plots/'+covariate_names[i]+'.svg', format='svg')
+            fig.savefig(outdir+'plots/LOO/'+all_countries[i-1]+'_'+str(j)+'.png', format = 'png')
             plt.close()
 
 
@@ -190,23 +165,23 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         missing_order = missing_country_order[country] #Order of exclusion for LOO
         #Plot cases
         #Per day
-
-        plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
-        outdir+'/plots/'+country+'_cases.png', missing_order)
-        #Cumulative
-        plot_shade_ci(days, end, dates[0], np.cumsum(np.array(means[0,:,:],dtype='int16'),axis=1), np.cumsum(observed_country_cases),
-        'Cumulative cases',outdir+'/plots/'+country+'_cumulative_cases.png', missing_order)
-        #Plot Deaths
-        plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
-        outdir+'/plots/'+country+'_deaths.png', missing_order)
-        #Plot R
-        plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png', missing_order)
-        #Correlations
+        #
+        # plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
+        # outdir+'/plots/LOO/'+country+'_cases.png', missing_order)
+        # #Cumulative
+        # plot_shade_ci(days, end, dates[0], np.cumsum(np.array(means[0,:,:],dtype='int16'),axis=1), np.cumsum(observed_country_cases),
+        # 'Cumulative cases',outdir+'/plots/LOO/'+country+'_cumulative_cases.png', missing_order)
+        # #Plot Deaths
+        # plot_shade_ci(days, end, dates[0],means[1,:,:],observed_country_deaths,'Deaths per day',
+        # outdir+'/plots/LOO/'+country+'_deaths.png', missing_order)
+        # #Plot R
+        # plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/LOO/'+country+'_Rt.png', missing_order)
+        # #Correlations
         corr = np.corrcoef(means[2,:,:])
-        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.svg', country)
+        plot_corr(corr, missing_order, outdir+'/plots/LOO/'+country+'_Rt_corr.svg', country)
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
-    retuwrn None
+    return None
 
 def plot_corr(corr, missing_order, outname, country):
     '''Plot corr matrix
@@ -272,6 +247,12 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
 #####MAIN#####
 args = parser.parse_args()
 datadir = args.datadir[0]
+#Get epidemic data
+epidemic_data = pd.read_csv(args.epidemic_data[0])
+#Convert to datetime
+epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
+#Get everything before 19 april
+epidemic_data = epidemic_data[epidemic_data['dateRep']<='2020-04-19']
 country_combos = pd.read_csv(args.country_combos[0], header = None)
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
@@ -282,8 +263,8 @@ country_data = {} #Save all data from all extracted country combinations
 all_countries = ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]
 for country in all_countries:
     #Read data
-    stan_data = read_and_format_data(datadir, country, days_to_simulate)
-    country_data[country]=stan_data
+    model_data = read_and_format_data(epidemic_data, country, days_to_simulate)
+    country_data[country]=model_data
 
 #Visualize
-visualize_results(outdir, country_combos, country_data, all_countries, days_to_simulate)
+visualize_results(datadir, outdir, country_combos, country_data, all_countries, days_to_simulate)
