@@ -182,7 +182,7 @@ def analyze_corr(model_data, covariate_names, outdir):
         fig.tight_layout()
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        fig.savefig(outdir+'correlations/'+covariate_names[j]+'.png', format='png')
+        fig.savefig(outdir+'correlations/'+covariate_names[j]+'.png', format='png', dpi=300)
 
     #Plot between correlations
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -191,9 +191,10 @@ def analyze_corr(model_data, covariate_names, outdir):
     ax.set_yticks(np.arange(5))
     ax.set_xticklabels(keys,rotation=90)
     ax.set_yticklabels(keys)
+    ax.set_title('Pearson R')
     plt.colorbar()
     fig.tight_layout()
-    fig.savefig(outdir+'correlations/btw_correlations.png', format='png')
+    fig.savefig(outdir+'correlations/btw_correlations.png', format='png', dpi=300)
 
 
 #####MAIN#####
