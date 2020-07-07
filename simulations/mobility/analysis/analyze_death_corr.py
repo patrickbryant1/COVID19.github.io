@@ -143,12 +143,14 @@ def analyze_corr(model_data, covariate_names, outdir):
     deaths = model_data['deaths_by_country']
     #Save correlations in array
     correlations = np.zeros((deaths.shape[1],len(covariate_names), int(min(model_data['days_by_country']))-x))
+    btw_correlations = np.zeros((5,5))#Correlations btw mobility sectors
     for i in range(deaths.shape[1]):
         country_days = int(model_data['days_by_country'][i])
         country_deaths = deaths[:country_days,i]
-
+        all_country_cov_data = [] #Save all cov data for btw correlation analysis
         for j in range(len(covariate_names)):
             cov_data = model_data[covariate_names[j]][:country_days,i]
+            all_country_cov_data.append(cov_data)
             #Correlate with delay
             R,p = pearsonr(country_deaths,cov_data) #0 delay
 
@@ -156,6 +158,8 @@ def analyze_corr(model_data, covariate_names, outdir):
             for k in range(1,correlations.shape[2]): #Include at least 10 points
                 R,p = pearsonr(country_deaths[k:],cov_data[:-k])
                 correlations[i,j,k]=R
+        #Analyze btw correlations
+        btw_correlations+=np.corrcoef(np.array(all_country_cov_data))
 
     #Plot correlations
     keys = ['retail and recreation', 'grocery and pharmacy',
@@ -172,13 +176,25 @@ def analyze_corr(model_data, covariate_names, outdir):
             ax.plot(np.arange(correlations.shape[2]),correlations[i,j,:],color=colors[j], linewidth=1, alpha = 0.5)
         #sns.kdeplot(all_countries_x,all_countries_y, shade = True, cmap = colors[j])
         ax.set_title(keys[j])
+        ax.set_ylim([-1,1])
         ax.set_xlabel('Time delay for deaths (days)')
         ax.set_ylabel('Pearson R')
         fig.tight_layout()
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        fig.savefig(outdir+'correlations/'+covariate_names[j]+'.png',  format='png', dpi=300)
-    pdb.set_trace()
+        fig.savefig(outdir+'correlations/'+covariate_names[j]+'.png', format='png')
+
+    #Plot between correlations
+    fig, ax = plt.subplots(figsize=(6, 4))
+    plt.imshow(btw_correlations/11,cmap='summer')
+    ax.set_xticks(np.arange(5))
+    ax.set_yticks(np.arange(5))
+    ax.set_xticklabels(keys,rotation=90)
+    ax.set_yticklabels(keys)
+    plt.colorbar()
+    fig.tight_layout()
+    fig.savefig(outdir+'correlations/btw_correlations.png', format='png')
+
 
 #####MAIN#####
 #Set font size
