@@ -245,6 +245,8 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
 
 
 #####MAIN#####
+#Set font size
+matplotlib.rcParams.update({'font.size': 6})
 args = parser.parse_args()
 datadir = args.datadir[0]
 #Get epidemic data
@@ -256,8 +258,6 @@ epidemic_data = epidemic_data[epidemic_data['dateRep']<='2020-04-19']
 country_combos = pd.read_csv(args.country_combos[0], header = None)
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 outdir = args.outdir[0]
-#Set font size
-matplotlib.rcParams.update({'font.size': 8})
 #Get data per country
 country_data = {} #Save all data from all extracted country combinations
 all_countries = ["Austria", "Belgium", "Denmark", "France", "Germany", "Italy", "Norway", "Spain", "Sweden", "Switzerland", "United_Kingdom"]
