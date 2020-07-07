@@ -86,24 +86,24 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     of the leave one out analysis.
     '''
     #Get all data from all simulations for each country
-    country_means = {"Austria":np.zeros((3,10,country_data['Austria']['days_by_country'])), #Cases,Deaths,Rt for all combinations and all days  
+    country_means = {"Austria":np.zeros((3,10,country_data['Austria']['days_by_country'])), #Cases,Deaths,Rt for all combinations and all days
                      "Belgium":np.zeros((3,10,country_data['Belgium']['days_by_country'])),
                      "Denmark":np.zeros((3,10,country_data['Denmark']['days_by_country'])),
                      "France":np.zeros((3,10,country_data['France']['days_by_country'])),
                      "Germany":np.zeros((3,10,country_data['Germany']['days_by_country'])),
-                     "Italy":np.zeros((3,10,country_data['Italy']['days_by_country'])),  
-                     "Norway":np.zeros((3,10,country_data['Norway']['days_by_country'])),         
-                     "Spain":np.zeros((3,10,country_data['Spain']['days_by_country'])), 
-                     "Sweden":np.zeros((3,10,country_data['Sweden']['days_by_country'])), 
-                     "Switzerland":np.zeros((3,10,country_data['Switzerland']['days_by_country'])), 
+                     "Italy":np.zeros((3,10,country_data['Italy']['days_by_country'])),
+                     "Norway":np.zeros((3,10,country_data['Norway']['days_by_country'])),
+                     "Spain":np.zeros((3,10,country_data['Spain']['days_by_country'])),
+                     "Sweden":np.zeros((3,10,country_data['Sweden']['days_by_country'])),
+                     "Switzerland":np.zeros((3,10,country_data['Switzerland']['days_by_country'])),
                      "United_Kingdom":np.zeros((3,10,country_data['United_Kingdom']['days_by_country']))
                     }
-    
+
     alpha_per_combo = np.zeros((3,5,11)) #mean,2.5 and 97.5 values (95 % CI together)
     #Loop through all country combos
     fetched_combos = {"Austria":0,"Belgium":0,"Denmark":0,"France":0, #Keep track of index for each country
                       "Germany":0,"Italy":0,"Norway":0,"Spain":0,
-                      "Sweden":0,"Switzerland":0,"United_Kingdom":0} 
+                      "Sweden":0,"Switzerland":0,"United_Kingdom":0}
     missing_country_order =  {"Austria":[],"Belgium":[],"Denmark":[],"France":[], #Keep track of index for each country
                               "Germany":[],"Italy":[],"Norway":[],"Spain":[],
                               "Sweden":[],"Switzerland":[],"United_Kingdom":[]}
@@ -120,7 +120,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
             alpha = summary[summary['Unnamed: 0']=='alpha['+str(a+1)+']']
             alpha_m = 1-np.exp(-alpha['mean'].values[0])
             alpha_2_5 = 1-np.exp(-alpha['2.5%'].values[0])
-            alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0]) 
+            alpha_97_5 = 1-np.exp(-alpha['97.5%'].values[0])
             alpha_per_combo[0,a,i]=alpha_m #Save mean
             alpha_per_combo[1,a,i]=alpha_2_5 #Save mean
             alpha_per_combo[2,a,i]=alpha_97_5 #Save mean
@@ -130,7 +130,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
             data = country_data[country]
             end_iter = data['days_by_country']
             missing_country_order[country].append(missing_country) #Save missing country to see which was left out in the sim
-                
+
             #Extract mean modeling results for country j
             means = {'prediction':[],'E_deaths':[], 'Rt':[]}
             for k in range(1,end_iter+1):
@@ -178,7 +178,7 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         missing_order = missing_country_order[country] #Order of exclusion for LOO
         #Plot cases
         #Per day
-       
+
         plot_shade_ci(days, end, dates[0], means[0,:,:], observed_country_cases, 'Cases per day',
         outdir+'/plots/'+country+'_cases.png', missing_order)
         #Cumulative
@@ -190,11 +190,11 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
         #Plot R
         plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/'+country+'_Rt.png', missing_order)
         #Correlations
-        corr = np.corrcoef(means[2,:,:]) 
-        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.svg', country) 
+        corr = np.corrcoef(means[2,:,:])
+        plot_corr(corr, missing_order, outdir+'/plots/'+country+'_Rt_corr.svg', country)
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
-    return None
+    retuwrn None
 
 def plot_corr(corr, missing_order, outname, country):
     '''Plot corr matrix
@@ -217,7 +217,7 @@ def plot_corr(corr, missing_order, outname, country):
 def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    country_colors = {"Austria":'k', #Cases,Deaths,Rt for all combinations and all days  
+    country_colors = {"Austria":'k', #Cases,Deaths,Rt for all combinations and all days
                      "Belgium":'tab:blue',
                      "Denmark":'tab:orange',
                      "France":'tab:green',
@@ -237,13 +237,13 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
     if len(observed_y)>1:
         ax.bar(x[:end],observed_y[:end], alpha = 0.5)
     #Plot the mean for each LOO combo
-    for i in range(10): 
+    for i in range(10):
         missing_country = missing_order[i]
         #Plot so far
         ax.plot(x[:end],y[i,:end], alpha=0.2, color = country_colors[missing_country],linewidth = 2.0, label = missing_country)
         #Plot predicted dates
         ax.plot(x[end-1:forecast],y[i,end-1:forecast], alpha=0.2, color='g', linewidth = 2.0)
-   
+
     #Format axis
     ax.set_ylabel(ylabel)
     ax.set_ylim([0,np.amax(y[:,:forecast])])
@@ -275,4 +275,3 @@ for country in all_countries:
 
 #Visualize
 visualize_results(outdir, country_combos, country_data, all_countries, days_to_simulate)
-
