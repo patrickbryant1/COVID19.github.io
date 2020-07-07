@@ -2,7 +2,7 @@
 args = commandArgs(trailingOnly=TRUE)
 
 epidemic_data=args[1]
-country=args[2]
+countryargs[2]
 outdir=args[3]
 
 
@@ -13,6 +13,9 @@ epidemic_df <- read.csv(epidemic_data)
 country_df <-epidemic_df[epidemic_df$countriesAndTerritories==country,]
 #Sort on date
 country_df <-country_df[order(as.Date(country_df$dateRep, format="%d/%m/%Y")),]
+#Get dates up to 19th April
+last_date = which(country_df$dateRep=='19/04/2020')
+country_df = country_df[(1:last_date),]
 #Cumulative deaths
 cum_deaths <-cumsum(country_df[,c("deaths") ])
 #Select data 30 days before 10 cumulative deaths were observed

@@ -76,7 +76,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date, covaria
                 #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
 
-                print(country, len(country_epidemic_data))
+                print(country, len(country_epidemic_data), np.array(country_epidemic_data['dateRep'], dtype='datetime64[D]')[0])
                 #Check that foreacast is really a forecast
                 N = len(country_epidemic_data)
                 stan_data['days_by_country'][c]=N
