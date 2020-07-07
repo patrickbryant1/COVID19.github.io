@@ -8,8 +8,7 @@ import glob
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-from scipy.stats import gamma
+from scipy.stats import pearsonr
 import numpy as np
 import seaborn as sns
 
@@ -73,12 +72,33 @@ def compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short
         country_mobilityR = country_mobilityR[country_mobilityR['mean_R']<=5] #Select below 5
         #Join dfs
         df = pd.merge(country_epiestim,country_mobilityR, left_on=['date'], right_on=['date'], how='inner')
-
         #Visualize
+        #EpiEstim R
         fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
-        ax.plot(df['mean_R'],df['Mean(R)'])
-        ax.fill_between(df['mean_R'],df['Quantile.0.025(R)'], df['Quantile.0.975(R)'], color='cornflowerblue', alpha=0.4)
-        plt.show()
+        ax.plot(np.arange(len(df)),df['Mean(R)'],color='b',label='EpiEstim')
+        ax.fill_between(np.arange(len(df)),df['Quantile.0.025(R)'], df['Quantile.0.975(R)'], color='cornflowerblue', alpha=0.4)
+        #Mobility R
+        ax.plot(np.arange(len(df)),df['mean_R'],color='g',label='Mobility')
+        ax.fill_between(np.arange(len(df)),df['0.025_R'], df['0.975_R'], color='forestgreen', alpha=0.4)
+        #Correlation
+        R,p = pearsonr(df['Mean(R)'],df['mean_R'])
+        #error
+        er = np.average(np.absolute(np.array(df['Mean(R)']-df['mean_R'])))
+        #Get short version of dates
+        selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(np.array(df['date']))]['short_date'])
+        xticks=np.arange(len(selected_short_dates)-1,0,-14)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.set_title(country+'\nPCC='+str(np.round(R,2))+'\nav.error='+str(np.round(er,2)))
+        ax.set_ylabel('Rt')
+        plt.legend()
+        if country == 'United_Kingdom':
+            ax.set_title('United Kingdom'+'\nPCC='+str(np.round(R,2))+'\nav.error='+str(np.round(er,2)))
+        fig.tight_layout()
+        fig.savefig(outdir+country+'.png', format = 'png')
+
 
 #####MAIN#####
 #Set font size

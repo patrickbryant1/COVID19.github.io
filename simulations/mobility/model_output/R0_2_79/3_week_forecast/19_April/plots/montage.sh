@@ -24,3 +24,6 @@ montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and
 montage 'posterior/mean R0*' -tile 6x2 -geometry +2+2 posterior/meanR0_all.png
 #Montage correlations
 montage 'correlations/retail_and_recreation_percent_change_from_baseline.png' 'correlations/grocery_and_pharmacy_percent_change_from_baseline.png' 'correlations/transit_stations_percent_change_from_baseline.png' correlations/workplaces_percent_change_from_baseline.png correlations/residential_percent_change_from_baseline.png -tile 3x2 -geometry +2+2 correlations/all_corr.png
+
+#Montage EpiEstim and mobility R estimate comparison
+montage "EpiEstim/Austria.png" "EpiEstim/Belgium.png" "EpiEstim/Denmark.png" "EpiEstim/France.png" "EpiEstim/Germany.png" "EpiEstim/Italy.png" "EpiEstim/Norway.png" "EpiEstim/Spain.png" "EpiEstim/Sweden.png" "EpiEstim/Switzerland.png" "EpiEstim/United_Kingdom.png" -tile 3x4 -geometry +2+2 EpiEstim/all.png

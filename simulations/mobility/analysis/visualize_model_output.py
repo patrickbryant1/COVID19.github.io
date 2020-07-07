@@ -134,6 +134,8 @@ def plot_posterior(matrix, countries, param):
         fig, ax = plt.subplots(figsize=(3/2.54, 3/2.54))
         sns.distplot(matrix[2000:,i]) #The first 2000 samplings are warmup
         ax.set_title(countries[i])
+        if countries[i] == 'United_Kingdom':
+            ax.set_title('United Kingdom')
         ax.set_xlabel(param)
         ax.set_xlim([1.5,5.5])
         ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
