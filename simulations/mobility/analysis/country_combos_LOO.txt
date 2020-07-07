@@ -1,0 +1,11 @@
+Belgium,Denmark,France,Germany,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Denmark,France,Germany,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,France,Germany,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,Germany,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Norway,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Italy,Spain,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Italy,Norway,Sweden,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Italy,Norway,Spain,Switzerland,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Italy,Norway,Spain,Sweden,United_Kingdom
+Austria,Belgium,Denmark,France,Germany,Italy,Norway,Spain,Sweden,Switzerland
