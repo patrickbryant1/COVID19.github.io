@@ -151,8 +151,20 @@ def visualize_results(outdir, country_combos, country_data, all_countries, days_
     covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
     alpha_colors =  {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(5): #Loop through all mobility params
-        fig, ax = plt.subplots(figsize=(4, 4))
         for j in range(11):
+            fig, ax = plt.subplots(figsize=(3/2.54, 3/2.54))
+            sns.distplot(matrix[2000:,i]) #The first 2000 samplings are warmup
+            ax.set_title(countries[i])
+            if countries[i] == 'United_Kingdom':
+                ax.set_title('United Kingdom')
+            ax.set_xlabel(param)
+            ax.set_xlim([1.5,5.5])
+            ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            fig.tight_layout()
+            fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png')
+            plt.close()
             lo_country = all_countries[i] #Left out country
             ax.scatter(j+1,alpha_per_combo[0,i,j], marker="_", color = alpha_colors[i]) #plot mean
             ax.plot([j+1]*2,alpha_per_combo[1:,i,j], color = alpha_colors[i]) #plot 2.5
