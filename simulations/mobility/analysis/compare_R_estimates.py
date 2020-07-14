@@ -25,16 +25,21 @@ parser.add_argument('--stan_results', nargs=1, type= str, default=sys.stdin, hel
 parser.add_argument('--country_meta', nargs=1, type= str, default=sys.stdin, help = 'Country meta data.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
+parser.add_argument('--interventions', nargs=1, type= str, default=sys.stdin, help = 'Intervemtion dates.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 
-def compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short_dates, outdir):
+def compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short_dates, interventions, outdir):
     '''Compare the R estimates from EpiEstim and the mobility model
     '''
 
     countries = country_meta['Country'].unique()
     for i in range(len(countries)):
         country = countries[i]
+        country_interventions = interventions[interventions['Country']==country]
+        first_intervention_date = min(country_interventions[country_interventions.columns[1:]].values[0])
+        if country == 'Sweden':
+            first_intervention_date = '2020-03-10'
         country_days = country_meta.loc[i,'epidemic_days']
         country_start_date = country_meta.loc[i,'start_date']
         #Load epiestim estimates
@@ -99,6 +104,15 @@ def compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short
         fig.tight_layout()
         fig.savefig(outdir+country+'.png', format = 'png')
 
+        #Get R at first intervention and at end date
+        #Get the date present closest ahead in time to the first intervention
+        try:
+            closest_index = df[df['date']>=first_intervention_date].index[0]
+            first_intervention_row = df.loc[closest_index]
+            last_row = df[df['date']=='2020-04-19']
+            print(country+','+str(np.datetime64(first_intervention_row['date'], '[D]'))+','+str(first_intervention_row['Mean(R)'])+','+str(first_intervention_row['mean_R'])+','+str(last_row['Mean(R)'].values[0])+','+str(last_row['mean_R'].values[0]))
+        except:
+            pdb.set_trace()
 
 #####MAIN#####
 #Set font size
@@ -109,8 +123,9 @@ stan_results = pd.read_csv(args.stan_results[0])
 country_meta = pd.read_csv(args.country_meta[0])
 end_date=args.end_date[0]
 short_dates = pd.read_csv(args.short_dates[0])
+interventions = pd.read_csv(args.interventions[0])
 #Make sure the np dates are in the correct format
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 #Compare
-compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short_dates, outdir)
+compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short_dates, interventions, outdir)
