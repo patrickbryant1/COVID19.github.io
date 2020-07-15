@@ -79,7 +79,7 @@ def evaluate_forecast(forecast_df, countries, weeks_to_forecast, outdir):
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+country+'_forecast.svg', format = 'svg', dpi=300)
+        fig.savefig(outdir+country+'_forecast.png', format = 'png', dpi=300)
         plt.close()
 
         #Analysis of correspondence

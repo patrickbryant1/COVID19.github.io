@@ -104,7 +104,7 @@ def evaluate_forecast(outdir, countries, stan_data, days_to_simulate, end_date):
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
-    fig.savefig(outdir+'plots/rhat.svg', format='svg')
+    fig.savefig(outdir+'plots/rhat.svg', format='svg', dpi=300)
     plt.close()
 
     #Evaluate per country

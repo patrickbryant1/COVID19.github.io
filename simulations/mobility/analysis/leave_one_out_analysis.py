@@ -149,7 +149,7 @@ def visualize_results(datadir, outdir, country_combos, country_data, all_countri
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             fig.tight_layout()
-            fig.savefig(outdir+'plots/LOO/'+all_countries[i-1]+'_'+str(j)+'.png', format = 'png')
+            fig.savefig(outdir+'plots/LOO/'+all_countries[i-1]+'_'+str(j)+'.png', format = 'png', dpi=300)
             plt.close()
 
 
@@ -197,7 +197,7 @@ def plot_corr(corr, missing_order, outname, country):
     ax.set_yticklabels(missing_order)
     ax.set_title(country)
     fig.tight_layout()
-    fig.savefig(outname, format = 'svg')
+    fig.savefig(outname, format = 'svg', dpi=300)
     plt.close()
 
 
@@ -239,7 +239,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
     ax.set_xticklabels(dates[xticks],rotation='vertical')
     ax.legend()
     fig.tight_layout()
-    fig.savefig(outname, format = 'png')
+    fig.savefig(outname, format = 'png', dpi=300)
     plt.close()
 
 
