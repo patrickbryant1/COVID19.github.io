@@ -102,7 +102,7 @@ def compare_R_estimates(EpiEstimdir, stan_results, country_meta, end_date, short
         if country == 'United_Kingdom':
             ax.set_title('United Kingdom'+'\nPCC='+str(np.round(R,2))+'\nav.error='+str(np.round(er,2)))
         fig.tight_layout()
-        fig.savefig(outdir+country+'.png', format = 'png')
+        fig.savefig(outdir+country+'.png', format = 'png', dpi=300)
 
         #Get R at first intervention and at end date
         #Get the date present closest ahead in time to the first intervention

@@ -142,7 +142,7 @@ def plot_posterior(matrix, countries, param):
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png')
+        fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png',dpi=300 )
         plt.close()
 
 
@@ -189,7 +189,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'plots/posterior/alpha_'+alpha_names[i]+'.png', format = 'png')
+        fig.savefig(outdir+'plots/posterior/alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
         plt.close()
 
     #plot per country
@@ -273,7 +273,7 @@ def mcmc_parcoord(cat_array, xtick_labels, outdir):
     ax.set_xticklabels(xtick_labels,rotation='vertical')
     ax.set_ylim([-5,20])
     plt.tight_layout()
-    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png')
+    fig.savefig(outdir+'plots/mcmc_parcoord.png', format = 'png',dpi=300 )
     plt.close()
 
 def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
@@ -359,7 +359,7 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     ax1.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)
     fig.tight_layout()
-    fig.savefig(outname, format = 'png')
+    fig.savefig(outname, format = 'png',dpi=300 )
     plt.close()
 
 
@@ -409,7 +409,7 @@ for npi in NPI:
 ax.set_ylim([0,6])
 ax.set_xlim([0.999,1.02])
 ax.axis('off')
-fig.savefig(outdir+'plots/NPI_markers.png', format = 'png')
+fig.savefig(outdir+'plots/NPI_markers.png', format = 'png',dpi=300 )
 
 #Mobility
 covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
@@ -421,7 +421,7 @@ for cov in covariate_colors:
     i-=1
 ax.set_xlim([0.999,3.9])
 ax.axis('off')
-fig.savefig(outdir+'plots/mobility_markers.png', format = 'png')
+fig.savefig(outdir+'plots/mobility_markers.png', format = 'png',dpi=300 )
 
 #Simulation and forecast
 fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
@@ -432,4 +432,4 @@ ax.text(2.001,1.45,'Forecast')
 ax.set_xlim([0.999,3.02])
 ax.set_ylim([1.42,1.52])
 ax.axis('off')
-fig.savefig(outdir+'plots/foreacast_markers.png', format = 'png')
+fig.savefig(outdir+'plots/foreacast_markers.png', format = 'png',dpi=300 )
