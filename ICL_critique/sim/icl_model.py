@@ -60,7 +60,7 @@ def fix_covariates(covariates):
         NPI = ['schools_universities',  'public_events',
         'social_distancing_encouraged', 'self_isolating_if_ill']
         #Add covariate for first intervention
-        covariates['any_intervention'] = ''
+        covariates['first_intervention'] = ''
 
         for i in range(len(covariates)):
                 row = covariates.iloc[i]
@@ -72,7 +72,7 @@ def fix_covariates(covariates):
                         if row[n] > lockdown:
                                 covariates.at[i,n] = lockdown
 
-                covariates.at[i,'any_intervention'] = first_inter
+                covariates.at[i,'first_intervention'] = first_inter
         return covariates
 
 
@@ -113,19 +113,20 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     'schools_universities':np.zeros((N2,len(countries)), dtype=int),
                     'self_isolating_if_ill':np.zeros((N2,len(countries)), dtype=int),
                     'public_events':np.zeros((N2,len(countries)), dtype=int),
-                    'any_intervention':np.zeros((N2,len(countries)), dtype=int),
+                    'first_intervention':np.zeros((N2,len(countries)), dtype=int),
                     'lockdown':np.zeros((N2,len(countries)), dtype=int),
                     'social_distancing_encouraged':np.zeros((N2,len(countries)), dtype=int),
+                    'last_intervention':np.zeros((N2,len(countries)), dtype=int),
                     'EpidemicStart': [],
                     'SI':serial_interval.loc[0:N2-1]['fit'].values,
-                    #'p':7, #stan setting?
+                    'pop':np.zeros(len(countries)), #Population
                     'y':[] #index cases
                     }
 
         #Infection to death distribution
         itd = infection_to_death()
         #Covariate names
-        covariate_names = ['schools_universities', 'self_isolating_if_ill','public_events', 'any_intervention', 'lockdown', 'social_distancing_encouraged']
+        covariate_names = ['schools_universities', 'self_isolating_if_ill','public_events', 'first_intervention', 'lockdown', 'social_distancing_encouraged']
         #Get data by country
         for c in range(len(countries)):
                 country = countries[c]
@@ -147,7 +148,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
                 #Get part of country_epidemic_data 30 days before day with at least 10 deaths
                 country_epidemic_data = country_epidemic_data.loc[di30:]
-		#Reset index
+		        #Reset index
                 country_epidemic_data = country_epidemic_data.reset_index()
                 #Save dates
                 dates_by_country[country] = country_epidemic_data['DateRep']
@@ -220,10 +221,22 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     cov_i[N:N2]=cov_i[N-1]
                     stan_data[name][:,c] = cov_i
 
-        pdb.set_trace()
-        #Rename covariates to match stan model
+                #Run last intervention only for Sweden (public_events)
+                if country == 'Sweden':
+                    cov_i = np.zeros(N2)
+                    cov_i[:N] = np.array(country_epidemic_data['public_events'])
+                    #Add covariate info to forecast
+                    cov_i[N:N2]=cov_i[N-1]
+                    stan_data['last_intervention'][:,c] = cov_i
+
+
+        #Matrix with covariate info
+        X = np.zeros((stan_data['M'],stan_data['N2'],stan_data['P']),dtype=int)
+        #Add covariates to match stan model
         for i in range(len(covariate_names)):
-            stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
+            X[:,:,i] = stan_data[covariate_names[i]].T
+        X[:,:,6]=stan_data['last_intervention'].T
+        pdb.set_trace()
 
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
 
