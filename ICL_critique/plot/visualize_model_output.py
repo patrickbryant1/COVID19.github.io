@@ -152,6 +152,18 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     ax.set_xlabel("Impact")
     fig.savefig(outdir+'figures/posterior/last_intervention.png', format='png', dpi=300)
     plt.close()
+
+    #Plot lockdown effect (all but Sweden)
+    lockdown = np.load(results_dir+'lockdown.npy', allow_pickle=True)
+
+    for i in range(len(countries)):
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.hist(lockdown[8000:,i])
+        ax.set_ylabel('Count')
+        ax.set_xlabel("Impact")
+        ax.set_title(countries[i])
+        fig.savefig(outdir+'figures/posterior/'+countries[i]+'_lockdown.png', format='png', dpi=300)
+        plt.close()
     #Read in data
     #For models fit using MCMC, also included in the summary are the
     #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
