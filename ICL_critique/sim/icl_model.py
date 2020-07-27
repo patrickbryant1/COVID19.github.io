@@ -182,7 +182,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 #f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
                 #Adjust f to reach max 1 - the half steps makes this different
                 #f = f/2
-                f = pd.read_csv('f.csv')#From the icl model
+                f = pd.read_csv(datadir+'f.csv')#From the icl model
                 f = np.array(f['x'])
 
                 #plt.scatter((np.arange(1,len(h)*2+1)),f)
