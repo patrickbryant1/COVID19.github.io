@@ -153,6 +153,8 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 #Get hazard rates for all days in country data
                 h = np.zeros(N2) #N2 = N+forecast
                 f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+                #Adjust f to reach max 1 - the half steps makes this different
+                f = f/2
                 for i in range(1,len(h)):
                     #for each day t, the death prob is the area btw [t-0.5, t+0.5]
                     #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)

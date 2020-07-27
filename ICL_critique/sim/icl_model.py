@@ -132,7 +132,9 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 country = countries[c]
                 #Get fatality rate
                 ifr = ifr_by_country[ifr_by_country['country']==country]['ifr'].values[0]
-
+                #Get population
+                pop = ifr_by_country[ifr_by_country['country']==country]['popt'].values[0]
+                stan_data['pop'][c]=pop
                 #Get country epidemic data
                 country_epidemic_data = epidemic_data[epidemic_data['Country']==country]
                 #Sort on date
@@ -177,7 +179,15 @@ def read_and_format_data(datadir, countries, N2, end_date):
 
                 #Get hazard rates for all days in country data
                 h = np.zeros(N2) #N2 = N+forecast
-                f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+                #f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+                #Adjust f to reach max 1 - the half steps makes this different
+                #f = f/2
+                f = pd.read_csv('f.csv')#From the icl model
+                f = np.array(f['x'])
+
+                #plt.scatter((np.arange(1,len(h)*2+1)),f)
+                #plt.scatter((np.arange(1,len(h)*2+1)),f_icl['x'])
+
                 for i in range(1,len(h)):
                     #for each day t, the death prob is the area btw [t-0.5, t+0.5]
                     #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
@@ -236,7 +246,8 @@ def read_and_format_data(datadir, countries, N2, end_date):
         for i in range(len(covariate_names)):
             X[:,:,i] = stan_data[covariate_names[i]].T
         X[:,:,6]=stan_data['last_intervention'].T
-        pdb.set_trace()
+        stan_data['X']=X
+
 
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
 
@@ -358,6 +369,7 @@ end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 #Read data
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+pdb.set_trace()
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
 #Visualize
