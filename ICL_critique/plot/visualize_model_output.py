@@ -30,7 +30,7 @@ parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-def read_and_format_data(datadir, countries, days_to_simulate, end_date, covariate_names):
+def read_and_format_data(datadir, countries, days_to_simulate, end_date):
         '''Read in and format all data needed for the model
         '''
 
@@ -59,7 +59,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date, covaria
                 country = countries[c]
 
                 #Get country epidemic data
-                country_epidemic_data = epidemic_data[epidemic_data['countriesAndTerritories']==country]
+                country_epidemic_data = epidemic_data[epidemic_data['Country']==country]
                 #Sort on date
                 country_epidemic_data = country_epidemic_data.sort_values(by='DateRep')
                 #Reset index
@@ -127,12 +127,12 @@ def plot_posterior(matrix, countries, param):
         if countries[i] == 'United_Kingdom':
             ax.set_title('United Kingdom')
         ax.set_xlabel(param)
-        ax.set_xlim([1.5,5.5])
+        #ax.set_xlim([1.5,5.5])
         ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'plots/posterior/'+param+'_'+countries[i]+'.png', format = 'png',dpi=300 )
+        fig.savefig(outdir+'figures/posterior/'+param+'_'+countries[i]+'.png', format = 'png',dpi=300 )
         plt.close()
 
 
@@ -141,33 +141,41 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     '''
     #Investigate parameter posterior distributions
     param = 'mu'
-    param_matrix = np.load(outdir+'mu.npy', allow_pickle=True)
+    param_matrix = np.load(results_dir+'mu.npy', allow_pickle=True)
     plot_posterior(param_matrix, countries, 'mean R0')
 
+    #Plot last intervention (Sweden only)
+    last_intervention = np.load(results_dir+'last_intervention.npy', allow_pickle=True)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.hist(last_intervention[8000:,8])
+    ax.set_ylabel('Count')
+    ax.set_xlabel("Impact")
+    fig.savefig(outdir+'figures/posterior/last_intervention.png', format='png', dpi=300)
+    plt.close()
     #Read in data
     #For models fit using MCMC, also included in the summary are the
     #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
     #and the R-hat statistic (Rhat).
-    summary = pd.read_csv(outdir+'summary.csv')
-    alphas = np.load(outdir+'alpha.npy', allow_pickle=True)
-    phi = np.load(outdir+'phi.npy', allow_pickle=True)
+    summary = pd.read_csv(results_dir+'summary.csv')
+    alphas = np.load(results_dir+'alpha.npy', allow_pickle=True)
+    phi = np.load(results_dir+'phi.npy', allow_pickle=True)
     days = np.arange(0,days_to_simulate) #Days to simulate
     #Plot rhat
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
-    fig.savefig(outdir+'plots/rhat.png', format='png', dpi=300)
+    fig.savefig(outdir+'figures/rhat.png', format='png', dpi=300)
     plt.close()
 
     #Plot alpha posteriors
     fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
-    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
-    alpha_names = {0:'retail and recreation',1:'grocery and pharmacy',2:'transit stations',3:'workplace',4:'residential'}
+    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan',5:'b',6:'k'}
+    alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
 
-    for i in range(5):
+    for i in range(7):
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
-        sns.distplot(alphas[2000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
+        sns.distplot(alphas[8000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
         ax.set_title(alpha_names[i])
         ax.set_ylabel('Density')
         ax.set_xlabel('Value')
@@ -176,7 +184,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'plots/posterior/alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
+        fig.savefig(outdir+'figures/posterior/alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
         plt.close()
 
     #plot per country
@@ -184,10 +192,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     #NPI and their implementation dates
     covariates = pd.read_csv(datadir+'interventions.csv')
     #Change dates
-    covariates = fix_covariates(covariates)
-    intervention_df = pd.read_csv(datadir+'interventions_only.csv')
-    result_file = open(outdir+'plots/summary_means.csv', 'w')
-    result_file.write('Country,Epidemic Start,R0 at start,R0 29 Mar,R0 Apr 19\n') #Write headers
+    intervention_df = fix_covariates(covariates)
     for i in range(1,len(countries)+1):
         country= countries[i-1]
         country_npi = intervention_df[intervention_df['Country']==country]
@@ -195,14 +200,8 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
         dates = stan_data['dates_by_country'][:,i-1]
         observed_country_deaths = stan_data['deaths_by_country'][:,i-1]
         observed_country_cases = stan_data['cases_by_country'][:,i-1]
-        end = int(stan_data['days_by_country'][i-1])-21 #3 week forecast #End of data for country i
-        country_retail = stan_data['retail_and_recreation_percent_change_from_baseline'][:,i-1]
-        country_grocery= stan_data['grocery_and_pharmacy_percent_change_from_baseline'][:,i-1]
-        country_transit = stan_data['transit_stations_percent_change_from_baseline'][:,i-1]
-        country_work = stan_data['workplaces_percent_change_from_baseline'][:,i-1]
-        country_residential = stan_data['residential_percent_change_from_baseline'][:,i-1]
-        #Print final mobility value
-        print(country,country_grocery[end-1])
+        end = int(stan_data['days_by_country'][i-1])
+
 
         #Extract modeling results
         means = {'prediction':[],'E_deaths':[], 'Rt':[]}
@@ -224,57 +223,42 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
         #Per day
         plot_shade_ci(country,days, end, dates[0], means['prediction'], observed_country_cases,lower_bound['prediction'],
         higher_bound['prediction'], lower_bound25['prediction'], higher_bound75['prediction'], 'Cases per day',
-        outdir+'plots/'+country+'_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'figures/'+country+'_cases.png',country_npi, short_dates)
         #Cumulative
         plot_shade_ci(country,days, end, dates[0], np.cumsum(means['prediction']), np.cumsum(observed_country_cases),np.cumsum(lower_bound['prediction']),
         np.cumsum(higher_bound['prediction']), np.cumsum(lower_bound25['prediction']), np.cumsum(higher_bound75['prediction']),
-        'Cumulative cases',outdir+'plots/'+country+'_cumulative_cases.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        'Cumulative cases',outdir+'figures/'+country+'_cumulative_cases.png',country_npi, short_dates)
         #Plot Deaths
         #Per day
         plot_shade_ci(country,days, end,dates[0],means['E_deaths'],observed_country_deaths, lower_bound['E_deaths'], higher_bound['E_deaths'],
         lower_bound25['E_deaths'], higher_bound75['E_deaths'], 'Deaths per day',
-        outdir+'plots/'+country+'_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'figures/'+country+'_deaths.png',country_npi, short_dates)
         #Cumulative
         plot_shade_ci(country,days, end,dates[0],np.cumsum(means['E_deaths']),np.cumsum(observed_country_deaths), np.cumsum(lower_bound['E_deaths']), np.cumsum(higher_bound['E_deaths']),
         np.cumsum(lower_bound25['E_deaths']), np.cumsum(higher_bound75['E_deaths']), 'Cumulative deaths',
-        outdir+'plots/'+country+'_cumulative_deaths.png',country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        outdir+'figures/'+country+'_cumulative_deaths.png',country_npi, short_dates)
         #Plot R
         plot_shade_ci(country,days,end,dates[0],means['Rt'],'', lower_bound['Rt'], higher_bound['Rt'], lower_bound25['Rt'],
-        higher_bound75['Rt'],'Rt',outdir+'plots/'+country+'_Rt.png',country_npi,
-        country_retail, country_grocery, country_transit, country_work, country_residential, short_dates)
+        higher_bound75['Rt'],'Rt',outdir+'figures/'+country+'_Rt.png',country_npi, short_dates)
 
-        #Print R mean at beginning and end of model
-        try:
-            result_file.write(country+','+str(dates[0])+','+str(np.round(means['Rt'][0],2))+','+str(np.round(means['Rt'][end],2))+','+str(np.round(means['Rt'][end+20],2))+'\n')#Print for table
-        except:
-            pdb.set_trace()
-    #Close outfile
-    result_file.close()
 
     return None
 
 
-def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, country_retail, country_grocery, country_transit, country_work, country_residential, short_dates):
+def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bound,lower_bound25, higher_bound75,ylabel,outname,country_npi, short_dates):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
-    dates = np.arange(start_date,np.datetime64('2020-04-20')) #Get dates - increase for longer foreacast
+    dates = np.arange(start_date,np.datetime64('2020-05-05')) #Get dates - increase for longer foreacast
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     if len(dates) != len(selected_short_dates):
         pdb.set_trace()
-    forecast = end+21
     fig, ax1 = plt.subplots(figsize=(6/2.54, 4.5/2.54))
     #Plot observed dates
     if len(observed_y)>1:
-        ax1.bar(x[:forecast],observed_y[:forecast], alpha = 0.5) #3 week forecast
+        ax1.bar(x[:end],observed_y[:end], alpha = 0.5) #3 week forecast
     ax1.plot(x[:end],y[:end], alpha=0.5, color='b', label='Simulation', linewidth = 2.0)
     ax1.fill_between(x[:end], lower_bound[:end], higher_bound[:end], color='cornflowerblue', alpha=0.4)
     ax1.fill_between(x[:end], lower_bound25[:end], higher_bound75[:end], color='cornflowerblue', alpha=0.6)
-
-    #Plot predicted dates
-    ax1.plot(x[end:forecast],y[end:forecast], alpha=0.5, color='g', label='Forecast', linewidth = 2.0)
-    ax1.fill_between(x[end-1:forecast], lower_bound[end-1:forecast] ,higher_bound[end-1:forecast], color='forestgreen', alpha=0.4)
-    ax1.fill_between(x[end-1:forecast], lower_bound25[end-1:forecast], higher_bound75[end-1:forecast], color='forestgreen', alpha=0.6)
-
 
 
     #Plot NPIs
@@ -288,15 +272,17 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     NPI_colors = {'schools_universities':'k',  'public_events': 'blueviolet', 'lockdown': 'mediumvioletred',
         'social_distancing_encouraged':'maroon', 'self_isolating_if_ill':'darkolivegreen'}
     if ylabel == 'Rt':
-        y_npi = max(y[:forecast])*0.9
+        y_npi = max(y[:end])*0.9
     else:
-        y_npi = max(higher_bound[:forecast])*0.9
+        y_npi = max(higher_bound[:end])*0.9
     y_step = y_npi/15
     npi_xvals = [] #Save npi xvals to not plot over each npi
     for npi in NPI:
-        if country_npi[npi].values[0] == '0': #If nan
+        try:
+            xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
+        except:
+            print(npi)
             continue
-        xval = np.where(dates==np.datetime64(country_npi[npi].values[0]))[0][0]
         ax1.axvline(xval, linestyle='--', linewidth=0.5, c= 'b')
         if xval in npi_xvals:
             ax1.scatter(xval, y_npi-y_step, s = 12, marker = NPI_markers[npi], color = NPI_colors[npi])
@@ -312,21 +298,18 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     if country=='United_Kingdom':
         country = 'United Kingdom'
     ax1.set_title(country)
-    ax1.set_ylim([0,max(higher_bound[:forecast])])
-    xticks=np.arange(forecast-1,0,-14)
+    #ax1.set_ylim([0,max(higher_bound[:end])])
+    xticks=np.arange(end-1,0,-14)
     ax1.set_xticks(xticks)
-    ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+    try:
+        ax1.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
+    except:
+        pdb.set_trace()
     #Plot a dashed line at Rt=1
     if ylabel=='Rt':
         ax1.hlines(1,0,max(xticks),linestyles='dashed',linewidth=1)
-        ax1.set_ylim([0,max(y[:forecast])])
-    #ax1.set_yticks(np.arange(0,max(higher_bound[:forecast]),))
-    #ax2
-    #ax2.set_ylabel('Relative change')
-    ax2.set_ylim([-1,0.4])
-    ax2.set_yticks([-1,-0.5,0,0.4])
+
     ax1.spines['top'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
     fig.tight_layout()
     fig.savefig(outname, format = 'png',dpi=300 )
     plt.close()
@@ -349,7 +332,7 @@ outdir = args.outdir[0]
 
 
 #Read data
-stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date, covariate_names)
+stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 
 #Visualize
 visualize_results(outdir, datadir, results_dir, countries, stan_data, days_to_simulate, short_dates)
