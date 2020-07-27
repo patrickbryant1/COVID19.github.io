@@ -260,7 +260,7 @@ def simulate(stan_data, stan_model, outdir):
 
         sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=8000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=8000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.99, 'max_treedepth': 20})
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
         summary.to_csv(outdir+'summary.csv')

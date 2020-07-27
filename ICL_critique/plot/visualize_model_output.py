@@ -150,6 +150,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     ax.hist(last_intervention[8000:,8])
     ax.set_ylabel('Count')
     ax.set_xlabel("Impact")
+    fig.tight_layout()
     fig.savefig(outdir+'figures/posterior/last_intervention.png', format='png', dpi=300)
     plt.close()
 
@@ -157,11 +158,13 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     lockdown = np.load(results_dir+'lockdown.npy', allow_pickle=True)
 
     for i in range(len(countries)):
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(4, 4))
         ax.hist(lockdown[8000:,i])
         ax.set_ylabel('Count')
         ax.set_xlabel("Impact")
         ax.set_title(countries[i])
+        ax.set_xlim([-1,1])
+        fig.tight_layout()
         fig.savefig(outdir+'figures/posterior/'+countries[i]+'_lockdown.png', format='png', dpi=300)
         plt.close()
     #Read in data
