@@ -260,7 +260,7 @@ def simulate(stan_data, stan_model, outdir):
 
         sm =  pystan.StanModel(file=stan_model)
         #fit = sm.sampling(data=stan_data, iter=40, warmup=20,chains=2) #n_jobs = number of parallel processes - number of chains
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
+        fit = sm.sampling(data=stan_data,iter=8000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 10})
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
         summary.to_csv(outdir+'summary.csv')
@@ -273,91 +273,6 @@ def simulate(stan_data, stan_model, outdir):
 
         return out
 
-def visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country):
-    '''Visualize results
-    '''
-    #params = ['mu', 'alpha', 'kappa', 'y', 'phi', 'tau', 'convolution', 'prediction',
-    #'E_deaths', 'Rt', 'lp0', 'lp1', 'convolution0', 'prediction0', 'E_deaths0', 'lp__']
-    #lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-    #lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-    #'prediction0', 'E_deaths0' = w/o intervention
-
-    subdir='without_log/'
-    #Read in data
-    summary = pd.read_csv(outdir+subdir+'summary.csv')
-    cases = np.load(outdir+subdir+'prediction.npy', allow_pickle=True)
-    deaths = np.load(outdir+subdir+'E_deaths.npy', allow_pickle=True)
-    Rt =  np.load(outdir+subdir+'Rt.npy', allow_pickle=True)
-    alphas = np.load(outdir+subdir+'alpha.npy', allow_pickle=True)
-    days = np.arange(0,75)
-
-    #Plot rhat
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.hist(summary['Rhat'])
-    ax.set_ylabel('Count')
-    ax.set_xlabel("Rhat")
-    fig.savefig(subdir+'plots/rhat.png', format='png')
-    plt.close()
-
-    #Plot alpha (Rt = R0*exp(-sum{alpha1-6}))
-    fig, ax = plt.subplots(figsize=(4, 4))
-    alpha_means = np.mean(alphas[2000:,:],axis=0) #2000 warmup rounds
-    alpha_stds = np.std(alphas[2000:,:],axis=0)
-    ax.barh(np.arange(6),1-np.exp(-alpha_means), xerr = 1-np.exp(-alpha_stds))
-    ax.set_ylabel('Fractional reduction in R0')
-    covariate_names.insert(0,'')
-    ax.set_yticklabels(covariate_names,rotation='horizontal')
-    plt.tight_layout()
-    fig.savefig(subdir+'plots/alphas.png', format='png')
-    plt.close()
-
-    #plot per country
-    for i in range(len(countries)):
-        country= countries[i]
-        dates = dates_by_country[country]
-        end = len(dates)#End of data
-        dates = np.array(dates,  dtype='datetime64[D]')
-        #Plot cases (prediction)
-        country_cases = cases[:,:,i][2000:,:end]
-        case_av =  np.average(country_cases,axis=0)
-        case_std =  np.std(country_cases,axis=0)
-        observed_country_cases = cases_by_country[country]
-        plot_shade_ci(days[:end], dates, case_av, observed_country_cases, case_std,'Cases',subdir+'plots/'+country+'_cases.png')
-
-        #Plot Deaths
-        country_deaths = deaths[:,:,i][2000:,:end]
-        #country_deaths = np.exp(country_deaths) #Necessary if neg_binomial_2_log_lpmf has been used in the stan model
-        observed_country_deaths = deaths_by_country[country]
-        death_av =  np.average(country_deaths,axis=0)
-        death_std =  np.std(country_deaths,axis=0)
-        plot_shade_ci(days[:end],dates,death_av,observed_country_deaths, death_std,'Deaths',subdir+'plots/'+country+'_deaths.png')
-
-        #Plot R
-        country_Rt = Rt[:,:,i][2000:,:end]
-        Rt_av =  np.average(country_Rt,axis=0)
-        Rt_std =  np.std(country_Rt,axis=0)
-        plot_shade_ci(days[:end],dates,Rt_av,'', Rt_std,'Rt',subdir+'plots/'+country+'_Rt.png')
-
-
-def plot_shade_ci(x,dates,y, observed_y, std,ylabel,outname):
-    '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
-    '''
-    fig, ax = plt.subplots(figsize=(4, 4))
-    if len(observed_y)>1:
-        ax.bar(x,observed_y)
-    ax.plot(x,y, alpha=0.5, color='b', label='mean', linewidth = 1.0)
-    ax.fill_between(x, y - std, y+std, color='cornflowerblue', alpha=0.6)
-    ax.fill_between(x, y - 2*std, y+2*std, color='cornflowerblue', alpha=0.4)
-
-    ax.legend(loc='best')
-    ax.set_ylabel(ylabel)
-    ax.set_ylim([0,max(y)+2*max(std)])
-    xticks=np.arange(min(x),max(x)+1,7)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(dates[xticks],rotation='vertical')
-    plt.tight_layout()
-    fig.savefig(outname, format = 'png')
-    plt.close()
 
 #####MAIN#####
 args = parser.parse_args()
@@ -369,8 +284,6 @@ end_date = np.datetime64(args.end_date[0])
 outdir = args.outdir[0]
 #Read data
 stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_simulate, end_date)
-pdb.set_trace()
+
 #Simulate
 out = simulate(stan_data, stan_model, outdir)
-#Visualize
-#visualize_results(outdir, countries, covariate_names, dates_by_country, deaths_by_country, cases_by_country)
