@@ -146,7 +146,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 
     #Plot last intervention (Sweden only)
     last_intervention = np.load(results_dir+'last_intervention.npy', allow_pickle=True)
-    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
+    fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
     sns.distplot(100*(1-np.exp(-last_intervention[8000:,8])))
     ax.set_ylabel('Density')
     ax.set_xlabel("Relative % reduction in Rt")
@@ -181,7 +181,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     phi = np.load(results_dir+'phi.npy', allow_pickle=True)
     days = np.arange(0,days_to_simulate) #Days to simulate
     #Plot rhat
-    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
+    fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
@@ -189,7 +189,6 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     plt.close()
 
     #Plot alpha posteriors
-    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
     alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan',5:'b',6:'k'}
     alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
 
