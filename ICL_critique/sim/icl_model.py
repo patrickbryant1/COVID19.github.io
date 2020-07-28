@@ -27,6 +27,7 @@ parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help =
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to model.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
+parser.add_argument('--last_intervention_for_all', nargs=1, type= int, default=sys.stdin, help = 'If to get last intervention for all or only for Sweden.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -76,7 +77,7 @@ def fix_covariates(covariates):
         return covariates
 
 
-def read_and_format_data(datadir, countries, N2, end_date):
+def read_and_format_data(datadir, countries, N2, end_date, last_intervention_for_all):
         '''Read in and format all data needed for the model
         '''
 
@@ -160,11 +161,15 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 cases_by_country[country] = country_epidemic_data['Cases']
                 #Add 1 for when each NPI (covariate) has been active
                 country_cov = covariates[covariates['Country']==country]
+                last_cov_date = pd.to_datetime(country_cov[covariate_names[0]].values[0])
+                last_cov = covariate_names[0]
                 for covariate in covariate_names:
                         cov_start = pd.to_datetime(country_cov[covariate].values[0]) #Get start of NPI
                         country_epidemic_data.loc[country_epidemic_data.index,covariate] = 0
                         country_epidemic_data.loc[country_epidemic_data['DateRep']>=cov_start, covariate]=1
-
+                        if cov_start > last_cov_date:
+                            last_cov_date = cov_start
+                            last_cov = covariate
 
                 #Hazard estimation
                 N = len(country_epidemic_data)
@@ -238,6 +243,16 @@ def read_and_format_data(datadir, countries, N2, end_date):
                     #Add covariate info to forecast
                     cov_i[N:N2]=cov_i[N-1]
                     stan_data['last_intervention'][:,c] = cov_i
+                    continue
+
+
+                if last_intervention_for_all==True:
+                    cov_i = np.zeros(N2)
+                    cov_i[:N] = np.array(country_epidemic_data[last_cov])
+                    #Add covariate info to forecast
+                    cov_i[N:N2]=cov_i[N-1]
+                    stan_data['last_intervention'][:,c] = cov_i
+
 
 
         #Matrix with covariate info
@@ -247,7 +262,6 @@ def read_and_format_data(datadir, countries, N2, end_date):
             X[:,:,i] = stan_data[covariate_names[i]].T
         X[:,:,6]=stan_data['last_intervention'].T
         stan_data['X']=X
-
 
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
 
@@ -281,9 +295,10 @@ countries = args.countries[0].split(',')
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
 end_date = np.datetime64(args.end_date[0])
+last_intervention_for_all = bool(args.last_intervention_for_all[0])
 outdir = args.outdir[0]
 #Read data
-stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_simulate, end_date)
+stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country = read_and_format_data(datadir, countries, days_to_simulate, end_date, last_intervention_for_all)
 
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

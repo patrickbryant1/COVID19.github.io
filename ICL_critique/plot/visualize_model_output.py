@@ -128,7 +128,7 @@ def plot_posterior(matrix, countries, param):
             ax.set_title('United Kingdom')
         ax.set_xlabel(param)
         #ax.set_xlim([1.5,5.5])
-        ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
+        ax.axvline(x=3.28, ymin=0, ymax=2, linestyle='--',linewidth=1)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
@@ -146,10 +146,13 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 
     #Plot last intervention (Sweden only)
     last_intervention = np.load(results_dir+'last_intervention.npy', allow_pickle=True)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.hist(last_intervention[8000:,8])
-    ax.set_ylabel('Count')
-    ax.set_xlabel("Impact")
+    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
+    sns.distplot(100*(1-np.exp(-last_intervention[8000:,8])))
+    ax.set_ylabel('Density')
+    ax.set_xlabel("Relative % reduction in Rt")
+    ax.set_title('Sweden last intervention')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     fig.tight_layout()
     fig.savefig(outdir+'figures/posterior/last_intervention.png', format='png', dpi=300)
     plt.close()
@@ -158,12 +161,14 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     lockdown = np.load(results_dir+'lockdown.npy', allow_pickle=True)
 
     for i in range(len(countries)):
-        fig, ax = plt.subplots(figsize=(4, 4))
-        ax.hist(lockdown[8000:,i])
-        ax.set_ylabel('Count')
-        ax.set_xlabel("Impact")
+        fig, ax = plt.subplots(figsize=(4.5/2.54, 4.5/2.54))
+        sns.distplot(100*(1-np.exp(-lockdown[8000:,i])))
+        ax.set_ylabel('Density')
+        ax.set_xlabel("Relative % reduction in Rt")
         ax.set_title(countries[i])
-        ax.set_xlim([-1,1])
+        ax.set_xlim([-100,100])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         fig.tight_layout()
         fig.savefig(outdir+'figures/posterior/'+countries[i]+'_lockdown.png', format='png', dpi=300)
         plt.close()
@@ -176,7 +181,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     phi = np.load(results_dir+'phi.npy', allow_pickle=True)
     days = np.arange(0,days_to_simulate) #Days to simulate
     #Plot rhat
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
     ax.hist(summary['Rhat'])
     ax.set_ylabel('Count')
     ax.set_xlabel("Rhat")
@@ -190,12 +195,10 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 
     for i in range(7):
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
-        sns.distplot(alphas[8000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
+        sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=alpha_colors[i]) #The first 2000 samplings are warmup
         ax.set_title(alpha_names[i])
         ax.set_ylabel('Density')
-        ax.set_xlabel('Value')
-        ax.axvline(x=np.median(alphas[2000:,i]), ymin=0, ymax=20, linestyle='--',linewidth=1)
-        print(np.round(np.median(alphas[2000:,i]),2))
+        ax.set_xlabel('Relative % reduction in Rt')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
