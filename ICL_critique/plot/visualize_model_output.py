@@ -147,16 +147,17 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     #Plot last intervention (Sweden only)
     try:
         last_intervention = np.load(results_dir+'last_intervention.npy', allow_pickle=True)
-        fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
-        sns.distplot(100*(1-np.exp(-last_intervention[8000:,8])))
-        ax.set_ylabel('Density')
-        ax.set_xlabel("Relative % reduction in Rt")
-        ax.set_title('Sweden last intervention')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        fig.tight_layout()
-        fig.savefig(outdir+'figures/posterior/last_intervention.png', format='png', dpi=300)
-        plt.close()
+        for i in range(len(countries)):
+            fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
+            sns.distplot(100*(1-np.exp(-last_intervention[8000:,i])))
+            ax.set_ylabel('Density')
+            ax.set_xlabel("Relative % reduction in Rt")
+            ax.set_title(countries[i]+' last intervention')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            fig.tight_layout()
+            fig.savefig(outdir+'figures/posterior/'+countries[i]+'_last_intervention.png', format='png', dpi=300)
+            plt.close()
     except:
         print('No last intervention')
 
