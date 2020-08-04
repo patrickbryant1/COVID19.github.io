@@ -178,7 +178,7 @@ def visualize_results(datadir, outdir, country_combos, country_data, all_countri
         # plot_shade_ci(days, end, dates[0],means[2,:,:],'','Rt',outdir+'/plots/LOO/'+country+'_Rt.png', missing_order)
         # #Correlations
         corr = np.corrcoef(means[2,:,:])
-        plot_corr(corr, missing_order, outdir+'/plots/LOO/'+country+'_Rt_corr.svg', country)
+        plot_corr(corr, missing_order, outdir+'/plots/LOO/'+country+'_Rt_corr.png', country)
         print(country+','+'Rt'+','+str(np.average(np.corrcoef(means[2,:,:]))-(10/100))) #10 of 100 will be self corr.
 
     return None

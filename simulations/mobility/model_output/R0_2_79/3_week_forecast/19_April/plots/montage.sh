@@ -35,3 +35,7 @@ montage "LOO/Austria_2.png" "LOO/Belgium_2.png" "LOO/Denmark_2.png" "LOO/France_
 montage "LOO/Austria_3.png" "LOO/Belgium_3.png" "LOO/Denmark_3.png" "LOO/France_3.png" "LOO/Germany_3.png" "LOO/Italy_3.png" "LOO/Norway_3.png" "LOO/Spain_3.png" "LOO/Sweden_3.png" "LOO/Switzerland_3.png" "LOO/United_Kingdom_3.png" -tile 6x3 -geometry +3+3 LOO/all_work.png
 montage "LOO/Austria_4.png" "LOO/Belgium_4.png" "LOO/Denmark_4.png" "LOO/France_4.png" "LOO/Germany_4.png" "LOO/Italy_4.png" "LOO/Norway_4.png" "LOO/Spain_4.png" "LOO/Sweden_4.png" "LOO/Switzerland_4.png" "LOO/United_Kingdom_4.png" -tile 6x4 -geometry +4+4 LOO/all_residential.png
 montage LOO/all_retail.png LOO/all_grocery.png LOO/all_transit.png LOO/all_work.png LOO/all_residential.png -tile 1x5 -geometry +2+2 LOO/all_mob.png
+
+#Montage correlations for LOO analysis
+#Montage different countries together
+montage  "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 'LOO/LOO_corr.png'
