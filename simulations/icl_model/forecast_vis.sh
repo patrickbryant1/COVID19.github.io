@@ -1,8 +1,8 @@
 #!/bin/bash -l
 
 
-DATADIR=/home/patrick/COVID19.github.io/simulations/icl_model/data/
-OUTDIR=/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/
+DATADIR=./data/
+OUTDIR=./model_output/3_week_forecast/
 COUNTRIES="Austria,Belgium,Denmark,France,Germany,Italy,Norway,Spain,Sweden,Switzerland,United_Kingdom" #Make sure these are in the same order as when simulating!
 DTS=84
 ED=2020-04-12
