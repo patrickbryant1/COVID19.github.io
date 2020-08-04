@@ -161,21 +161,25 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     except:
         print('No last intervention')
 
-    #Plot lockdown effect (all but Sweden)
-    lockdown = np.load(results_dir+'lockdown.npy', allow_pickle=True)
 
-    for i in range(len(countries)):
-        fig, ax = plt.subplots(figsize=(4.5/2.54, 4.5/2.54))
-        sns.distplot(100*(1-np.exp(-lockdown[8000:,i])))
-        ax.set_ylabel('Density')
-        ax.set_xlabel("Relative % reduction in Rt")
-        ax.set_title(countries[i])
-        ax.set_xlim([-100,100])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        fig.tight_layout()
-        fig.savefig(outdir+'figures/posterior/'+countries[i]+'_lockdown.png', format='png', dpi=300)
-        plt.close()
+    #Plot lockdown effect (all but Sweden)
+    try:
+        lockdown = np.load(results_dir+'lockdown.npy', allow_pickle=True)
+
+        for i in range(len(countries)):
+            fig, ax = plt.subplots(figsize=(4.5/2.54, 4.5/2.54))
+            sns.distplot(100*(1-np.exp(-lockdown[8000:,i])))
+            ax.set_ylabel('Density')
+            ax.set_xlabel("Relative % reduction in Rt")
+            ax.set_title(countries[i])
+            ax.set_xlim([-100,100])
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            fig.tight_layout()
+            fig.savefig(outdir+'figures/posterior/'+countries[i]+'_lockdown.png', format='png', dpi=300)
+            plt.close()
+    except:
+        print('No lockdown')
     #Read in data
     #For models fit using MCMC, also included in the summary are the
     #Monte Carlo standard error (se_mean), the effective sample size (n_eff),

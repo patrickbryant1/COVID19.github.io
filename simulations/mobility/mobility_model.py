@@ -44,7 +44,7 @@ def conv_gamma_params(mean,std):
 def infection_to_death():
         '''Simulate the time from infection to death: Infection --> Onset --> Death'''
         #Infection to death: sum of ito and otd
-        itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
+        itd_shape, itd_scale = conv_gamma_params((5.1+17.8), (0.45))
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
         return itd
 

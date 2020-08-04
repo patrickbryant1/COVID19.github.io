@@ -184,6 +184,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
                 #Get hazard rates for all days in country data
                 h = np.zeros(N2) #N2 = N+forecast
                 f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+                f = f/2
                 for i in range(1,len(h)):
                     #for each day t, the death prob is the area btw [t-0.5, t+0.5]
                     #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
@@ -230,7 +231,7 @@ def read_and_format_data(datadir, countries, N2, end_date):
         #Rename covariates to match stan model
         for i in range(len(covariate_names)):
             stan_data['covariate'+str(i+1)] = stan_data.pop(covariate_names[i])
-        
+
         return stan_data, covariate_names, dates_by_country, deaths_by_country, cases_by_country
 
 
