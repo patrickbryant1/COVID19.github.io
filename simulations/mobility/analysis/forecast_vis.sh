@@ -9,7 +9,7 @@ ED=2020-04-12
 SD=$OUTDIR'/plots/short_dates.csv'
 #Visualize model output
 #1.Obtain forecast in terms of the mean number of deaths and write to csv
-#/home/patrick/COVID19.github.io/simulations/mobility/analysis/forecast_analysis.py --datadir $DATADIR --countries $COUNTRIES --days_to_simulate $DTS --end_date $ED --outdir $OUTDIR
+./forecast_analysis.py --datadir $DATADIR --countries $COUNTRIES --days_to_simulate $DTS --end_date $ED --outdir $OUTDIR
 #2.Plot
 FORECAST_CSV=$OUTDIR'forecast.csv'
 OUTDIR=$OUTDIR'/plots/forecast/'

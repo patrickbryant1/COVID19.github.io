@@ -197,9 +197,19 @@ def plot_corr(corr, missing_order, outname, country):
     ax.set_yticklabels(missing_order)
     ax.set_title(country)
     fig.tight_layout()
-    fig.savefig(outname, format = 'svg', dpi=300)
+    fig.savefig(outname, format = 'png', dpi=300)
     plt.close()
 
+def plot_colorbar():
+    '''Plots a stand alone colorbar
+    '''
+    fig,ax = plt.subplots(figsize=(6/2.54, 3/2.54))
+
+    cb = matplotlib.colorbar.ColorbarBase(ax, orientation='horizontal',cmap=matplotlib.cm.viridis)
+    ax.set_title('Pearson Correlation')
+    fig.tight_layout()
+    fig.savefig('pearson_corr_scale.png', format = 'png', dpi=300)
+    plt.show()
 
 def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order):
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)

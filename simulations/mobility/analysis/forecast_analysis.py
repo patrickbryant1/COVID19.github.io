@@ -32,7 +32,7 @@ def read_and_format_data(datadir, countries, days_to_simulate, end_date):
         '''
 
         #Get epidemic data
-        epidemic_data = pd.read_csv(datadir+'ecdc_20200419.csv')
+        epidemic_data = pd.read_csv(datadir+'ecdc_20200603.csv')
         #Convert to datetime
         epidemic_data['dateRep'] = pd.to_datetime(epidemic_data['dateRep'], format='%d/%m/%Y')
         #Select all data up to end_date
