@@ -152,7 +152,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
     #Investigate parameter posterior distributions
     param = 'mu'
     param_matrix = np.load(outdir+'mu.npy', allow_pickle=True)
-    plot_posterior(param_matrix, countries, 'mean R0')
+    plot_posterior(param_matrix, countries, 'mean_R0')
 
     #Read in data
     #For models fit using MCMC, also included in the summary are the

@@ -7,16 +7,19 @@ montage  "markers.png" "Austria"  "Belgium" "Denmark" "France"  -tile 1x5 -geome
 montage  "Germany" "Italy" "Norway" "Spain" "Sweden" -tile 1x5 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/supplementary/FigureS4part2.png'
 montage  "Switzerland" "United_Kingdom" -tile 1x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/supplementary/FigureS4part3.png'
 
+#Figure 1
 #Sweden and Italy together
-montage   "Italy" "Sweden" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
-montage 'Sweden_Italy.png' "markers.png" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
+montage   "Italy_Fig1.png" "Sweden_Fig1.png" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
+montage 'Sweden_Italy.png' "markers.png" -tile 1x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure1.png'
 
+
+#Figure 3
 #Forecast
-montage forecast/Austria_forecast.png  forecast/Germany_forecast.png  forecast/Sweden_forecast.png forecast/Belgium_forecast.png  forecast/Italy_forecast.png    forecast/Switzerland_forecast.png forecast/Denmark_forecast.png  forecast/Norway_forecast.png   forecast/United_Kingdom_forecast.png forecast/France_forecast.png   forecast/Spain_forecast.png -tile 3x4 -geometry +2+2 'forecast.png'
+montage forecast/Austria_forecast.png  forecast/Germany_forecast.png  forecast/Sweden_forecast.png forecast/Belgium_forecast.png  forecast/Italy_forecast.png    forecast/Switzerland_forecast.png forecast/Denmark_forecast.png  forecast/Norway_forecast.png   forecast/United_Kingdom_forecast.png forecast/France_forecast.png   forecast/Spain_forecast.png -tile 3x4 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure3.png'
 
 #Montage posterior distributions
 montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and pharmacy.png' 'posterior/alpha_transit stations.png' posterior/alpha_workplace.png posterior/alpha_residential.png -tile 3x2 -geometry +2+2 posterior/alphas.png
-montage 'posterior/mean R0*' -tile 6x2 -geometry +2+2 posterior/meanR0_all.png
+montage 'posterior/mean_R0*' -tile 6x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure2.png'
 #Montage correlations
 montage 'correlations/retail_and_recreation_percent_change_from_baseline.png' 'correlations/grocery_and_pharmacy_percent_change_from_baseline.png' 'correlations/transit_stations_percent_change_from_baseline.png' correlations/workplaces_percent_change_from_baseline.png correlations/residential_percent_change_from_baseline.png -tile 3x2 -geometry +2+2 correlations/all_corr.png
 
@@ -32,5 +35,5 @@ montage "LOO/Austria_4.png" "LOO/Belgium_4.png" "LOO/Denmark_4.png" "LOO/France_
 montage LOO/all_retail.png LOO/all_grocery.png LOO/all_transit.png LOO/all_work.png LOO/all_residential.png -tile 1x5 -geometry +2+2 LOO/all_mob.png
 
 #Montage correlations for LOO analysis
-#Montage different countries together
-montage  "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 'LOO/LOO_corr.png'
+#Figure S1
+montage  "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/supplementary/FigureS1.png'
