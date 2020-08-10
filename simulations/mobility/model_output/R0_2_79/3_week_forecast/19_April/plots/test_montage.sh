@@ -136,3 +136,14 @@
 #   convert "$f" -pointsize 50 -gravity NorthWest -annotate +0+0 "$label" $f
 #   ((number++))
 # done
+
+
+#Figure S8
+number=0
+letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+for f in "EpiEstim/Austria.png" "EpiEstim/Belgium.png" "EpiEstim/Denmark.png" "EpiEstim/France.png" "EpiEstim/Germany.png" "EpiEstim/Italy.png" "EpiEstim/Norway.png" "EpiEstim/Spain.png" "EpiEstim/Sweden.png" "EpiEstim/Switzerland.png" "EpiEstim/United_Kingdom.png"
+do
+  label=${letters:number:1}
+  convert "$f" -pointsize 50 -gravity NorthWest -annotate +0+0 "$label" $f
+  ((number++))
+done
