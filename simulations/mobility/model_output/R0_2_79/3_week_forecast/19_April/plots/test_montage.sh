@@ -34,6 +34,23 @@ done
 #   ((number++))
 # done
 
+# #Figure 4
+# letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# for f in "posterior/alpha_0.png" 'posterior/alpha_1.png' 'posterior/alpha_2.png' 'posterior/alpha_3.png' 'posterior/alpha_4.png'
+#   do
+#   label=${letters:number:1}
+#   convert "$f" -pointsize 50 -gravity NorthWest -annotate +0+0 "$label" $f
+#   ((number++))
+# done
+
+# #Figure 5
+# letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# for f in 'correlations/retail_and_recreation_percent_change_from_baseline.png' 'correlations/grocery_and_pharmacy_percent_change_from_baseline.png' 'correlations/transit_stations_percent_change_from_baseline.png' correlations/workplaces_percent_change_from_baseline.png correlations/residential_percent_change_from_baseline.png
+#   do
+#   label=${letters:number:1}
+#   convert "$f" -pointsize 50 -gravity NorthWest -annotate +0+0 "$label" $f
+#   ((number++))
+# done
 
 
 #

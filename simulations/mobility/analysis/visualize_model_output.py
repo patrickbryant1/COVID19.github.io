@@ -189,7 +189,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'plots/posterior/alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
+        fig.savefig(outdir+'plots/posterior/alpha_'+str(i)+'.png', format = 'png',dpi=300 )
         plt.close()
 
     #plot per country

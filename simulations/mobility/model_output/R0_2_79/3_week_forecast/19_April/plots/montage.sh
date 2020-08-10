@@ -12,16 +12,20 @@ montage  "Switzerland" "United_Kingdom" -tile 1x2 -geometry +2+2 '/home/patrick/
 montage   "Italy_Fig1.png" "Sweden_Fig1.png" -tile 1x2 -geometry +2+2 'Sweden_Italy.png'
 montage 'Sweden_Italy.png' "markers.png" -tile 1x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure1.png'
 
+#Figure 2
+montage 'posterior/mean_R0*' -tile 6x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure2.png'
 
 #Figure 3
 #Forecast
 montage forecast/Austria_forecast.png  forecast/Germany_forecast.png  forecast/Sweden_forecast.png forecast/Belgium_forecast.png  forecast/Italy_forecast.png    forecast/Switzerland_forecast.png forecast/Denmark_forecast.png  forecast/Norway_forecast.png   forecast/United_Kingdom_forecast.png forecast/France_forecast.png   forecast/Spain_forecast.png -tile 3x4 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure3.png'
 
+#Figuer 4
 #Montage posterior distributions
-montage 'posterior/alpha_retail and recreation.png' 'posterior/alpha_grocery and pharmacy.png' 'posterior/alpha_transit stations.png' posterior/alpha_workplace.png posterior/alpha_residential.png -tile 3x2 -geometry +2+2 posterior/alphas.png
-montage 'posterior/mean_R0*' -tile 6x2 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure2.png'
+montage "posterior/alpha_0.png" 'posterior/alpha_1.png' 'posterior/alpha_2.png' 'posterior/alpha_3.png' 'posterior/alpha_4.png' -tile 3x2 -geometry +2+2 /home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure4.png
+
+#Figure 5
 #Montage correlations
-montage 'correlations/retail_and_recreation_percent_change_from_baseline.png' 'correlations/grocery_and_pharmacy_percent_change_from_baseline.png' 'correlations/transit_stations_percent_change_from_baseline.png' correlations/workplaces_percent_change_from_baseline.png correlations/residential_percent_change_from_baseline.png -tile 3x2 -geometry +2+2 correlations/all_corr.png
+montage 'correlations/retail_and_recreation_percent_change_from_baseline.png' 'correlations/grocery_and_pharmacy_percent_change_from_baseline.png' 'correlations/transit_stations_percent_change_from_baseline.png' correlations/workplaces_percent_change_from_baseline.png correlations/residential_percent_change_from_baseline.png -tile 3x2 -geometry +2+2 /home/patrick/COVID19.github.io/simulations/mobility/publication_figures/Figure5.png
 
 #Montage EpiEstim and mobility R estimate comparison
 montage "EpiEstim/Austria.png" "EpiEstim/Belgium.png" "EpiEstim/Denmark.png" "EpiEstim/France.png" "EpiEstim/Germany.png" "EpiEstim/Italy.png" "EpiEstim/Norway.png" "EpiEstim/Spain.png" "EpiEstim/Sweden.png" "EpiEstim/Switzerland.png" "EpiEstim/United_Kingdom.png" -tile 3x4 -geometry +2+2 EpiEstim/all.png
