@@ -110,7 +110,7 @@ do
 done
 
 #Figure S5
-BASE=/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast
+BASE=./forecast
 number=0
 letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 for f in $BASE/Austria_forecast.png  $BASE/Germany_forecast.png  $BASE/Sweden_forecast.png $BASE/Belgium_forecast.png  $BASE/Italy_forecast.png $BASE/Switzerland_forecast.png $BASE/Denmark_forecast.png  $BASE/Norway_forecast.png  $BASE/United_Kingdom_forecast.png $BASE/France_forecast.png  $BASE/Spain_forecast.png
