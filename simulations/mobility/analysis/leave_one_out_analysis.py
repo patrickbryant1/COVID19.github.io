@@ -135,7 +135,7 @@ def visualize_results(datadir, outdir, country_combos, country_data, all_countri
 
     #Plot alphas - influence of each mobility parameter
     covariate_names = ['retail and recreation','grocery and pharmacy', 'transit stations','workplace','residential']
-    alpha_colors =  {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
+    alpha_colors =  {0:'darkorange',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
     for i in range(1,12): #Loop through all mobility params
         alphas = np.load(datadir+'alpha'+str(i)+'.npy')
         for j in range(5):
@@ -218,7 +218,7 @@ def plot_shade_ci(x,end,start_date,y, observed_y, ylabel, outname, missing_order
                      "Belgium":'tab:blue',
                      "Denmark":'tab:orange',
                      "France":'tab:green',
-                     "Germany":'tab:red',
+                     "Germany":'darkorange',
                      "Italy":'tab:purple',
                      "Norway":'tab:brown',
                      "Spain":'tab:pink',
