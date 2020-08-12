@@ -180,12 +180,13 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     for i in range(5):
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
-        sns.distplot(alphas[2000:,i],color=alpha_colors[i]) #The first 2000 samplings are warmup
+        alpha_red = 100*(1-np.exp(-alphas[2000:,i]))
+        sns.distplot(alpha_red ,color=alpha_colors[i]) #The first 2000 samplings are warmup
         ax.set_title(alpha_names[i])
         ax.set_ylabel('Density')
-        ax.set_xlabel('Value')
-        ax.axvline(x=np.median(alphas[2000:,i]), ymin=0, ymax=20, linestyle='--',linewidth=1)
-        print(np.round(np.median(alphas[2000:,i]),2))
+        ax.set_xlabel("Relative % reduction in Rt")
+        ax.axvline(x=np.median(alpha_red), ymin=0, ymax=20, linestyle='--',linewidth=1)
+        print(alpha_names[i],np.round(np.median(alpha_red),2))
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()

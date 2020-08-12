@@ -58,7 +58,7 @@ done
 
 
 ##SUPPLEMENTARY###
-Figure S1
+#Figure S1
 number=0
 letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 for f in "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/supplementary/FigureS1.png'
@@ -110,7 +110,7 @@ do
 done
 
 #Figure S5
-BASE=/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast
+BASE=./forecast
 number=0
 letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 for f in $BASE/Austria_forecast.png  $BASE/Germany_forecast.png  $BASE/Sweden_forecast.png $BASE/Belgium_forecast.png  $BASE/Italy_forecast.png $BASE/Switzerland_forecast.png $BASE/Denmark_forecast.png  $BASE/Norway_forecast.png  $BASE/United_Kingdom_forecast.png $BASE/France_forecast.png  $BASE/Spain_forecast.png

@@ -165,7 +165,7 @@ def analyze_corr(model_data, covariate_names, outdir):
     keys = ['retail and recreation', 'grocery and pharmacy',
             'transit stations','workplaces','residential']
     cmaps = ['Reds','Purples','Oranges','Greens','Blues']
-    colors =['tab:red','tab:purple','tab:pink', 'tab:olive', 'tab:cyan']
+    colors =['darkorange','tab:purple','tab:pink', 'tab:olive', 'tab:cyan']
     for j in range(correlations.shape[1]): #Go through all covariates
         fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
         all_countries_x=[]
