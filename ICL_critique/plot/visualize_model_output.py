@@ -144,12 +144,13 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     param_matrix = np.load(results_dir+'mu.npy', allow_pickle=True)
     plot_posterior(param_matrix, countries, 'mean R0')
 
-    #Plot last intervention (Sweden only)
+    #Plot last intervention
     try:
         last_intervention = np.load(results_dir+'last_intervention.npy', allow_pickle=True)
         for i in range(len(countries)):
             fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
             sns.distplot(100*(1-np.exp(-last_intervention[8000:,i])))
+            print(countries[i]+' last intervention', np.median(100*(1-np.exp(-last_intervention[8000:,i]))))
             ax.set_ylabel('Density')
             ax.set_xlabel("Relative % reduction in Rt")
             ax.set_title(countries[i]+' last intervention')
@@ -198,12 +199,14 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 
     #Plot alpha posteriors
     alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan',5:'b',6:'k'}
+    alpha_titles = {0:'Schools and Universities',1:'Self isolating if ill',2:'Public events',3:'First intervention',4:'Lockdown',5:'Social distancing encouraged',6:'Last intervention'}
     alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
 
     for i in range(7):
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
         sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=alpha_colors[i]) #The first 2000 samplings are warmup
-        ax.set_title(alpha_names[i])
+        print(alpha_titles[i], np.median(100*(1-np.exp(-alphas[8000:,i]))))
+        ax.set_title(alpha_titles[i])
         ax.set_ylabel('Density')
         ax.set_xlabel('Relative % reduction in Rt')
         ax.spines['top'].set_visible(False)

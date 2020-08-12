@@ -35,7 +35,7 @@ montage  "Germany" "Italy" "Norway" "Spain" "Sweden" -tile 1x5 -geometry +2+2 '.
 montage  "Switzerland" "United_Kingdom" -tile 1x2 -geometry +2+2 '../../../../../publication_figures/supplementary/FigureS4part3.png'
 
 #Figure S5
-BASE=/home/patrick/COVID19.github.io/simulations/icl_model/model_output/3_week_forecast/plots/forecast
+BASE=./forecast
 montage $BASE/Austria_forecast.png  $BASE/Germany_forecast.png  $BASE/Sweden_forecast.png  $BASE/Belgium_forecast.png  $BASE/Italy_forecast.png $BASE/Switzerland_forecast.png $BASE/Denmark_forecast.png  $BASE/Norway_forecast.png  $BASE/United_Kingdom_forecast.png $BASE/France_forecast.png  $BASE/Spain_forecast.png -tile 3x4 -geometry +2+2 '../../../../../publication_figures/supplementary/FigureS5.png'
 
 #Figure S6

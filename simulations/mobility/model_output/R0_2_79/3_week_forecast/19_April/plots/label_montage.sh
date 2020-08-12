@@ -61,7 +61,7 @@ done
 #Figure S1
 number=0
 letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-for f in "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 '/home/patrick/COVID19.github.io/simulations/mobility/publication_figures/supplementary/FigureS1.png'
+for f in "LOO/Austria_Rt_corr.png"  "LOO/Belgium_Rt_corr.png" "LOO/Denmark_Rt_corr.png" "LOO/France_Rt_corr.png" "LOO/Germany_Rt_corr.png" "LOO/Italy_Rt_corr.png" "LOO/Norway_Rt_corr.png" "LOO/Spain_Rt_corr.png" "LOO/Sweden_Rt_corr.png" "LOO/Switzerland_Rt_corr.png" "LOO/United_Kingdom_Rt_corr.png" -tile 3x4 -geometry +2+2 '../../../../../publication_figures/supplementary/FigureS1.png'
   do
   label=${letters:number:1}
   convert "$f" -pointsize 50 -gravity NorthWest -annotate +0+0 "$label" $f

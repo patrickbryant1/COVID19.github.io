@@ -31,7 +31,7 @@ done
 
 
 montage $BASE1/Sweden_cases.png $BASE1/Sweden_deaths.png $BASE1/Sweden_Rt.png $BASE2/Sweden_cases.png $BASE2/Sweden_deaths.png $BASE2/Sweden_Rt.png -tile 3x2 -geometry +2+2 Figure2.png
-
+montage NPI_markers.png Figure2.png -tile 1x2 -geometry +2+2 Figure2.png
 #Figure 3. posterior for model without the last intervention for Sweden
 number=0
 BASE=../plot/no_last/figures/posterior
