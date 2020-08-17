@@ -175,7 +175,7 @@ def visualize_results(outdir, countries, stan_data, days_to_simulate, short_date
 
     #Plot alpha posteriors
     fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
-    alpha_colors = {0:'darkorange',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
+    alpha_colors = {0:'darkorange',1:'tab:purple',2:'magenta', 3:'tab:olive', 4:'tab:cyan'}
     alpha_names = {0:'retail and recreation',1:'grocery and pharmacy',2:'transit stations',3:'workplace',4:'residential'}
 
     for i in range(5):
@@ -333,7 +333,7 @@ def plot_shade_ci(country,x,end,start_date,y, observed_y, lower_bound, higher_bo
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     ax2.plot(x[:end],country_retail[:end], alpha=0.5, color='darkorange', linewidth = 2.0)
     ax2.plot(x[:end],country_grocery[:end], alpha=0.5, color='tab:purple', linewidth = 2.0)
-    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='tab:pink', linewidth = 2.0)
+    ax2.plot(x[:end],country_transit[:end], alpha=0.5, color='magenta', linewidth = 2.0)
     ax2.plot(x[:end],country_work[:end], alpha=0.5, color='tab:olive', linewidth = 2.0)
     ax2.plot(x[:end],country_residential[:end], alpha=0.5, color='tab:cyan', linewidth = 2.0)
 
@@ -413,7 +413,7 @@ ax.axis('off')
 fig.savefig(outdir+'plots/NPI_markers.png', format = 'png',dpi=300 )
 
 #Mobility
-covariate_colors = {'retail and recreation':'darkorange','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
+covariate_colors = {'retail and recreation':'darkorange','grocery and pharmacy':'tab:purple', 'transit stations':'magenta','workplace':'tab:olive','residential':'tab:cyan'}
 fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
 i=5
 for cov in covariate_colors:
