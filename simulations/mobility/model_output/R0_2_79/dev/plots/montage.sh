@@ -14,6 +14,10 @@ montage Washington_cases.png Washington_deaths.png Washington_Rt.png 'West Virgi
 montage 'New York_cases.png' 'New York_deaths.png' 'New York_Rt.png' 'Louisiana_cases.png' 'Louisiana_deaths.png' 'Louisiana_Rt.png' Michigan_cases.png Michigan_deaths.png Michigan_Rt.png 'North Carolina_cases.png' 'North Carolina_deaths.png' 'North Carolina_Rt.png' -tile 3x4 -geometry +2+2 Figure2.png
 montage mobility_markers.png sim_markers.png -tile 2x1 -geometry +2+2 markers.png
 montage Figure2.png markers.png -tile 1x2 -geometry +2+2 Figure2.png
+
+montage 'New York_cases.png' 'New York_deaths.png' 'New York_Rt.png' 'North Carolina_cases.png' 'North Carolina_deaths.png' 'North Carolina_Rt.png' -tile 3x4 -geometry +2+2 newyork_northcarolina.png
+montage mobility_markers.png sim_markers.png -tile 2x1 -geometry +2+2 markers.png
+montage newyork_northcarolina.png markers.png -tile 1x2 -geometry +2+2 newyork_northcarolina.png
 #Add mob and epiestim r estimates
 montage ../epiestim_vs_mob_close.png ../epiestim_vs_mob_open.png Figure2.png -tile 1x3 -geometry +2+2 ../Figure2.png
 
