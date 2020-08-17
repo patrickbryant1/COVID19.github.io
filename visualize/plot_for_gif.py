@@ -8,34 +8,9 @@ import geopandas as gpd
 import geoplot
 import mapclassify
 import matplotlib.pyplot as plt
+import matplotlib
 
 import pdb
-
-def get_cumulative(df):
-    '''Calculate cumulative cases and deaths
-    '''
-    #Cumulative calcs
-    countries = ecdc_data['countriesAndTerritories'].unique()
-
-    ecdc_data['cumulative_deaths'] = 0
-    ecdc_data['cumulative_cases'] = 0
-    for country in countries:
-        country_data = ecdc_data[ecdc_data['countriesAndTerritories']==country]
-        index = country_data.index
-        country_data = country_data.reset_index()
-        cum_deaths = country_data['deaths'].cumsum().values
-        cum_cases = country_data['cases'].cumsum().values
-        ecdc_data.loc[index,'cumulative_deaths']=np.array(cum_deaths)
-        ecdc_data.loc[index,'cumulative_cases']=np.array(cum_cases)
-
-
-def json_data(selectedDate):
-    df_date = ecdc_df[ecdc_df['dateRep']==selectedDate]
-    merged = gdf.merge(df_date, left_on = 'country_code', right_on ='countryterritoryCode', how = 'left')
-    merged.fillna('No data', inplace = True)
-    merged_json = json.loads(merged.to_json())
-    json_data = json.dumps(merged_json)
-    return json_data
 
 ########MAIN#########
 #ecdc data
@@ -43,6 +18,8 @@ ecdc_df = pd.read_csv('ecdc_20200817.csv')
 ecdc_df['date'] = pd.to_datetime(ecdc_df['dateRep'], format='%d/%m/%Y')
 ecdc_df = ecdc_df.sort_values(by=['date'], ascending=False)
 ecdc_df = ecdc_df.drop(columns=['date'])
+ecdc_df['deaths_per_100000'] = 100000*ecdc_df['deaths']/ecdc_df['popData2019']
+
 
 #Read shapefile using Geopandas
 shapefile = './countries_110m/ne_110m_admin_0_countries.shp'
@@ -55,14 +32,35 @@ gdf = gdf.drop(gdf.index[159])
 #Input GeoJSON source that contains features for plotting.
 dates = ecdc_df['dateRep'].unique()
 
+def plot_colorbar():
+    '''Plots a stand alone colorbar
+    '''
+    fig,ax = plt.subplots(figsize=(10,10))
 
+    cb = matplotlib.colorbar.ColorbarBase(ax, orientation='horizontal',cmap=matplotlib.cm.Reds)
+    fig.tight_layout()
+    plt.show()
 
-
-for date in dates:
+#Colorbar
+#plot_colorbar()
+vmin = 0
+vmax = 1
+names = []
+for i in range(0,len(dates),7):
+    date = dates[i]
     ecdc_date = ecdc_df[ecdc_df['dateRep']==date]
     world = pd.merge(gdf, ecdc_date, left_on='country_code', right_on='countryterritoryCode', how='right')
-    world.plot(column='deaths', cmap='Reds')
+    fig,ax = plt.subplots()
+    world.plot(ax=ax,column='deaths_per_100000', cmap='Reds',legend=True, vmin=vmin, vmax=vmax,legend_kwds={'orientation':'horizontal'})
+    ax.axis('off')
 
+    ax.set_title(date)
+    fig.tight_layout()
     date = date.split('/')
-    plt.savefig('./deaths/world'+date[0]+'_'+date[1]+'_'+date[2]+'_deaths.png', format='png', dpi=300)
+    outname='./deaths/world'+date[0]+'_'+date[1]+'_'+date[2]+'_deaths.png'
+    fig.savefig(outname, format='png', dpi=300)
     plt.close()
+    names.append('world'+date[0]+'_'+date[1]+'_'+date[2]+'_deaths.png')
+
+for name in names:
+    print(name+' ')
