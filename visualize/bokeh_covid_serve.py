@@ -11,6 +11,7 @@ from bokeh.layouts import widgetbox, row, column
 from bokeh.plotting import figure
 from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar
 from bokeh.palettes import brewer
+from bokeh.io import export_png
 import json
 import pdb
 
@@ -42,7 +43,11 @@ def json_data(selectedDate):
 
 ########MAIN#########
 #ecdc data
-ecdc_df = pd.read_csv('ecdc_20200505.csv')
+ecdc_df = pd.read_csv('ecdc_20200817.csv')
+ecdc_df['date'] = pd.to_datetime(ecdc_df['dateRep'], format='%d/%m/%Y')
+ecdc_df = ecdc_df.sort_values(by=['date'], ascending=False)
+ecdc_df = ecdc_df.drop(columns=['date'])
+
 #Read shapefile using Geopandas
 shapefile = './countries_110m/ne_110m_admin_0_countries.shp'
 #Rename columns.
@@ -56,7 +61,7 @@ dates = ecdc_df['dateRep'].unique()
 geosource = GeoJSONDataSource(geojson = json_data(dates[0]))
 
 #Define a sequential multi-hue color palette.
-palette = brewer['YlGnBu'][9]
+palette = brewer['Reds'][9]
 #Reverse color order so that dark blue is highest.
 palette = palette[::-1]
 #Instantiate LinearColorMapper that linearly maps numbers in a range, into a sequence of colors. Input nan_color.
@@ -87,10 +92,14 @@ def update_plot(attr, old, new):
     geosource.geojson = new_data
     p.title.text = 'Deaths on '+ date
 
+
+
 # Make a slider object: slider
 slider = Slider(title = 'Date',start = 0, end = len(dates)-1, step = 1, value = len(dates)-1)
 slider.on_change('value', update_plot)# Make a column layout of widgetbox(slider) and plot, and add it to the current document
 layout = column(p,widgetbox(slider))
 curdoc().add_root(layout)#Display plot inline in Jupyter notebook
-output_notebook()#Display plot
-show(layout)
+#output_notebook()#Display plot
+#show(layout)
+curdoc().add_periodic_callback(update_plot, 60)
+session.loop_until_closed() # run forever
