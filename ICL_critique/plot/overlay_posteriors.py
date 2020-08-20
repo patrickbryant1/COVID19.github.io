@@ -23,7 +23,7 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Visulaize results from the ICL response team model''')
 
 parser.add_argument('--datadir', nargs=1, type= str, default=sys.stdin, help = 'Path to dir with data.')
-parser.add_argument('--results_dirs', nargs=1, type= str, default=sys.stdin, help = 'Path to resultsdirs.')
+parser.add_argument('--results_dir', nargs=1, type= str, default=sys.stdin, help = 'Path to resultsdir.')
 parser.add_argument('--countries', nargs=1, type= str, default=sys.stdin, help = 'Countries to model (csv).')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
@@ -140,32 +140,33 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
     '''Visualize results
     '''
 
+    #Plot alpha posteriors
+    run_colors = {'original':'tab:purple','no_last':'tab:pink', 'no_lock_no_last':'tab:olive'}
+    alpha_titles = {0:'Schools and Universities',1:'Self isolating if ill',2:'Public events',3:'First intervention',4:'Lockdown',5:'Social distancing encouraged',6:'Last intervention'}
+    alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
+
     #Read in data
     #For models fit using MCMC, also included in the summary are the
     #Monte Carlo standard error (se_mean), the effective sample size (n_eff),
     #and the R-hat statistic (Rhat).
-    summary = pd.read_csv(results_dir+'summary.csv')
-    alphas = np.load(results_dir+'alpha.npy', allow_pickle=True)
-    phi = np.load(results_dir+'phi.npy', allow_pickle=True)
-    days = np.arange(0,days_to_simulate) #Days to simulate
-
-    #Plot alpha posteriors
-    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan',5:'b',6:'k'}
-    alpha_titles = {0:'Schools and Universities',1:'Self isolating if ill',2:'Public events',3:'First intervention',4:'Lockdown',5:'Social distancing encouraged',6:'Last intervention'}
-    alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
-
     for i in range(7):
+        #Create plot for posterior
         fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
-        sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=alpha_colors[i]) #The first 2000 samplings are warmup
-        print(alpha_titles[i], np.median(100*(1-np.exp(-alphas[8000:,i]))))
+        types = ['original','no_last','no_lock_no_last']
+        #Go through all simulations
+        for type in types:
+            alphas = np.load(results_dir+type+'/alpha.npy', allow_pickle=True)
+            sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=run_colors[type]) #The first 2000 samplings are warmup
+            print(alpha_titles[i], np.median(100*(1-np.exp(-alphas[8000:,i]))))
         ax.set_title(alpha_titles[i])
         ax.set_ylabel('Density')
         ax.set_xlabel('Relative % reduction in Rt')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         fig.tight_layout()
-        fig.savefig(outdir+'figures/posterior/alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
+        fig.savefig(outdir+'alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
         plt.close()
+
 
 
 
@@ -174,7 +175,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 matplotlib.rcParams.update({'font.size': 7})
 args = parser.parse_args()
 datadir = args.datadir[0]
-results_dirs = args.results_dir[0].split(',')
+results_dir = args.results_dir[0]
 countries = args.countries[0].split(',')
 days_to_simulate=args.days_to_simulate[0] #Number of days to model. Increase for further forecast
 end_date=args.end_date[0]
@@ -183,7 +184,6 @@ short_dates = pd.read_csv(args.short_dates[0])
 short_dates['np_date'] = pd.to_datetime(short_dates['np_date'], format='%Y/%m/%d')
 outdir = args.outdir[0]
 
-pdb.set_trace()
 #Read data
 stan_data = read_and_format_data(datadir, countries, days_to_simulate, end_date)
 

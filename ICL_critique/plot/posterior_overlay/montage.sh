@@ -1,0 +1,1 @@
+montage alpha_schools_universities.png alpha_self_isolating_if_ill.png alpha_public_events.png alpha_lockdown.png alpha_social_distancing_encouraged.png ../original_model/figures/posterior/last_intervention.png  -tile 3x2 -geometry +2+2 alphas.png
