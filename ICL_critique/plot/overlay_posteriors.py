@@ -142,6 +142,7 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
 
     #Plot alpha posteriors
     run_colors = {'original':'tab:purple','no_last':'tab:pink', 'no_lock_no_last':'tab:olive'}
+    labels  = {'original':'Original (i)','no_last':'No last (ii)', 'no_lock_no_last':'No lockdown or last (iii)'}
     alpha_titles = {0:'Schools and Universities',1:'Self isolating if ill',2:'Public events',3:'First intervention',4:'Lockdown',5:'Social distancing encouraged',6:'Last intervention'}
     alpha_names = {0:'schools_universities',1:'self_isolating_if_ill',2:'public_events',3:'first_intervention',4:'lockdown',5:'social_distancing_encouraged',6:'last_intervention'}
 
@@ -156,13 +157,17 @@ def visualize_results(outdir, datadir, results_dir, countries, stan_data, days_t
         #Go through all simulations
         for type in types:
             alphas = np.load(results_dir+type+'/alpha.npy', allow_pickle=True)
-            sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=run_colors[type]) #The first 2000 samplings are warmup
+            sns.distplot(100*(1-np.exp(-alphas[8000:,i])),color=run_colors[type],
+            label=labels[type],
+            kde_kws={"lw": 0.5},
+            hist_kws={"linewidth": 3,"alpha": 0.5}) #The first 8000 samplings are warmup
             print(alpha_titles[i], np.median(100*(1-np.exp(-alphas[8000:,i]))))
         ax.set_title(alpha_titles[i])
         ax.set_ylabel('Density')
         ax.set_xlabel('Relative % reduction in Rt')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
+        plt.legend()
         fig.tight_layout()
         fig.savefig(outdir+'alpha_'+alpha_names[i]+'.png', format = 'png',dpi=300 )
         plt.close()
