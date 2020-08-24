@@ -60,26 +60,25 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
     mcmc_parcoord(np.concatenate([alphas,np.expand_dims(phi,axis=1)], axis=1), covariate_names+['phi'], outdir)
 
     #Plot alpha (Rt = R0*exp(sum{mob_change*alpha1-6}))
-    fig, ax = plt.subplots(figsize=(9/2.54, 9/2.54))
-    alpha_colors = {0:'tab:red',1:'tab:purple',2:'tab:pink', 3:'tab:olive', 4:'tab:cyan'}
-    for i in range(1,6):
-        alpha = summary[summary['Unnamed: 0']=='alpha['+str(i)+']']
-        alpha_m = 1-np.exp(-100*alpha['mean'].values[0])
-        alpha_2_5 = 1-np.exp(-100*alpha['2.5%'].values[0])
-        alpha_25 = 1-np.exp(-100*alpha['25%'].values[0])
-        alpha_75 = 1-np.exp(-100*alpha['75%'].values[0])
-        alpha_97_5 = 1-np.exp(-100*alpha['97.5%'].values[0])
-        ax.plot([i-0.25,i+0.25],[alpha_m,alpha_m],color = alpha_colors[i-1])
-        ax.plot([i]*2,[alpha_2_5,alpha_97_5],  marker = '_',color = alpha_colors[i-1])
-        rect = Rectangle((i-0.25,alpha_25),0.5,alpha_75-alpha_25,linewidth=1, color = alpha_colors[i-1], alpha = 0.3)
-        ax.add_patch(rect)
-    ax.set_ylim([0,1])
-    ax.set_ylabel('Fractional reduction in R0')
-    ax.set_xticks([1,2,3,4,5])
-    ax.set_xticklabels(['retail and recreation', 'grocery and pharmacy', 'transit stations','workplace', 'residential'],rotation='vertical')
-    plt.tight_layout()
-    fig.savefig(outdir+'plots/alphas.png', format='png', dpi=300)
-    plt.close()
+    #Plot alpha posteriors
+    fig, ax = plt.subplots(figsize=(6/2.54, 4/2.54))
+    alpha_colors = {0:'darkorange',1:'tab:purple',2:'magenta', 3:'tab:olive', 4:'tab:cyan'}
+    alpha_names = {0:'retail and recreation',1:'grocery and pharmacy',2:'transit stations',3:'workplace',4:'residential'}
+
+    for i in range(5):
+        fig, ax = plt.subplots(figsize=(6/2.54, 4.5/2.54))
+        alpha_red = 100*(1-np.exp(-100*alphas[2000:,i]))
+        sns.distplot(alpha_red ,color=alpha_colors[i]) #The first 2000 samplings are warmup
+        ax.set_title(alpha_names[i])
+        ax.set_ylabel('Density')
+        ax.set_xlabel("Relative % reduction in Rt")
+        ax.axvline(x=np.median(alpha_red), ymin=0, ymax=20, linestyle='--',linewidth=1)
+        print(alpha_names[i],np.round(np.median(alpha_red),2))
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        fig.savefig(outdir+'plots/posterior/alpha_'+str(i)+'.png', format = 'png',dpi=300 )
+        plt.close()
 
     #Plot per state
     states = complete_df['region'].unique()
@@ -112,12 +111,15 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
         #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
         for j in range(1,days+1):
             for var in ['prediction', 'E_deaths','Rt']:
+                try:
                     var_ij = summary[summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
                     means[var][j-1]=var_ij['mean'].values[0]
                     lower_bound[var][j-1]=var_ij['2.5%'].values[0]
                     higher_bound[var][j-1]=var_ij['97.5%'].values[0]
                     lower_bound25[var][j-1]=var_ij['25%'].values[0]
                     higher_bound75[var][j-1]=var_ij['75%'].values[0]
+                except:
+                    pdb.set_trace()
 
         #Plot cases
         #Per day
@@ -208,9 +210,9 @@ def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param,
     ax1.fill_between(x, lower_bound25, higher_bound75, color='cornflowerblue', alpha=0.6)
 
     #Mobility
-    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'darkorange',
                 'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
-                'transit_stations_percent_change_from_baseline':'tab:pink',
+                'transit_stations_percent_change_from_baseline':'magenta',
                 'workplaces_percent_change_from_baseline':'tab:olive',
                 'residential_percent_change_from_baseline':'tab:cyan'}
     #Plot mobility data
@@ -248,7 +250,7 @@ def plot_markers():
     '''Plot the marker explanations
     '''
     #Mobility
-    covariate_colors = {'retail and recreation':'tab:red','grocery and pharmacy':'tab:purple', 'transit stations':'tab:pink','workplace':'tab:olive','residential':'tab:cyan'}
+    covariate_colors = {'retail and recreation':'darkorange','grocery and pharmacy':'tab:purple', 'transit stations':'magenta','workplace':'tab:olive','residential':'tab:cyan'}
     fig, ax = plt.subplots(figsize=(6/2.54,2.25/2.54))
     i=5
     for cov in covariate_colors:
@@ -277,9 +279,9 @@ def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
     '''
 
     titles =  {1:'Retail and recreation',2:'Grocery and pharmacy', 3:'Transit stations',4:'Workplace',5:'Residential',6:'Parks'}
-    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'tab:red',
+    mob_keys = {'retail_and_recreation_percent_change_from_baseline':'darkorange',
                 'grocery_and_pharmacy_percent_change_from_baseline':'tab:purple',
-                'transit_stations_percent_change_from_baseline':'tab:pink',
+                'transit_stations_percent_change_from_baseline':'magenta',
                 'workplaces_percent_change_from_baseline':'tab:olive',
                 'residential_percent_change_from_baseline':'tab:cyan',
                 'parks_percent_change_from_baseline':'tab:green'}
@@ -306,7 +308,7 @@ def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
             start = min(complete_df['date'])
             end = max(complete_df['date'])
             dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
-            xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,111]
+            xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112, 126, 140, 154, 168, 184]
             dates = dates[xticks]
             selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
             ax.set_xticks(dates)
@@ -321,6 +323,7 @@ def visualize_mobility(complete_df, lockdown_df, short_dates, outdir):
             else:
                 fig.savefig(outdir+str(i)+'.png', format = 'png')
             i+=1
+            plt.close()
 
 def print_CI(metrics):
     '''Print table of mean and 95 % CIs for % of previous peak at end for
@@ -375,17 +378,17 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
                 continue
             state_data = complete_df[complete_df['region']==state]
             #Compare with the epiestim df
-            epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
-            #epiestim_state = epiestim_df[epiestim_df['state']==state]
+            #epiestim_state = epiestim_df[epiestim_df['country']=='US-'+state.replace(" ", "_")]
+            epiestim_state = epiestim_df[epiestim_df['state']==state]
             #Cases per state
             case_state = case_df[case_df['region']==state]
             #Join on date
             state_data = state_data.merge(epiestim_state, left_on='date', right_on='date', how = 'left')
             state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
-            state_data = state_data[state_data['R0_7days']<6] #'R0_7days'
+            state_data = state_data[state_data['Median(R)']<6] #'Median(R)'
             #Plot R from EpiEstim
-            axR.plot(state_data['date'], state_data['R0_7days'], color = 'b', alpha = 0.5)
+            axR.plot(state_data['date'], state_data['Median(R)'], color = 'b', alpha = 0.5)
             state_data = state_data[state_data['date']<'2020-06-06']
             #Get cases last week and normalize with total
             cases_last_week = np.zeros(len(state_data))
@@ -405,15 +408,15 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
             #Get all data together
             all_x.extend(np.array(state_data[key]))
-            all_y.extend(np.array(state_data['R0_7days']))
+            all_y.extend(np.array(state_data['Median(R)']))
             #Get close and open data
             close_x.extend(np.array(close_data[key]))
-            close_y.extend(np.array(close_data['R0_7days']))
+            close_y.extend(np.array(close_data['Median(R)']))
             #close_y.extend(np.array(close_data['cases'])/max(state_data['cases']))
             #close_y.extend(np.gradient(np.array(close_data['cases'])/max(state_data['cases'])))
             #close_y.extend(np.array(close_data['cases_last_week']))
             open_x.extend(np.array(open_data[key]))
-            open_y.extend(np.array(open_data['R0_7days']))
+            open_y.extend(np.array(open_data['Median(R)']))
             #open_y.extend(np.array(open_data['cases'])/max(state_data['cases']))
             #open_y.extend(np.gradient(np.array(open_data['cases'])/max(state_data['cases'])))
             #open_y.extend(np.array(open_data['cases_last_week']))
@@ -424,7 +427,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
         start = min(complete_df['date'])
         end = max(complete_df['date'])
         dates=np.arange(start,end+datetime.timedelta(days=1), dtype='datetime64[D]')
-        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,111]
+        xticks=[ 0, 14, 28, 42, 56, 70, 84, 98,112, 126, 140, 154, 168, 184]
         dates = dates[xticks]
         selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
         axR.set_xticks(dates)
@@ -539,6 +542,6 @@ outdir = args.outdir[0]
 #Visualize
 metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Print metrics as table with CIs
-#print_CI(metrics)
+print_CI(metrics)
 #Analyze mobility and R relstionhip
 #epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)

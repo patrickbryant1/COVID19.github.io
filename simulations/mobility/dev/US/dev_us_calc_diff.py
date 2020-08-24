@@ -18,7 +18,8 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
+parser = argparse.ArgumentParser(description = '''Calculate the scenario that would have been obtained if lockdown had not ended
+                                                Get the R estimate at the extreme points in mobility''')
 
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Path to all input data.')
 parser.add_argument('--modelling_results', nargs=1, type= str, default=sys.stdin, help = 'Path to stan model results.')

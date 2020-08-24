@@ -24,3 +24,7 @@ montage ../epiestim_vs_mob_close.png ../epiestim_vs_mob_open.png Figure2.png -ti
 #'District of Columbia_cases.png' 'District of Columbia_deaths.png' 'District of Columbia_Rt.png'
 #Montage markers
 montage  $OUTDIR/all_states9.png markers.png -tile 1x2 -geometry +2+2 $OUTDIR/all_states9.png
+
+
+#Montage posterior
+montage posterior/alpha_0.png posterior/alpha_1.png posterior/alpha_2.png posterior/alpha_3.png posterior/alpha_4.png -tile 3x2 -geometry +2+2 posterior/alphas.png
