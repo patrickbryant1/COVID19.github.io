@@ -7,7 +7,7 @@ outdir=args[3]
 
 
 library(EpiEstim)
-#outdir="/home/patrick/results/COVID19/mobility_and_spread/US/EpiEstimR/"
+#outdir="/home/pbryant/results/COVID19/mobility_and_spread/US/EpiEstimR/"
 #epidemic_data="./complete_case_df.csv"
 #country="New_Hampshire"
 if (grepl("_", country)){
