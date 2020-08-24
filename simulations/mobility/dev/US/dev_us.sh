@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
-DEATHS=/home/patrick/COVID19.github.io/simulations/mobility/data/US/us_deaths.csv
-MOBILITY_DATA=/home/patrick/COVID19.github.io/simulations/mobility/data/Global_Mobility_Report.csv
+DEATHS=../../data/US/us_deaths.csv
+MOBILITY_DATA=../../data/US/Global_Mobility_US.csv
 STAN_MODEL=./mobility_dispersion.stan
 OUTDIR=../../model_output/R0_2_79/dev/
 DTS=126 #Days to simulate
