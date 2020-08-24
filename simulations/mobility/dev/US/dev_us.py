@@ -148,6 +148,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
             #Create dataframe
             regional_epidemic_data = pd.DataFrame()
             regional_epidemic_data['date']=dates
+
             #Convert to datetime
             regional_epidemic_data['date'] = pd.to_datetime(regional_epidemic_data['date'], format='%m/%d/%y')
             regional_epidemic_data['deaths']=deaths_per_day
@@ -261,6 +262,7 @@ days_to_simulate = args.days_to_simulate[0]
 outdir = args.outdir[0]
 #Read data
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
+pdb.set_trace()
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate
