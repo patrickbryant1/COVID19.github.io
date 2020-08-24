@@ -154,7 +154,7 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
     #     if i%9==0:
     #         montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png\nmontage ')
     # montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png')
-
+    metrics.to_csv(outdir+'metrics.csv')
     return metrics
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
@@ -541,6 +541,7 @@ outdir = args.outdir[0]
 #plot_markers()
 #Visualize
 metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+
 #Print metrics as table with CIs
 print_CI(metrics)
 #Analyze mobility and R relstionhip
