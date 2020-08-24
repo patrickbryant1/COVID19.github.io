@@ -40,7 +40,7 @@ def conv_gamma_params(mean,std):
 def infection_to_death():
         '''Simulate the time from infection to death: Infection --> Onset --> Death'''
         #Infection to death: sum of ito and otd
-        itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
+        itd_shape, itd_scale = conv_gamma_params((5.1+17.8), (0.45))
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
         return itd
 
@@ -64,6 +64,8 @@ def get_death_f(N2):
     #This can be done only once now that the cfr is constant
     h = np.zeros(N2) #N2 = N+forecast
     f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+    #Adjust f to reach max 1 - the half steps makes this different
+    f = f/2
     for i in range(1,len(h)):
         #for each day t, the death prob is the area btw [t-0.5, t+0.5]
         #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
