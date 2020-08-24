@@ -1,10 +1,10 @@
 #!/bin/bash -l
 
 #Format data
-# CASES=../../../data/US/us_cases.csv
-# MOBILITY_DATA=../../../data/US/Global_Mobility_US.csv
-# OUTDIR=./
-# ./epiestim_format.py --us_cases $CASES --mobility_data $MOBILITY_DATA --outdir $OUTDIR
+CASES=../../../data/US/us_cases.csv
+MOBILITY_DATA=../../../data/US/Global_Mobility_US.csv
+OUTDIR=./
+./epiestim_format.py --us_cases $CASES --mobility_data $MOBILITY_DATA --outdir $OUTDIR
 
 
 #Estimate R using EpiEstim
@@ -19,4 +19,4 @@ time for i in {1..50}
   done
 
 #Join all data
-#./join_epiR.py --indir /home/patrick/results/COVID19/mobility_and_spread/US/EpiEstimR/ --outdir ./
+./join_epiR.py --indir ../modeling_results/EpiEstim/ --outdir ./
