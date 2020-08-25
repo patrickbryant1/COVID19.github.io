@@ -103,13 +103,16 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
     figopen, axopen = plt.subplots(figsize=(12/2.54, 12/2.54))
     #metrics
     metrics = pd.DataFrame(np.zeros((len(states),9)), columns=['state','observed deaths','mean deaths', 'lower deaths', 'higher deaths', 'mean cont. deaths', 'lower cont. deaths', 'higher cont. deaths', 'previous peak mean deaths'])
+    #Save estimates
+    complete_df['meanR_mobility'] = 0
+    complete_df['mean_deaths_mobility'] = 0
+    complete_df['mean_cases_mobility'] = 0
     for i in range(1,len(states)+1):
 
         state= states[i-1]
         #Plot R posterior
         plot_R_posterior(R_posteriors[2000:,i-1], state, outdir)
         print('posterior/R_'+state+'.png')
-        continue
         #Get att data for state i
         state_data = complete_df[complete_df['region']==state]
         observed_deaths = state_data['deaths']
@@ -139,6 +142,10 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
                 except:
                     pdb.set_trace()
 
+        #Add the R estimates to complete df
+        complete_df.loc[complete_df['region']==state, 'meanR_mobility']=means['Rt']
+        complete_df.loc[complete_df['region']==state, 'mean_deaths_mobility']=means['E_deaths']
+        complete_df.loc[complete_df['region']==state, 'mean_cases_mobility']=means['prediction']
         #Plot cases
         #Per day
         plot_shade_ci(days, state_data,state_lockdown, state_early_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
@@ -165,15 +172,8 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
         metrics.loc[i-1,'higher cont. deaths']=np.round(np.array(state_lockdown['higher_deaths'])[-1],0)
         metrics.loc[i-1,'previous peak mean deaths']=np.round(max(means['E_deaths'][:-30]),0)
 
-
-            #     #Print for montage
-    #     montage_file.write(state+'_cases.png '+state+'_deaths.png '+state+'_Rt.png ')
-    #
-    #     if i%9==0:
-    #         montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png\nmontage ')
-    # montage_file.write(' -tile 3x9 -geometry +2+2 all_states'+str(i)+'.png')
     metrics.to_csv(outdir+'metrics.csv')
-    return metrics
+    return metrics, complete_df
 
 def mcmc_parcoord(cat_array, xtick_labels, outdir):
     '''Plot parameters for each iteration next to each other as in the R fucntion mcmc_parcoord
@@ -405,6 +405,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
             state_data = state_data.merge(case_state, left_on='date', right_on='date', how = 'left')
 
             state_data = state_data[state_data['Median(R)']<6] #'Median(R)'
+            pdb.set_trace()
             #Plot R from EpiEstim
             axR.plot(state_data['date'], state_data['Median(R)'], color = 'b', alpha = 0.5)
             state_data = state_data[state_data['date']<'2020-06-06']
@@ -558,9 +559,9 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-metrics = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+metrics, complete_df = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 
 #Print metrics as table with CIs
-print_CI(metrics)
+#print_CI(metrics)
 #Analyze mobility and R relstionhip
-#epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
+epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
