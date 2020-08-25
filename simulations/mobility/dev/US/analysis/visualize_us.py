@@ -31,7 +31,18 @@ parser.add_argument('--case_df', nargs=1, type= str, default=sys.stdin, help = '
 parser.add_argument('--short_dates', nargs=1, type= str, default=sys.stdin, help = 'Short date format for plotting (csv).')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
-
+def plot_R_posterior(data, state, outdir):
+    fig, ax = plt.subplots(figsize=(3/2.54, 3/2.54))
+    sns.distplot(data) #The first 2000 samplings are warmup
+    ax.set_title(state)
+    ax.set_xlabel('R0')
+    #ax.set_xlim([1.5,5.5])
+    #ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(outdir+'plots/posterior/R_'+state+'.png', format = 'png',dpi=300 )
+    plt.close()
 
 def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir):
     '''Visualize results
@@ -80,8 +91,11 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
         fig.savefig(outdir+'plots/posterior/alpha_'+str(i)+'.png', format = 'png',dpi=300 )
         plt.close()
 
+
     #Plot per state
     states = complete_df['region'].unique()
+    #R posteriors
+    R_posteriors = np.load(indir+'mu.npy', allow_pickle=True)
     # montage_file = open(outdir+'/plots/montage.sh','w')
     # montage_file.write('montage ')
     #all death curves together
@@ -92,6 +106,10 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
     for i in range(1,len(states)+1):
 
         state= states[i-1]
+        #Plot R posterior
+        plot_R_posterior(R_posteriors[2000:,i-1], state, outdir)
+        print('posterior/R_'+state+'.png')
+        continue
         #Get att data for state i
         state_data = complete_df[complete_df['region']==state]
         observed_deaths = state_data['deaths']

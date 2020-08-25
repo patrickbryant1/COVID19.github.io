@@ -26,5 +26,8 @@ montage ../epiestim_vs_mob_close.png ../epiestim_vs_mob_open.png Figure2.png -ti
 montage  $OUTDIR/all_states9.png markers.png -tile 1x2 -geometry +2+2 $OUTDIR/all_states9.png
 
 
-#Montage posterior
+#Montage posterior alphas
 montage posterior/alpha_0.png posterior/alpha_1.png posterior/alpha_2.png posterior/alpha_3.png posterior/alpha_4.png -tile 3x2 -geometry +2+2 posterior/alphas.png
+
+#Montage posterior R0
+montage posterior/R_Alabama.png posterior/R_Alaska.png posterior/R_Arizona.png posterior/R_Arkansas.png posterior/R_California.png posterior/R_Colorado.png posterior/R_Connecticut.png posterior/R_Delaware.png 'posterior/R_District of Columbia.png' posterior/R_Florida.png posterior/R_Georgia.png posterior/R_Hawaii.png posterior/R_Idaho.png posterior/R_Illinois.png posterior/R_Indiana.png posterior/R_Iowa.png posterior/R_Kansas.png posterior/R_Kentucky.png posterior/R_Louisiana.png posterior/R_Maine.png posterior/R_Maryland.png posterior/R_Massachusetts.png posterior/R_Michigan.png posterior/R_Minnesota.png posterior/R_Mississippi.png posterior/R_Missouri.png posterior/R_Montana.png posterior/R_Nebraska.png posterior/R_Nevada.png 'posterior/R_New Hampshire.png' 'posterior/R_New Jersey.png' 'posterior/R_New Mexico.png' 'posterior/R_New York.png' 'posterior/R_North Carolina.png' 'posterior/R_North Dakota.png' posterior/R_Ohio.png posterior/R_Oklahoma.png posterior/R_Oregon.png posterior/R_Pennsylvania.png 'posterior/R_Rhode Island.png' 'posterior/R_South Carolina.png' 'posterior/R_South Dakota.png' posterior/R_Tennessee.png posterior/R_Texas.png posterior/R_Utah.png posterior/R_Vermont.png posterior/R_Virginia.png posterior/R_Washington.png 'posterior/R_West Virginia.png' posterior/R_Wisconsin.png posterior/R_Wyoming.png  -tile 6x9 -geometry +2+2 posterior/R.png
