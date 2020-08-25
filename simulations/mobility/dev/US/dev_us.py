@@ -240,7 +240,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.98, 'max_treedepth': 20})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.92, 'max_treedepth': 20})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
@@ -262,6 +262,10 @@ days_to_simulate = args.days_to_simulate[0]
 outdir = args.outdir[0]
 #Read data
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7588995e7bd5d2422ca89ece8429cd04b3e3dcce
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate
