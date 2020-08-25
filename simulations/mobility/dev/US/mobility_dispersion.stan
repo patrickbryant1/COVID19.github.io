@@ -60,7 +60,7 @@ transformed parameters {
 
       E_deaths[1, m]= 1e-9; //Start expectation - practically 0
 	//Step through all days til end of forecast
-      for (i in 2:N2){
+      for (i in 2:N[m]){
         E_deaths[i,m]= 0; //set to 0
         for(j in 1:(i-1)){
           E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
