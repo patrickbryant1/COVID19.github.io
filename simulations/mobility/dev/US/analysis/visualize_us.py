@@ -365,12 +365,12 @@ def print_CI(metrics):
 
         print(row_i['state']+';'+str(row_i['mean deaths'])+' ['+str(row_i['lower deaths'])+','+str(row_i['higher deaths'])+']'+';'+php_open_mean+' % ['+php_open_lower+','+php_open_higher+'];'+str(row_i['mean cont. deaths'])+' ['+str(row_i['lower cont. deaths'])+','+str(row_i['higher cont. deaths'])+']'+';'+php_cl_mean+' % ['+php_cl_lower+','+php_cl_higher+']')
 
-def plot_R_comparison(state_data, state, outdir):
+def plot_R_comparison(state_data, short_dates, state, outdir):
     '''Plot the coparison btw R estimates of the obility model and EpiEstim
     '''
 
     #Compare R from the mobility model and EpiEstim
-    fig, ax = plt.subplots(figsize=(6/2.54, 6/2.54))
+    fig, ax = plt.subplots(figsize=(4.5/2.54, 4.5/2.54))
     ax.plot(np.arange(len(state_data)),state_data['Mean(R)'],color='b',label='EpiEstim')
     ax.fill_between(np.arange(len(state_data)),state_data['Quantile.0.025(R)'], state_data['Quantile.0.975(R)'], color='cornflowerblue', alpha=0.4)
     #Mobility R
@@ -382,6 +382,10 @@ def plot_R_comparison(state_data, state, outdir):
     er = np.average(np.absolute(np.array(state_data['Mean(R)']-state_data['meanR_mobility'])))
     ax.set_title(state+'\nPCC='+str(np.round(R,2))+'\nav.error='+str(np.round(er,2)))
     ax.set_ylabel('Rt')
+    selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(np.array(state_data['date']))]['short_date'])
+    xticks=np.arange(len(selected_short_dates)-1,0,-14)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(selected_short_dates[xticks],rotation='vertical')
     plt.legend()
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -435,7 +439,7 @@ def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
 
             state_data = state_data[state_data['Median(R)']<6] #'Median(R)'
             #Plot R from epiestim vs the R from the mobility model
-            plot_R_comparison(state_data, state, outdir)
+            plot_R_comparison(state_data,  short_dates, state, outdir)
 
             #Plot R from EpiEstim
             axR.plot(state_data['date'], state_data['Median(R)'], color = 'b', alpha = 0.5)
@@ -592,9 +596,9 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-metrics, complete_df = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+#metrics, complete_df = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Save df
-complete_df.to_csv('../modeling_results/complete_df.csv')
+#complete_df.to_csv('../modeling_results/complete_df.csv')
 #Print metrics as table with CIs
 #print_CI(metrics)
 #Analyze mobility and R relstionhip
