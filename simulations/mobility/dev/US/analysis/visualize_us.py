@@ -391,7 +391,8 @@ def plot_R_comparison(state_data, short_dates, state, outdir):
     ax.spines['right'].set_visible(False)
     fig.tight_layout()
     fig.savefig(outdir+'/plots/R_comparison/'+state+'.png', format = 'png', dpi=300)
-
+    plt.close()
+    print(state,',', max(state_data['meanR_mobility']),',',max(state_data['Mean(R)']),',',min(state_data['meanR_mobility']),',',min(state_data['Mean(R)']))
     return None
 
 def epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates):
