@@ -12,7 +12,7 @@ data {
   matrix[N2, M] covariate4; //workplace
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
-  real SI[N2]; // fixed pre-calculated SI using emprical data from Neil
+  real SI[N2]; 
 }
 
 transformed data {

@@ -582,7 +582,6 @@ epiestim_df = pd.read_csv(args.epiestim_df[0])
 case_df = pd.read_csv(args.case_df[0])
 #Convert to datetime
 complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
-complete_df = complete_df[complete_df['date']<='20200605']
 epiestim_df['date']=pd.to_datetime(epiestim_df['date'], format='%Y/%m/%d')
 case_df['date']=pd.to_datetime(case_df['date'], format='%Y/%m/%d')
 lockdown_df = pd.read_csv(args.lockdown_df[0])
@@ -597,10 +596,10 @@ outdir = args.outdir[0]
 #Plot the markers
 #plot_markers()
 #Visualize
-#metrics, complete_df = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
+metrics, complete_df = visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, indir, short_dates, outdir)
 #Save df
-#complete_df.to_csv('../modeling_results/complete_df.csv')
+complete_df.to_csv('../modeling_results/complete_df.csv')
 #Print metrics as table with CIs
-#print_CI(metrics)
+print_CI(metrics)
 #Analyze mobility and R relstionhip
 epiestim_vs_mob(complete_df, epiestim_df, case_df, short_dates)
