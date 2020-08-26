@@ -262,10 +262,6 @@ days_to_simulate = args.days_to_simulate[0]
 outdir = args.outdir[0]
 #Read data
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
-<<<<<<< HEAD
-=======
-
->>>>>>> 7588995e7bd5d2422ca89ece8429cd04b3e3dcce
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate
