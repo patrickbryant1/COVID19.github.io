@@ -149,7 +149,7 @@ def visualize_results(complete_df, lockdown_df, early_lockdown_df, epiestim_df, 
         complete_df.loc[complete_df['region']==state, '0.975R_mobility']= higher_bound['Rt']
         complete_df.loc[complete_df['region']==state, 'mean_deaths_mobility']=means['E_deaths']
         complete_df.loc[complete_df['region']==state, 'mean_cases_mobility']=means['prediction']
-        continue
+
         #Plot cases
         #Per day
         plot_shade_ci(days, state_data,state_lockdown, state_early_lockdown, 'cases', means['prediction'],lower_bound['prediction'],
@@ -197,6 +197,7 @@ def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param,
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = state_data['date']
+    pdb.set_trace()
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     x = np.arange(days)#x-vals
     if len(dates) != len(selected_short_dates):
