@@ -67,7 +67,7 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         mobility_data = mobility_data[mobility_data['country_region']=="United States"]
         #Look at the US states
         subregions = mobility_data['sub_region_1'].unique()[1:] #The first subregion is nan (no subregion)
-        subregions = subregions[0:5] #For testing
+        #subregions = subregions[0:5] #For testing
 
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
