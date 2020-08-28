@@ -14,7 +14,7 @@ import pdb
 
 ########MAIN#########
 #ecdc data
-ecdc_df = pd.read_csv('ecdc_20200817.csv')
+ecdc_df = pd.read_csv('ecdc_20200828.csv')
 ecdc_df['date'] = pd.to_datetime(ecdc_df['dateRep'], format='%d/%m/%Y')
 ecdc_df = ecdc_df.sort_values(by=['date'], ascending=False)
 ecdc_df = ecdc_df.drop(columns=['date'])

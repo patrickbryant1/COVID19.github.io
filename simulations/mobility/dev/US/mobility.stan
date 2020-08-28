@@ -13,7 +13,7 @@ data {
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
   real SI[N2]; 
-  int<lower=1> population_size [M];
+  int<lower=1> population_size[M];
 }
 
 transformed data {
@@ -60,7 +60,7 @@ transformed parameters {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
           cumulative_cases += prediction[j, m];
         }
-        Rt[i,m] = Rt[i,m]*(1-beta*(cumulative_cases/population_size[m]));
+        Rt[i,m] = Rt[i,m]*beta*(1-(cumulative_cases/population_size[m]));
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
 
@@ -79,7 +79,7 @@ transformed parameters {
 }
 
 
-}
+
 //We assume that seeding of new infections begins 30 days before the day after a country has
 //cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of
 //infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03). These seed

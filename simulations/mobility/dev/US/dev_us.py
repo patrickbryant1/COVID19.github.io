@@ -67,7 +67,8 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         mobility_data = mobility_data[mobility_data['country_region']=="United States"]
         #Look at the US states
         subregions = mobility_data['sub_region_1'].unique()[1:] #The first subregion is nan (no subregion)
-        pdb.set_trace()
+        #subregions = subregions[0:10] #For testing
+
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
 
@@ -134,9 +135,13 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         complete_df = pd.DataFrame()
         #Get data by state
         for c in range(len(subregions)):
+
             #Assign fraction dead
             stan_data['f'][:,c]=f
+            #State
             region =subregions[c]
+            #Get population size
+            stan_data['population_size'].append(population_sizes[population_sizes['State']==region]['Population'].values[0])
 
             #Get region epidemic data
             regional_deaths = us_deaths[us_deaths['Province_State']== region]
@@ -243,7 +248,7 @@ def simulate(stan_data, stan_model, outdir):
         '''
 
         sm =  pystan.StanModel(file=stan_model)
-        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.99, 'max_treedepth': 20})
+        fit = sm.sampling(data=stan_data,iter=4000,warmup=2000,chains=8,thin=4, control={'adapt_delta': 0.96, 'max_treedepth': 20})
         #Save summary
         s = fit.summary()
         summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
