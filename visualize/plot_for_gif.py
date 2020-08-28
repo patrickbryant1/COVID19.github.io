@@ -62,5 +62,5 @@ for i in range(0,len(dates),7):
     plt.close()
     names.append('world'+date[0]+'_'+date[1]+'_'+date[2]+'_deaths.png')
 
-for name in names:
-    print(name+' ')
+for i in range(len(names)-1,-1,-1):
+    print(names[i]+',')

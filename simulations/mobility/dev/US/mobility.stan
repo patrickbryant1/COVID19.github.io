@@ -37,6 +37,7 @@ parameters {
 transformed parameters {
     real convolution; //value of integration
     real cumulative_cases; //cumulative
+    real impact; //scaling for impact of fraction infected 
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
@@ -60,7 +61,15 @@ transformed parameters {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
           cumulative_cases += prediction[j, m];
         }
-        Rt[i,m] = Rt[i,m]*beta*(1-(cumulative_cases/population_size[m]));
+	if((cumulative_cases/population_size[m])<0)
+		impact = min([0,beta*(cumulative_cases/population_size[m])]);
+	else
+		impact = max([0.99,beta*(cumulative_cases/population_size[m])]);
+
+	//print(population_size[m])
+	//print(cumulative_cases)
+	//print(impact)
+        Rt[i,m] = Rt[i,m]*(1-impact);
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
 
