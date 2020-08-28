@@ -52,7 +52,7 @@ def serial_interval_distribution(N2):
         '''Models the the time between when a person gets infected and when
         they subsequently infect another other people
         '''
-        serial_shape, serial_scale = conv_gamma_params(4.7,2.9)
+        serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
         return serial.pdf(np.arange(1,N2+1))
