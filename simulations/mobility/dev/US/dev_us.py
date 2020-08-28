@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 
 parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help = 'Path to death data.')
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
+parser.add_argument('--population_sizes', nargs=1, type= str, default=sys.stdin, help = 'Path to population size data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
@@ -56,7 +57,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, N2):
+def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -66,6 +67,7 @@ def read_and_format_data(us_deaths, mobility_data, N2):
         mobility_data = mobility_data[mobility_data['country_region']=="United States"]
         #Look at the US states
         subregions = mobility_data['sub_region_1'].unique()[1:] #The first subregion is nan (no subregion)
+        pdb.set_trace()
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
 
@@ -84,7 +86,8 @@ def read_and_format_data(us_deaths, mobility_data, N2):
                     'residential_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'parks_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'EpidemicStart': [],
-                    'SI':serial_interval[0:N2]
+                    'SI':serial_interval[0:N2],
+                    'population_size':[]
                     }
         #Infection to death distribution
         itd = infection_to_death()
@@ -257,11 +260,12 @@ def simulate(stan_data, stan_model, outdir):
 args = parser.parse_args()
 us_deaths = pd.read_csv(args.us_deaths[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
+population_sizes = pd.read_csv(args.population_sizes[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, days_to_simulate)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data,population_sizes, days_to_simulate)
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate

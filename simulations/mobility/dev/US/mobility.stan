@@ -13,6 +13,7 @@ data {
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
   real SI[N2]; 
+  int<lower=1> population_size [M];
 }
 
 transformed data {
@@ -22,6 +23,7 @@ transformed data {
 parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
+  real<lower=0> beta; //scaling for impact of fraction infected 
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
@@ -34,6 +36,7 @@ parameters {
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
     real convolution; //value of integration
+    real cumulative_cases; //cumulative
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
@@ -51,10 +54,13 @@ transformed parameters {
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
+        cumulative_cases=0;
 	//loop through all days up to current
         for(j in 1:(i-1)) {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
+          cumulative_cases += prediction[j, m];
         }
+        Rt[i,m] = Rt[i,m]*(1-beta*(cumulative_cases/population_size[m]));
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
 
@@ -68,6 +74,9 @@ transformed parameters {
         }
       }
     }
+
+
+}
 
 
 }
@@ -88,6 +97,7 @@ model {
   kappa ~ normal(0,0.5); //std for R distr.
   mu ~ normal(2.79, kappa); // R distribution, https://academic.oup.com/jtm/article/27/2/taaa021/5735319
   alpha ~ gamma(.5,1); //alpha distribution - mobility
+  beta ~ gamma(.5,1); //alpha distribution - mobility
 	//Loop through countries
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
