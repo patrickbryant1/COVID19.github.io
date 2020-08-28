@@ -62,9 +62,9 @@ transformed parameters {
           cumulative_cases += prediction[j, m];
         }
 	if((cumulative_cases/population_size[m])<0)
-		impact = min([0,beta*(cumulative_cases/population_size[m])]);
+		impact = min([0,exp(beta)*(cumulative_cases/population_size[m])]);
 	else
-		impact = max([0.99,beta*(cumulative_cases/population_size[m])]);
+		impact = max([0.99,exp(beta)*(cumulative_cases/population_size[m])]);
 
 	//print(population_size[m])
 	//print(cumulative_cases)
