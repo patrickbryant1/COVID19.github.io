@@ -26,6 +26,7 @@ parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, he
 parser.add_argument('--population_sizes', nargs=1, type= str, default=sys.stdin, help = 'Path to population size data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
 parser.add_argument('--days_to_simulate', nargs=1, type= int, default=sys.stdin, help = 'Number of days to simulate.')
+parser.add_argument('--end_date', nargs=1, type= str, default=sys.stdin, help = 'Up to which date to include data.')
 parser.add_argument('--outdir', nargs=1, type= str, default=sys.stdin, help = 'Path to outdir.')
 
 ###FUNCTIONS###
@@ -57,7 +58,7 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
+def read_and_format_data(us_deaths, mobility_data, population_sizes, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -65,9 +66,15 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         mobility_data['date']=pd.to_datetime(mobility_data['date'], format='%Y/%m/%d')
         #Select US
         mobility_data = mobility_data[mobility_data['country_region']=="United States"]
+        #Select data up to end date
+        mobility_data = mobility_data[mobility_data['date']<=end_date]
+
         #Look at the US states
         subregions = mobility_data['sub_region_1'].unique()[1:] #The first subregion is nan (no subregion)
         subregions = subregions[0:5] #For testing
+        #Remove regions with too little data
+        drop_regions = ['Alaska']
+        subregions = subregions[np.isin(subregions, drop_regions, invert=True)]
 
         #SI
         serial_interval = serial_interval_distribution(N2) #pd.read_csv(datadir+"serial_interval.csv")
@@ -136,13 +143,8 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
         #Get data by state
         for c in range(len(subregions)):
 
-            #Assign fraction dead
-            stan_data['f'][:,c]=f
             #State
             region =subregions[c]
-            #Get population size
-            stan_data['population_size'].append(population_sizes[population_sizes['State']==region]['Population'].values[0])
-
             #Get region epidemic data
             regional_deaths = us_deaths[us_deaths['Province_State']== region]
             cols = regional_deaths.columns
@@ -171,8 +173,18 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2):
 
             #Get all dates with at least 10 deaths
             cum_deaths = regional_epidemic_data['deaths'].cumsum()
-            death_index = cum_deaths[cum_deaths>=10].index[0]
+            try:
+                death_index = cum_deaths[cum_deaths>=10].index[0]
+            except:
+                print(region, 'has a maximum of', max(cum_deaths), 'cumulative deaths')
+                continue
             di30 = death_index-30
+
+            #Assign fraction dead
+            stan_data['f'][:,c]=f
+            #Get population size
+            stan_data['population_size'].append(population_sizes[population_sizes['State']==region]['Population'].values[0])
+
             #Add epidemic start to stan data
             stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
             #Get part of country_epidemic_data 30 days before day with at least 10 deaths
@@ -268,9 +280,11 @@ mobility_data = pd.read_csv(args.mobility_data[0])
 population_sizes = pd.read_csv(args.population_sizes[0])
 stan_model = args.stan_model[0]
 days_to_simulate = args.days_to_simulate[0]
+end_date = args.end_date[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data,population_sizes, days_to_simulate)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data,population_sizes, days_to_simulate, end_date)
+pdb.set_trace()
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate
