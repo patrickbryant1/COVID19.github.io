@@ -71,9 +71,9 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2, end_dat
 
         #Look at the US states
         subregions = mobility_data['sub_region_1'].unique()[1:] #The first subregion is nan (no subregion)
-        subregions = subregions[0:5] #For testing
+        #subregions = subregions[0:5] #For testing
         #Remove regions with too little data
-        drop_regions = ['Alaska']
+        drop_regions = ['Alaska', 'Wyoming', 'District of Columbia']
         subregions = subregions[np.isin(subregions, drop_regions, invert=True)]
 
         #SI
@@ -284,7 +284,7 @@ end_date = args.end_date[0]
 outdir = args.outdir[0]
 #Read data
 stan_data,complete_df = read_and_format_data(us_deaths, mobility_data,population_sizes, days_to_simulate, end_date)
-pdb.set_trace()
+
 #Save complete df
 complete_df.to_csv('complete_df.csv')
 #Simulate

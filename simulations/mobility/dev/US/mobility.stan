@@ -59,7 +59,8 @@ transformed parameters {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
 	  cum_cases += prediction[j, m]; //cumulative cases observed
         }
-        prediction[i, m] = Rt[i,m] * convolution*(1-cum_cases/population_size[m]); //Scale with average spread per case
+	//Rt[i,m] = Rt[i,m]*(1-(cum_cases/population_size[m]));
+        prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
 
       E_deaths[1, m]= 1e-9; //Start expectation - practically 0
