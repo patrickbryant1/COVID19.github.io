@@ -197,7 +197,6 @@ def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param,
     '''Plot with shaded 95 % CI (plots both 1 and 2 std, where 2 = 95 % interval)
     '''
     dates = state_data['date']
-    pdb.set_trace()
     selected_short_dates = np.array(short_dates[short_dates['np_date'].isin(dates)]['short_date']) #Get short version of dates
     x = np.arange(days)#x-vals
     if len(dates) != len(selected_short_dates):
@@ -210,13 +209,13 @@ def plot_shade_ci(days, state_data, state_lockdown, state_early_lockdown, param,
 
 
     #Plot continued lockdown
-    exi = int(state_lockdown['extreme_index'].values[0])
-    try:
-        ax1.plot(x[exi:],state_lockdown.loc[exi:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'g')
-    except:
-        pdb.set_trace()
-    ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
-    ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
+    # exi = int(state_lockdown['extreme_index'].values[0])
+    # try:
+    #     ax1.plot(x[exi:],state_lockdown.loc[exi:,'mean_'+param], alpha=0.5, linewidth = 2.0, color = 'g')
+    # except:
+    #     pdb.set_trace()
+    # ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower_'+param], state_lockdown.loc[exi:,'higher_'+param], color='seagreen', alpha=0.4)
+    # ax1.fill_between(x[exi:],state_lockdown.loc[exi:,'lower25_'+param], state_lockdown.loc[exi:,'higher75_'+param], color='seagreen', alpha=0.6)
 
     # #Plot earlier continued lockdown
     # exi = int(state_early_lockdown['extreme_index'].values[0])
@@ -581,6 +580,7 @@ indir = args.indir[0]
 complete_df = pd.read_csv(args.complete_df[0])
 epiestim_df = pd.read_csv(args.epiestim_df[0])
 case_df = pd.read_csv(args.case_df[0])
+
 #Convert to datetime
 complete_df['date']=pd.to_datetime(complete_df['date'], format='%Y/%m/%d')
 epiestim_df['date']=pd.to_datetime(epiestim_df['date'], format='%Y/%m/%d')

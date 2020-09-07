@@ -1,4 +1,4 @@
-OUTDIR=/home/patrick/COVID19.github.io/docs/assets/
+OUTDIR=/home/pbryant/COVID19.github.io/docs/assets/
 montage Alabama_cases.png Alabama_deaths.png Alabama_Rt.png Alaska_cases.png Alaska_deaths.png Alaska_Rt.png Arizona_cases.png Arizona_deaths.png Arizona_Rt.png Arkansas_cases.png Arkansas_deaths.png Arkansas_Rt.png California_cases.png California_deaths.png California_Rt.png -tile 3x5 -geometry +2+2 $OUTDIR/all_states1.png
 montage Colorado_cases.png Colorado_deaths.png Colorado_Rt.png Connecticut_cases.png Connecticut_deaths.png Connecticut_Rt.png Delaware_cases.png Delaware_deaths.png Delaware_Rt.png Florida_cases.png Florida_deaths.png Florida_Rt.png Georgia_cases.png Georgia_deaths.png Georgia_Rt.png  -tile 3x6 -geometry +2+2 $OUTDIR/all_states2.png
 montage Hawaii_cases.png Hawaii_deaths.png Hawaii_Rt.png Idaho_cases.png Idaho_deaths.png Idaho_Rt.png Illinois_cases.png Illinois_deaths.png Illinois_Rt.png Indiana_cases.png Indiana_deaths.png Indiana_Rt.png Iowa_cases.png Iowa_deaths.png Iowa_Rt.png Kansas_cases.png Kansas_deaths.png Kansas_Rt.png  -tile 3x6 -geometry +2+2 $OUTDIR/all_states3.png
