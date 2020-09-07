@@ -3,7 +3,7 @@
 DEATHS=../../data/US/us_deaths.csv
 MOBILITY_DATA=../../data/US/Global_Mobility_US.csv
 POPDATA=../../data/US/us_state_populations.csv
-STAN_MODEL=./mobility.stan
+STAN_MODEL=./mobility_close.stan
 OUTDIR=../../model_output/R0_2_79/dev/
 DTS=71 #Days to simulate
 ED='20200425' #end date

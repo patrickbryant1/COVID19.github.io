@@ -22,6 +22,8 @@ import pdb
 parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
 
 parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help = 'Path to death data.')
+parser.add_argument('--modeled_summary', nargs=1, type= str, default=sys.stdin, help = 'Path to modeled data.')
+parser.add_argument('-days_til_open', nargs=1, type= str, default=sys.stdin, help = 'Days til opening up per state (25 April).')
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
 parser.add_argument('--population_sizes', nargs=1, type= str, default=sys.stdin, help = 'Path to population size data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
@@ -59,7 +61,22 @@ def serial_interval_distribution(N2):
 
         return serial.pdf(np.arange(1,N2+1))
 
-def read_and_format_data(us_deaths, mobility_data, population_sizes, N2, end_date):
+def get_modeled_cases(days, i, modeled_summary):
+    '''Get the modeled cases to be sued in the estimate as initialization
+    '''
+    #Save means
+    means = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))}
+    #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
+    for j in range(1,days+1):
+        for var in ['prediction']: #, 'E_deaths','Rt'
+            pdb.set_trace()
+            var_ij = modeled_summary[modeled_summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
+            means[var][j-1]=var_ij['mean'].values[0]
+
+    return means['prediction']
+
+
+def read_and_format_data(us_deaths, mobility_data, modeled_summary, population_sizes, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -173,15 +190,12 @@ def read_and_format_data(us_deaths, mobility_data, population_sizes, N2, end_dat
             region_mob_data = region_mob_data[region_mob_data['sub_region_2'].isna()]
             #Merge epidemic data with mobility data
             regional_epidemic_data = regional_epidemic_data.merge(region_mob_data, left_on = 'date', right_on ='date', how = 'right')
+
+            #Get the estimated cases
+            days = len(regional_epidemic_data)#Number of days for state c
             pdb.set_trace()
-            #Get all dates with at least 10 deaths
-            cum_deaths = regional_epidemic_data['deaths'].cumsum()
-            try:
-                death_index = cum_deaths[cum_deaths>=10].index[0]
-            except:
-                print(region, 'has a maximum of', max(cum_deaths), 'cumulative deaths')
-                continue
-            di30 = death_index-30
+            estimated_cases = get_modeled_cases(days, c, modeled_summary)
+            pdb.set_trace()
 
             #Assign fraction dead
             stan_data['f'][:,c]=f
@@ -279,6 +293,8 @@ def simulate(stan_data, stan_model, outdir):
 #####MAIN#####
 args = parser.parse_args()
 us_deaths = pd.read_csv(args.us_deaths[0])
+modeled_summary = pd.read_csv(args.modeled_summary[0])
+days_til_open = pd.read_csv(args.days_til_open[0])
 mobility_data = pd.read_csv(args.mobility_data[0])
 population_sizes = pd.read_csv(args.population_sizes[0])
 stan_model = args.stan_model[0]
@@ -287,7 +303,7 @@ start_date = args.start_date[0]
 end_date = args.end_date[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data,population_sizes, days_to_simulate, end_date)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, modeled_summary, population_sizes, days_to_simulate, end_date)
 
 #Save complete df
 complete_df.to_csv('complete_df.csv')
