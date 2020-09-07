@@ -37,7 +37,7 @@ def plot_R_posterior(data, state, outdir):
     ax.set_title(state)
     ax.set_xlabel('R0')
     #ax.set_xlim([1.5,5.5])
-    #ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
+    ax.axvline(x=2.79, ymin=0, ymax=2, linestyle='--',linewidth=1)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     fig.tight_layout()
