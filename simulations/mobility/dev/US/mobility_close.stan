@@ -12,7 +12,7 @@ data {
   matrix[N2, M] covariate4; //workplace
   matrix[N2, M] covariate5; //residential
   int EpidemicStart[M];
-  real SI[N2]; 
+  real SI[N2];
   int population_size[M];
 }
 
@@ -25,7 +25,7 @@ parameters {
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
   real<lower=0> y[M]; //
-  //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
+  real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
   real<lower=0> phi_mu;
   real<lower=0> phi_tau;
   real<lower=0> phi_eta;
@@ -39,8 +39,8 @@ transformed parameters {
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
-    real<lower=0> phi;
-    phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
+    //real<lower=0> phi;
+    //phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
 	//loop through all countries
     for (m in 1:M){
       prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
@@ -57,9 +57,10 @@ transformed parameters {
 	//loop through all days up to current
         for(j in 1:(i-1)) {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
-	  cum_cases += prediction[j, m]; //cumulative cases observed
+	        cum_cases += prediction[j, m]; //cumulative cases observed
         }
-	//Rt[i,m] = Rt[i,m]*(1-(cum_cases/population_size[m]));
+
+	      //Rt[i,m] = Rt[i,m]*(1-(cum_cases/population_size[m]));
         prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
       }
 
@@ -86,7 +87,7 @@ model {
   for (m in 1:M){
       y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic
   }
-  //phi ~ normal(0,5); //variance scaling for neg binomial
+  phi ~ normal(0,5); //variance scaling for neg binomial
   phi_mu ~ normal(0, 5);
   phi_tau ~ cauchy(0, 5);
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
@@ -101,36 +102,4 @@ model {
        deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
     }
    }
-}
-
-//Out metrics - baseline, without R0 reduction
-generated quantities {
-    matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
-    matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
-    real convolution0;
-    matrix[N2, M] prediction0 = rep_matrix(0,N2,M);
-    matrix[N2, M] E_deaths0  = rep_matrix(0,N2,M);
-    for (m in 1:M){
-      prediction0[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days
-      for (i in (N0+1):N2) {
-        convolution0=0;
-        for(j in 1:(i-1)) {
-          convolution0 += prediction0[j, m]*SI[i-j]; // Correctd 22nd March
-        }
-        prediction0[i, m] = mu[m] * convolution0;
-      }
-
-      E_deaths0[1, m]= 1e-9;
-      for (i in 2:N2){
-        E_deaths0[i,m]= 0;
-        for(j in 1:(i-1)){
-          E_deaths0[i,m] += prediction0[j,m]*f[i-j,m];
-        }
-      }
-      for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-      }
-    }
-
 }

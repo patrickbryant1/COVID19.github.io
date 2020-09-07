@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description = '''Simulate using google mobility
 
 parser.add_argument('--us_deaths', nargs=1, type= str, default=sys.stdin, help = 'Path to death data.')
 parser.add_argument('--modeled_summary', nargs=1, type= str, default=sys.stdin, help = 'Path to modeled data.')
-parser.add_argument('-days_til_open', nargs=1, type= str, default=sys.stdin, help = 'Days til opening up per state (25 April).')
+parser.add_argument('--days_til_open', nargs=1, type= str, default=sys.stdin, help = 'Days til opening up per state (25 April).')
 parser.add_argument('--mobility_data', nargs=1, type= str, default=sys.stdin, help = 'Path to mobility data.')
 parser.add_argument('--population_sizes', nargs=1, type= str, default=sys.stdin, help = 'Path to population size data.')
 parser.add_argument('--stan_model', nargs=1, type= str, default=sys.stdin, help = 'Stan model.')
@@ -68,15 +68,14 @@ def get_modeled_cases(days, i, modeled_summary):
     means = {'prediction':np.zeros((days)),'E_deaths':np.zeros((days)), 'Rt':np.zeros((days))}
     #Get means and 95 % CI for cases (prediction), deaths and Rt for all time steps
     for j in range(1,days+1):
-        for var in ['prediction']: #, 'E_deaths','Rt'
-            pdb.set_trace()
+        for var in ['prediction','E_deaths','Rt']:
             var_ij = modeled_summary[modeled_summary['Unnamed: 0']==var+'['+str(j)+','+str(i)+']']
             means[var][j-1]=var_ij['mean'].values[0]
 
-    return means['prediction']
+    return means['prediction'], means['Rt'], means['E_deaths']
 
 
-def read_and_format_data(us_deaths, mobility_data, modeled_summary, population_sizes, N2, end_date):
+def read_and_format_data(us_deaths, mobility_data, modeled_summary, days_til_open, population_sizes, N2, end_date):
         '''Read in and format all data needed for the model
         N2 = number of days to model
         '''
@@ -101,11 +100,15 @@ def read_and_format_data(us_deaths, mobility_data, modeled_summary, population_s
 
         #Create stan data
         stan_data = {'M':len(subregions), #number of countries
-                    'N0':6, #number of days for which to impute infections
+                    'N0':28, #number of days for which to us for initializing the infections (how many days before 25th of April)
                     'N':[], #days of observed data for country m. each entry must be <= N2
                     'N2':N2, #number of days to model
                     'x':np.arange(1,N2+1),
                     'deaths':np.zeros((N2,len(subregions)), dtype=int),
+                    'initial_cases':np.zeros((28,len(subregions)), dtype=int),
+                    'initial_cum_cases':np.zeros((28,len(subregions)), dtype=int),
+                    'initial_R':np.zeros((28,len(subregions)), dtype=int),
+                    'initial_deaths':np.zeros((28,len(subregions)), dtype=int),
                     'f':np.zeros((N2,len(subregions))),
                     'retail_and_recreation_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'grocery_and_pharmacy_percent_change_from_baseline':np.zeros((N2,len(subregions))),
@@ -113,7 +116,6 @@ def read_and_format_data(us_deaths, mobility_data, modeled_summary, population_s
                     'workplaces_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'residential_percent_change_from_baseline':np.zeros((N2,len(subregions))),
                     'parks_percent_change_from_baseline':np.zeros((N2,len(subregions))),
-                    'EpidemicStart': [],
                     'SI':serial_interval[0:N2],
                     'population_size':[]
                     }
@@ -192,22 +194,19 @@ def read_and_format_data(us_deaths, mobility_data, modeled_summary, population_s
             regional_epidemic_data = regional_epidemic_data.merge(region_mob_data, left_on = 'date', right_on ='date', how = 'right')
 
             #Get the estimated cases
-            days = len(regional_epidemic_data)#Number of days for state c
-            pdb.set_trace()
-            estimated_cases = get_modeled_cases(days, c, modeled_summary)
-            pdb.set_trace()
-
+            days = days_til_open[days_til_open['State']==region]['DTO'].values[0] #Number of days for state c
+            estimated_cases, estimated_R, estimated_deaths = get_modeled_cases(days, c+1, modeled_summary)
+            #Take the number of days used to intialize the model
+            inital_cases = estimated_cases[-stan_data['N0']:]
+            stan_data['initial_cases'][:,c]=inital_cases
+            stan_data['initial_cum_cases'][:,c]=np.cumsum(estimated_cases)[-stan_data['N0']:]
+            stan_data['initial_R'][:,c]=estimated_R[-stan_data['N0']:]
+            stan_data['initial_deaths'][:,c]=estimated_deaths[-stan_data['N0']:]
             #Assign fraction dead
             stan_data['f'][:,c]=f
             #Get population size
             stan_data['population_size'].append(population_sizes[population_sizes['State']==region]['Population'].values[0])
 
-            #Add epidemic start to stan data
-            stan_data['EpidemicStart'].append(death_index+1-di30) #30 days before 10 deaths
-            #Get part of country_epidemic_data 30 days before day with at least 10 deaths
-            regional_epidemic_data = regional_epidemic_data.loc[di30:]
-            #Reset index
-            regional_epidemic_data = regional_epidemic_data.reset_index()
             #Print region and number of days
             print(region, len(regional_epidemic_data), min(regional_epidemic_data['date']),max(regional_epidemic_data['date']))
 
@@ -303,9 +302,9 @@ start_date = args.start_date[0]
 end_date = args.end_date[0]
 outdir = args.outdir[0]
 #Read data
-stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, modeled_summary, population_sizes, days_to_simulate, end_date)
+stan_data,complete_df = read_and_format_data(us_deaths, mobility_data, modeled_summary, days_til_open, population_sizes, days_to_simulate, end_date)
 
 #Save complete df
-complete_df.to_csv('complete_df.csv')
+complete_df.to_csv('complete_open_df.csv')
 #Simulate
 out = simulate(stan_data, stan_model, outdir)

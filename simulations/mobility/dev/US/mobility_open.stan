@@ -5,14 +5,16 @@ data {
   int<lower=1> N2; // days of observed data + # of days to forecast
   real<lower=0> x[N2]; // index of days (starting at 1)
   int deaths[N2, M]; // reported deaths -- the rows with i > N contain -1 and should be ignored
-  int initial_cases[N2, M]; // modeled initial -- the rows with i > N contain -1 and should be ignored
+  int initial_cases[N0, M]; // modeled initial cases
+  int initial_cum_cases[N0, M]; // modeled initial cumulative cases
+  int initial_R[N0, M]; // modeled initial R
+  int initial_deaths[N0, M]; // modeled initial deaths
   matrix[N2, M] f; // h * s - change in fraction dead each day
   matrix[N2, M] covariate1; //retail_and_recreation
   matrix[N2, M] covariate2; //grocery_and_pharmacy
   matrix[N2, M] covariate3; //transit_stations
   matrix[N2, M] covariate4; //workplace
   matrix[N2, M] covariate5; //residential
-  int EpidemicStart[M];
   real SI[N2];
   int population_size[M];
 }
@@ -25,7 +27,6 @@ parameters {
   real<lower=0> mu[M]; // intercept for Rt - hyperparam to be learned
   real<lower=0> alpha[5]; // Rt^exp(sum(alpha))
   real<lower=0> kappa; //std of R
-  real<lower=0> y[M]; //
   //real<lower=0> phi; //variance scaling for neg binomial: var = mu^2/phi
   real<lower=0> phi_mu;
   real<lower=0> phi_tau;
@@ -36,17 +37,17 @@ parameters {
 //The transformed parameters are the prediction (cases) and E_deaths = (cases*f) due to cumulative probability
 transformed parameters {
     real convolution; //value of integration
-    real cum_cases; //value of integration
     matrix[N2, M] prediction = rep_matrix(0,N2,M); //predict for each day for all countries
     matrix[N2, M] E_deaths  = rep_matrix(0,N2,M);
     matrix[N2, M] Rt = rep_matrix(0,N2,M);
-    real<lower=0> phi;
-    phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
+    matrix[N2, M] Rt_adj = rep_matrix(0,N2,M);
+    matrix[N2, M] cum_cases = rep_matrix(0,N2,M);
+    //real<lower=0> phi;
+    //phi = phi_mu+phi_tau*phi_eta; //non-centered representation of phi
 	//loop through all countries
     for (m in 1:M){
-      prediction[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days, here N0=6
-						//y is the index case
-	//mu is the mean R for each country sampled in model
+
+  //mu is the mean R for each country sampled in model
 	//For covariates 1-4: if the covariate is negative = less mobility, R will be decreased
   //For covariate 5 (residential), the opposite is true. More mobility at home --> less spread. Why the sign is negative.
         Rt[,m] = mu[m] * exp(covariate1[,m] * (alpha[1]) + covariate2[,m] * (alpha[2]) +
@@ -54,25 +55,45 @@ transformed parameters {
 	//for all days from 7 (1 after the cases in N0 days) to end of forecast
       for (i in (N0+1):N2) {
         convolution=0;//reset
-	cum_cases=0;//reset
+        for (ic in 1:N0){
+          Rt[ic,m] = initial_R[ic,m]; //use the initial R estimates
+          }
 	//loop through all days up to current
         for(j in 1:(i-1)) {
           convolution += prediction[j, m]*SI[i-j]; //Cases today due to cumulative probability, sum(cases*rel.change due to SI)
-	  cum_cases += prediction[j, m]; //cumulative cases observed
         }
-	//Rt[i,m] = Rt[i,m]*(1-(cum_cases/population_size[m]));
-        prediction[i, m] = Rt[i,m] * convolution; //Scale with average spread per case
-      }
+        for (ic in 1:N0){
+          prediction[ic,m] = initial_cases[ic,m]; //use the number of cases in the first N0 days from previous sim, here N0=14
+          cum_cases[ic,m] = initial_cum_cases[ic,m];
+          E_deaths[ic,m] = initial_deaths[ic,m];
+          }
+        cum_cases[i,m] = cum_cases[i-1,m]+prediction[i-1,m];
+        if (cum_cases[i,m] < cum_cases[N0,m])
+            cum_cases[i,m] = cum_cases[N0,m];
+        else
+            cum_cases[i,m] = cum_cases[i,m];
 
-      E_deaths[1, m]= 1e-9; //Start expectation - practically 0
+        if (cum_cases[i,m] > population_size[m]*0.9)
+          cum_cases[i,m] = population_size[m]*0.9;
+        else
+          cum_cases[i,m] = cum_cases[i,m];
+	      Rt_adj[i,m] = Rt[i,m]*(1-(cum_cases[i,m]/population_size[m]));
+        prediction[i, m] = Rt_adj[i,m] * convolution; //Scale with average spread per case
+        }
+
 	//Step through all days til end of forecast
-      for (i in 2:N2){
-        E_deaths[i,m]= 0; //set to 0
+      for (i in 1:N2){
         for(j in 1:(i-1)){
           E_deaths[i,m] += prediction[j,m]*f[i-j,m]; //Deaths today due to cumulative probability, sum(deaths*rel.change due to f)
 							  //exp when neg_binomial_2_log_lpmf is used, otherwise without (when neg_binomial_2_log_lpmf
+
         }
       }
+      print(Rt_adj);
+      print(Rt);
+      print(prediction);
+      print(E_deaths);
+
     }
 
 
@@ -82,12 +103,8 @@ transformed parameters {
 //infections drawn from c 1,m , ... , c 6,m ~Exponential(τ), where τ~Exponential(0.03). These seed
 //infections are inferred in our Bayesian posterior distribution.
 model {
-  tau ~ exponential(0.03);
 	//loop through countries
-  for (m in 1:M){
-      y[m] ~ exponential(1.0/tau); //seed for estimated number of cases in beginning of epidemic
-  }
-  //phi ~ normal(0,5); //variance scaling for neg binomial
+  phi ~ normal(0,5); //variance scaling for neg binomial
   phi_mu ~ normal(0, 5);
   phi_tau ~ cauchy(0, 5);
   phi_eta ~ normal(0, 1); // implies phi ~ normal(phi_mu, phi_tau)
@@ -97,41 +114,9 @@ model {
 	//Loop through countries
   for(m in 1:M){
 	//Loop through from epidemic start to end of epidemic
-    for(i in EpidemicStart[m]:N[m]){
-       //print(phi);
+    for(i in 1:N[m]){
        deaths[i,m] ~ neg_binomial_2_lpmf(E_deaths[i,m],phi);
+
     }
    }
-}
-
-//Out metrics - baseline, without R0 reduction
-generated quantities {
-    matrix[N2, M] lp0 = rep_matrix(1000,N2,M); // log-probability for LOO for the counterfactual model
-    matrix[N2, M] lp1 = rep_matrix(1000,N2,M); // log-probability for LOO for the main model
-    real convolution0;
-    matrix[N2, M] prediction0 = rep_matrix(0,N2,M);
-    matrix[N2, M] E_deaths0  = rep_matrix(0,N2,M);
-    for (m in 1:M){
-      prediction0[1:N0,m] = rep_vector(y[m],N0); // learn the number of cases in the first N0 days
-      for (i in (N0+1):N2) {
-        convolution0=0;
-        for(j in 1:(i-1)) {
-          convolution0 += prediction0[j, m]*SI[i-j]; // Correctd 22nd March
-        }
-        prediction0[i, m] = mu[m] * convolution0;
-      }
-
-      E_deaths0[1, m]= 1e-9;
-      for (i in 2:N2){
-        E_deaths0[i,m]= 0;
-        for(j in 1:(i-1)){
-          E_deaths0[i,m] += prediction0[j,m]*f[i-j,m];
-        }
-      }
-      for(i in 1:N[m]){
-        lp0[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths[i,m],phi);
-        lp1[i,m] = neg_binomial_2_log_lpmf(deaths[i,m] | E_deaths0[i,m],phi);
-      }
-    }
-
 }
