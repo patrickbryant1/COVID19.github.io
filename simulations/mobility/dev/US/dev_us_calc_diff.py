@@ -18,7 +18,8 @@ import pdb
 
 
 #Arguments for argparse module:
-parser = argparse.ArgumentParser(description = '''Simulate using google mobility data and most of the ICL response team model''')
+parser = argparse.ArgumentParser(description = '''Calculate the scenario that would have been obtained if lockdown had not ended
+                                                Get the R estimate at the extreme points in mobility''')
 
 parser.add_argument('--complete_df', nargs=1, type= str, default=sys.stdin, help = 'Path to all input data.')
 parser.add_argument('--modelling_results', nargs=1, type= str, default=sys.stdin, help = 'Path to stan model results.')
@@ -39,7 +40,7 @@ def conv_gamma_params(mean,std):
 def infection_to_death():
         '''Simulate the time from infection to death: Infection --> Onset --> Death'''
         #Infection to death: sum of ito and otd
-        itd_shape, itd_scale = conv_gamma_params((5.1+18.8), (0.45))
+        itd_shape, itd_scale = conv_gamma_params((5.1+17.8), (0.45))
         itd = gamma(a=itd_shape, scale = itd_scale) #a=shape
         return itd
 
@@ -47,7 +48,7 @@ def serial_interval_distribution(N2):
         '''Models the the time between when a person gets infected and when
         they subsequently infect another other people
         '''
-        serial_shape, serial_scale = conv_gamma_params(6.5,0.62)
+        serial_shape, serial_scale = conv_gamma_params(4.7,2.9)
         serial = gamma(a=serial_shape, scale = serial_scale) #a=shape
 
         return serial.pdf(np.arange(1,N2+1))
@@ -63,6 +64,8 @@ def get_death_f(N2):
     #This can be done only once now that the cfr is constant
     h = np.zeros(N2) #N2 = N+forecast
     f = np.cumsum(itd.pdf(np.arange(1,len(h)+1,0.5))) #Cumulative probability to die for each day
+    #Adjust f to reach max 1 - the half steps makes this different
+    f = f/2
     for i in range(1,len(h)):
         #for each day t, the death prob is the area btw [t-0.5, t+0.5]
         #divided by the survival fraction (1-the previous death fraction), (fatality ratio*death prob at t-0.5)
