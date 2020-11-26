@@ -6,12 +6,12 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Epidemic modeling</title>
+  <title>Oxford Evaluation</title>
   <meta name="description" content="Visualizations for COVID19 data analysis. The analysis focuses on elucidating decision making by authorities and the decisions' effects.
 ">
 
   <link rel="stylesheet" href="/COVID19.github.io/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/models.html">
+  <link rel="canonical" href="http://localhost:4000/COVID19.github.io/Oxford_Evaluation.html">
   <link rel="alternate" type="application/rss+xml" title="COVID19 Decision Analysis" href="http://localhost:4000/COVID19.github.io/feed.xml">
 
 </head>
@@ -91,62 +91,45 @@
         <article class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Epidemic modeling</h1>
+    <h1 class="post-title">Oxford Evaluation</h1>
   </header>
 
   <div class="post-content">
-    <h2 id="estimating-the-impact-of-mobility-patterns-on-covid-19-in-11-european-countries">Estimating the impact of mobility patterns on COVID-19 in 11 European countries</h2>
+    <h1 id="simple-least-squares-linear-regression">Simple least squares linear regression</h1>
+<p><img src="/COVID19.github.io/assets/linear/lr-0.png" alt="lr0" />
+<img src="/COVID19.github.io/assets/linear/lr-1.png" alt="lr1" />
+<img src="/COVID19.github.io/assets/linear/lr-2.png" alt="lr2" />
+<img src="/COVID19.github.io/assets/linear/lr-3.png" alt="lr3" />
+<img src="/COVID19.github.io/assets/linear/lr-4.png" alt="lr4" />
+<img src="/COVID19.github.io/assets/linear/lr-5.png" alt="lr5" />
+<img src="/COVID19.github.io/assets/linear/lr-6.png" alt="lr6" />
+<img src="/COVID19.github.io/assets/linear/lr-7.png" alt="lr7" />
+<img src="/COVID19.github.io/assets/linear/lr-8.png" alt="lr8" />
+<img src="/COVID19.github.io/assets/linear/lr-9.png" alt="lr9" /></p>
 
-<h2 id="r0-vs-the-final-fraction-infected">R0 vs the final fraction infected</h2>
-<p><img src="/COVID19.github.io/assets/R0_vs_tau.png" alt="R0_vs_tau" /></p>
+<h1 id="huber-regression">Huber regression</h1>
+<p><img src="/COVID19.github.io/assets/huber/huber-0.png" alt="huber0" />
+<img src="/COVID19.github.io/assets/huber/huber-1.png" alt="huber1" />
+<img src="/COVID19.github.io/assets/huber/huber-2.png" alt="huber2" />
+<img src="/COVID19.github.io/assets/huber/huber-3.png" alt="huber3" />
+<img src="/COVID19.github.io/assets/huber/huber-4.png" alt="huber4" />
+<img src="/COVID19.github.io/assets/huber/huber-5.png" alt="huber5" />
+<img src="/COVID19.github.io/assets/huber/huber-6.png" alt="huber6" />
+<img src="/COVID19.github.io/assets/huber/huber-7.png" alt="huber7" />
+<img src="/COVID19.github.io/assets/huber/huber-8.png" alt="huber8" />
+<img src="/COVID19.github.io/assets/huber/huber-9.png" alt="huber9" /></p>
 
-<h2 id="psi---half-normal-distribution-mean0-std5">Psi - half normal distribution (mean=0, std=5)</h2>
-<p><img src="/COVID19.github.io/assets/psi.svg" alt="psi.png" /></p>
-
-<h2 id="infection-to-onset-gammamean51-variance086">Infection-to-onset: gamma(mean=5.1, variance=0.86)</h2>
-<p>shape (α) = 1/std^2</p>
-
-<p>scale (β) = mean/shape = mean/(1/std^2) = mean*std^2</p>
-
-<p><img src="/COVID19.github.io/assets/ITO.png" alt="ITO.png" /></p>
-
-<h2 id="onset-to-death-gamma188-045">Onset-to-death: gamma(18.8, 0.45)</h2>
-<p><img src="/COVID19.github.io/assets/OTD.png" alt="OTD.png" /></p>
-
-<h2 id="infection-to-death">Infection-to-death</h2>
-<p>(infection fatality rate = 0.01)
-<img src="/COVID19.github.io/assets/ITD.svg" alt="ITD.png" /></p>
-
-<h2 id="survival-fraction-for-infection-to-death">Survival Fraction for Infection-to-death</h2>
-<p><img src="/COVID19.github.io/assets/survival_fraction.png" alt="survival_fraction.png" /></p>
-
-<h2 id="serial-interval-distribution">Serial interval distribution</h2>
-<p>To model the number of infections over time we need to specify a serial
-interval distribution g with density g(τ), (the time between when a person gets infected and when they subsequently infect another other people), which we choose to be Gamma distributed: g ∼ Gamma (6.5,0.62).
-<img src="/COVID19.github.io/assets/Serial.svg" alt="Serial.svg" /></p>
-
-<h2 id="impact">Impact</h2>
-<p>The impact of each intervention on R t,m is characterised by a set of parameters
-α 1 , … , α 6 , with independent prior distributions chosen to be α k ∼ Gamma(0.5,1)</p>
-
-<p><img src="/COVID19.github.io/assets/Impact.svg" alt="Impact.svg" /></p>
-
-<h2 id="r-0m-prior-distribution">R 0,m prior distribution</h2>
-<p>The prior distribution for R 0 was chosen to be R 0,m ∼ Normal(2.4, |κ|) with κ ∼ Normal(0,0.5)</p>
-
-<p>Kappa
-<img src="/COVID19.github.io/assets/Kappa.svg" alt="Kappa.svg" />
-R0m
-<img src="/COVID19.github.io/assets/R0m.svg" alt="R0m.svg" /></p>
-
-<h2 id="tau-seed">Tau seed</h2>
-<p>We assume that seeding of new infections begins 30 days before the day after a country has cumulatively observed 10 deaths. From this date, we seed our model with 6 sequential days of infections drawn from c 1,m , … , c 6,m ~Exponential(τ), where τ~Exponential(0.03).</p>
-
-<p>Tau
-<img src="/COVID19.github.io/assets/tau_seed.svg" alt="tau_seed.svg" /></p>
-
-<p>Exponential(τ)
-<img src="/COVID19.github.io/assets/Exp_tau.svg" alt="Exp_tau.svg" /></p>
+<h1 id="theil-sen-regression">Theil-Sen regression</h1>
+<p><img src="./assets/zen/zen-0.png" alt="zen0" />
+<img src="./assets/zen/zen-1.png" alt="zen1" />
+<img src="./assets/zen/zen-2.png" alt="zen2" />
+<img src="./assets/zen/zen-3.png" alt="zen3" />
+<img src="./assets/zen/zen-4.png" alt="zen4" />
+<img src="./assets/zen/zen-5.png" alt="zen5" />
+<img src="./assets/zen/zen-6.png" alt="zen6" />
+<img src="./assets/zen/zen-7.png" alt="zen7" />
+<img src="./assets/zen/zen-8.png" alt="zen8" />
+<img src="./assets/zen/zen-9.png" alt="zen9" /></p>
 
   </div>
 
