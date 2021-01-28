@@ -3,6 +3,14 @@ layout: page
 title: Mutations
 ---
 
+# Dominance per protein and position
+![dom0](./assets/mutations/dominance-0.png)
+![dom1](./assets/mutations/dominance-1.png)
+![dom2](./assets/mutations/dominance-2.png)
+![dom3](./assets/mutations/dominance-3.png)
+![dom4](./assets/mutations/dominance-4.png)
+![dom5](./assets/mutations/dominance-5.png)
+
 # Mutational development in countries with sufficient data
 ![mut0](./assets/mutations/countries-0.png)
 ![mut1](./assets/mutations/countries-1.png)
