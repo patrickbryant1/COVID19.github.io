@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 import pdb
 
 
@@ -230,7 +230,7 @@ def corr_feature_with_death(complete_df, outdir):
     pvals = []
     for i in range(X.shape[1]):
         try:
-            R,p = pearsonr(X[:,i],y)
+            R,p = spearmanr(X[:,i],y)
         except:
             pdb.set_trace()
         corr.append(R)
@@ -239,14 +239,14 @@ def corr_feature_with_death(complete_df, outdir):
     #Visualize
     corr_df = pd.DataFrame()
     corr_df['Feature'] = data.columns[3:]
-    corr_df['Pearson R'] = np.array(corr)
+    corr_df['Spearman R'] = np.array(corr)
     corr_df['p-value'] = np.array(pvals)
     #Bonferroni correction
     corr_df = corr_df[corr_df['p-value']<(0.05/X.shape[1])]
-    corr_df=corr_df.sort_values(by='Pearson R',ascending=False)
+    corr_df=corr_df.sort_values(by='Spearman R',ascending=False)
     #All
     fig, ax = plt.subplots(figsize=(18/2.54,150/2.54))
-    sns.barplot(x="Pearson R", y="Feature", data=corr_df)
+    sns.barplot(x="Spearman R", y="Feature", data=corr_df)
     fig.tight_layout()
     fig.savefig(outdir+'feature_correlations.png', format='png')
     plt.close()
@@ -256,12 +256,13 @@ def corr_feature_with_death(complete_df, outdir):
     top10 = corr_df.loc[0:9]
     bottom10 = corr_df.loc[len(corr_df)-10:len(corr_df)]
     top_bottom = pd.concat([top10,bottom10])
-    sns.barplot(x="Pearson R", y="Feature", data=top_bottom)
+    sns.barplot(x="Spearman R", y="Feature", data=top_bottom)
     fig.tight_layout()
     fig.savefig(outdir+'top_bottom_feature_correlations.png', format='png')
     plt.close()
     #Save significant features
     corr_df.to_csv('sig_feature_corr.csv')
+    pdb.set_trace()
 
 
 #####MAIN#####
